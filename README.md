@@ -1,7 +1,5 @@
 # Yoable - AI-Assisted Image Labeling Tool 🖼️🤖
 
-![Yoable Banner]()
-
 Yoable is a **powerful yet simple image labeling tool** built in **C# .NET 8.0**, designed for **bounding box annotation** and **AI-assisted auto-labeling**. It supports manual labeling as well as **YOLOv5 & YOLOv8 ONNX models** for automatic object detection. 
 
 ---
