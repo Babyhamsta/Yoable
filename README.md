@@ -48,10 +48,10 @@ Yoable is a **powerful yet simple image labeling tool** built in **C# .NET 8.0**
    ```
 
 2. Build & Run
-```sh
-dotnet build
-dotnet run
-```
+   ```sh
+   dotnet build
+   dotnet run
+   ```
 
 3. Load Images & Models
 Import images via File > Import Directory / Import Image.
