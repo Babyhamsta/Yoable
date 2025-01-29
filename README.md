@@ -36,7 +36,7 @@ Yoable is a **powerful yet simple image labeling tool** built in **C# .NET 8.0**
 ### **🔹 Prerequisites**
 - **.NET 8.0 SDK** (https://dotnet.microsoft.com/en-us/download/dotnet/8.0)
 - **Windows 10/11** (for DirectML support)
-- **YOLO ONNX Models** (download [YOLOv5](https://github.com/ultralytics/yolov5) / [YOLOv8](https://github.com/ultralytics/ultralytics))
+- **A Pretrained YOLO ONNX Model**
 
 ### **🔹 How to Run**
 1. **Clone the Repository**
