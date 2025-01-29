@@ -1,6 +1,7 @@
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
 using System.Diagnostics;
+using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
 
@@ -134,6 +135,12 @@ namespace Yoble
             return boxes;
         }
 
+        public static float Sigmoid(double value)
+        {
+            float k = (float)Math.Exp(value);
+            return k / (1.0f + k);
+        }
+
         private List<Rectangle> PostProcessYoloV8Output(Tensor<float> outputTensor, int imgWidth, int imgHeight)
         {
             List<Rectangle> boxes = new();
@@ -142,11 +149,7 @@ namespace Yoble
             for (int i = 0; i < numDetections; i++)
             {
                 float objectness = outputTensor[0, 4, i]; // Confidence score
-                if (i < 5) // Print first 5 detections for debugging
-                {
-                    Debug.WriteLine($"[DEBUG] Detection {i}: Confidence={objectness}");
-                }
-
+                Debug.WriteLine($"new conf: {objectness}"); // bad numbers something is off
                 if (objectness < confidenceThreshold) continue;
 
                 // Extract normalized coordinates
@@ -156,15 +159,10 @@ namespace Yoble
                 float height = outputTensor[0, 3, i];
 
                 // Convert YOLO format (center-x, center-y, width, height) to (x_min, y_min, width, height)
-                float xMin = (xCenter - width / 2) * imgWidth;
-                float yMin = (yCenter - height / 2) * imgHeight;
-                float xMax = (xCenter + width / 2) * imgWidth;
-                float yMax = (yCenter + height / 2) * imgHeight;
-
-                if (i < 5) // Print first 5 bounding boxes for debugging
-                {
-                    Debug.WriteLine($"[DEBUG] BBox {i}: ({xMin}, {yMin}, {width}, {height})");
-                }
+                float xMin = xCenter - width / 2;
+                float yMin = yCenter - height / 2;
+                float xMax = xCenter + width / 2;
+                float yMax = yCenter + height / 2;
 
                 // Ignore if outside bounds of image
                 if (xMin < 0 || xMax > imgWidth || yMin < 0 || yMax > imgHeight) continue;
@@ -403,7 +401,7 @@ namespace Yoble
 
         private void AboutUsToolStrip_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Yoble was created by Babyhamsta to help users label images faster for YOLO training.\n\nYoble is free to use and open source, if you paid for it you've been scammed.\n\nPlease check out our github for updates!\nYoable V1.0");
+            MessageBox.Show("Yoable was created by Babyhamsta to help users label images faster for YOLO training.\n\nYoble is free to use and open source, if you paid for it you've been scammed.\n\nPlease check out our github for updates!\nYoable V1.0");
         }
 
         //---------------------------------\\

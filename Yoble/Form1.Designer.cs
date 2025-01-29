@@ -37,11 +37,11 @@
             AIDropdownButton = new ToolStripDropDownButton();
             AutoLabelImagesToolStrip = new ToolStripMenuItem();
             AutoSuggestLabelsToolStrip = new ToolStripMenuItem();
+            AboutUsToolStrip = new ToolStripLabel();
             MainPanel = new Panel();
             LoadedImage = new PictureBox();
             LabelListBox = new ListBox();
             ImageListBox = new ListBox();
-            AboutUsToolStrip = new ToolStripLabel();
             toolStrip1.SuspendLayout();
             MainPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)LoadedImage).BeginInit();
@@ -114,6 +114,13 @@
             AutoSuggestLabelsToolStrip.Text = "Auto Suggest Labels";
             AutoSuggestLabelsToolStrip.Click += AutoSuggestLabelsToolStrip_Click;
             // 
+            // AboutUsToolStrip
+            // 
+            AboutUsToolStrip.Name = "AboutUsToolStrip";
+            AboutUsToolStrip.Size = new Size(40, 22);
+            AboutUsToolStrip.Text = "About";
+            AboutUsToolStrip.Click += AboutUsToolStrip_Click;
+            // 
             // MainPanel
             // 
             MainPanel.Controls.Add(LoadedImage);
@@ -161,13 +168,6 @@
             ImageListBox.TabIndex = 1;
             ImageListBox.SelectedIndexChanged += ImageListBox_SelectedIndexChanged;
             // 
-            // AboutUsToolStrip
-            // 
-            AboutUsToolStrip.Name = "AboutUsToolStrip";
-            AboutUsToolStrip.Size = new Size(40, 22);
-            AboutUsToolStrip.Text = "About";
-            AboutUsToolStrip.Click += AboutUsToolStrip_Click;
-            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
@@ -178,7 +178,7 @@
             Name = "Form1";
             ShowIcon = false;
             StartPosition = FormStartPosition.CenterScreen;
-            Text = "Yoble";
+            Text = "Yoable";
             toolStrip1.ResumeLayout(false);
             toolStrip1.PerformLayout();
             MainPanel.ResumeLayout(false);
