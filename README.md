@@ -77,10 +77,12 @@ Labels are saved in YOLO .txt format with image-aligned names.
 ## 📜 License
 GNU General Public License v3.0
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
+
 This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose. See the GNU General Public License for more details.
 
 📜 You can read the full license [here](https://github.com/Babyhamsta/Yoble/blob/master/LICENSE.txt).
 
 ## 🤝 Contributing
 Want to improve Yoable? Fork the repo and submit a PR!
+
 For issues or feature requests, submit a GitHub Issue.
