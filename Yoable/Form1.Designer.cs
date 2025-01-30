@@ -38,12 +38,13 @@
             AutoLabelImagesToolStrip = new ToolStripMenuItem();
             AutoSuggestLabelsToolStrip = new ToolStripMenuItem();
             AISettingsToolStrip = new ToolStripMenuItem();
+            UISettingsDropdown = new ToolStripDropDownButton();
             AboutUsToolStrip = new ToolStripLabel();
             MainPanel = new Panel();
             LoadedImage = new PictureBox();
             LabelListBox = new ListBox();
             ImageListBox = new ListBox();
-            UISettingsDropdown = new ToolStripDropDownButton();
+            DarkThemeToolStrip = new ToolStripMenuItem();
             toolStrip1.SuspendLayout();
             MainPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)LoadedImage).BeginInit();
@@ -72,6 +73,7 @@
             // 
             // ImportDirectoryToolStrip
             // 
+            ImportDirectoryToolStrip.BackColor = SystemColors.Control;
             ImportDirectoryToolStrip.Name = "ImportDirectoryToolStrip";
             ImportDirectoryToolStrip.Size = new Size(161, 22);
             ImportDirectoryToolStrip.Text = "Import Directory";
@@ -122,6 +124,16 @@
             AISettingsToolStrip.Size = new Size(181, 22);
             AISettingsToolStrip.Text = "AI Settings";
             AISettingsToolStrip.Click += AISettingsToolStrip_Click;
+            // 
+            // UISettingsDropdown
+            // 
+            UISettingsDropdown.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            UISettingsDropdown.DropDownItems.AddRange(new ToolStripItem[] { DarkThemeToolStrip });
+            UISettingsDropdown.Image = (Image)resources.GetObject("UISettingsDropdown.Image");
+            UISettingsDropdown.ImageTransparentColor = Color.Magenta;
+            UISettingsDropdown.Name = "UISettingsDropdown";
+            UISettingsDropdown.Size = new Size(76, 22);
+            UISettingsDropdown.Text = "UI Settings";
             // 
             // AboutUsToolStrip
             // 
@@ -176,14 +188,12 @@
             ImageListBox.TabIndex = 1;
             ImageListBox.SelectedIndexChanged += ImageListBox_SelectedIndexChanged;
             // 
-            // UISettingsDropdown
+            // DarkThemeToolStrip
             // 
-            UISettingsDropdown.DisplayStyle = ToolStripItemDisplayStyle.Text;
-            UISettingsDropdown.Image = (Image)resources.GetObject("UISettingsDropdown.Image");
-            UISettingsDropdown.ImageTransparentColor = Color.Magenta;
-            UISettingsDropdown.Name = "UISettingsDropdown";
-            UISettingsDropdown.Size = new Size(76, 22);
-            UISettingsDropdown.Text = "UI Settings";
+            DarkThemeToolStrip.Name = "DarkThemeToolStrip";
+            DarkThemeToolStrip.Size = new Size(180, 22);
+            DarkThemeToolStrip.Text = "Dark Theme";
+            DarkThemeToolStrip.Click += DarkThemeToolStrip_Click;
             // 
             // Form1
             // 
@@ -221,5 +231,6 @@
         private ToolStripLabel AboutUsToolStrip;
         private ToolStripMenuItem AISettingsToolStrip;
         private ToolStripDropDownButton UISettingsDropdown;
+        private ToolStripMenuItem DarkThemeToolStrip;
     }
 }

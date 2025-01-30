@@ -1,9 +1,7 @@
+using Dark.Net;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
-using System.Diagnostics;
-using System.Drawing;
 using System.Drawing.Imaging;
-using System.Linq;
 using Yoable;
 
 namespace Yoble
@@ -18,6 +16,12 @@ namespace Yoble
         private bool isYoloV5 = true; // Flag to differentiate YOLOv5 vs YOLOv8
         private List<LabelData> suggestedLabels = new();
         private int TotalDetections = 0;
+
+        // UI Overlay
+        private Panel overlayPanel;
+        private Label overlayLabel;
+        private CancellationTokenSource? aiProcessingToken;
+        private Button cancelButton;
 
         // Images and drawing
         private string currentImagePath = "";
@@ -57,6 +61,174 @@ namespace Yoble
         public Form1()
         {
             InitializeComponent();
+            InitializeOverlay();
+
+            // Load saved settings
+            bool isDarkTheme = Yoable.Properties.Settings.Default.DarkTheme;
+            float confidence = Yoable.Properties.Settings.Default.AIConfidence;
+
+            // Apply settings
+            ToggleDarkMode(isDarkTheme);
+            confidenceThreshold = confidence;
+            DarkThemeToolStrip.Checked = isDarkTheme;
+
+            // Auto dark theme title bar
+            DarkNet.Instance.SetWindowThemeForms(this, Theme.Auto);
+        }
+
+        //-----------------------\\
+        //-- Dark Theme Handler --\\
+        //-------------------------\\
+        public void ToggleDarkMode(bool enableDark)
+        {
+            // Update Form colors
+            this.BackColor = enableDark ? Color.FromArgb(30, 30, 30) : SystemColors.Control;
+            this.ForeColor = enableDark ? Color.White : SystemColors.ControlText;
+
+            foreach (Control control in this.Controls)
+            {
+                ApplyThemeToControl(control, enableDark);
+            }
+        }
+
+        private void ApplyThemeToControl(Control control, bool enableDark)
+        {
+            Color backgroundColor = enableDark ? Color.FromArgb(40, 40, 40) : SystemColors.Control;
+            Color textColor = enableDark ? Color.White : SystemColors.ControlText;
+
+            switch (control)
+            {
+                case Panel or GroupBox:
+                    control.BackColor = backgroundColor;
+                    control.ForeColor = textColor;
+                    break;
+
+                case Label:
+                    control.ForeColor = textColor;
+                    break;
+
+                case Button button:
+                    button.BackColor = enableDark ? Color.FromArgb(50, 50, 50) : SystemColors.ButtonFace;
+                    button.ForeColor = textColor;
+                    button.FlatStyle = FlatStyle.Flat;
+                    button.FlatAppearance.BorderSize = 0;
+                    button.FlatAppearance.MouseOverBackColor = enableDark ? Color.FromArgb(70, 70, 70) : SystemColors.ButtonHighlight;
+                    button.FlatAppearance.MouseDownBackColor = enableDark ? Color.FromArgb(90, 90, 90) : SystemColors.ButtonShadow;
+                    break;
+
+                case ListBox listBox:
+                    listBox.BackColor = backgroundColor;
+                    listBox.ForeColor = textColor;
+                    listBox.BorderStyle = BorderStyle.FixedSingle;
+                    break;
+
+                case TextBox textBox:
+                    textBox.BackColor = enableDark ? Color.FromArgb(50, 50, 50) : SystemColors.Window;
+                    textBox.ForeColor = textColor;
+                    textBox.BorderStyle = BorderStyle.FixedSingle;
+                    break;
+
+                case ToolStrip toolStrip:
+                    toolStrip.BackColor = enableDark ? Color.FromArgb(50, 50, 50) : SystemColors.Control;
+                    toolStrip.ForeColor = textColor;
+                    foreach (ToolStripItem item in toolStrip.Items)
+                    {
+                        item.BackColor = toolStrip.BackColor;
+                        item.ForeColor = textColor;
+                        if (item is ToolStripDropDownItem menuItem)
+                        {
+                            ApplyThemeToMenuItems(menuItem, enableDark);
+                        }
+                    }
+                    break;
+            }
+
+            // Apply theme recursively to nested controls
+            foreach (Control child in control.Controls)
+            {
+                ApplyThemeToControl(child, enableDark);
+            }
+        }
+
+        private void ApplyThemeToMenuItems(ToolStripDropDownItem menuItem, bool enableDark)
+        {
+            menuItem.BackColor = enableDark ? Color.FromArgb(50, 50, 50) : SystemColors.Control;
+            menuItem.ForeColor = enableDark ? Color.White : SystemColors.ControlText;
+            menuItem.DropDown.BackColor = menuItem.BackColor;
+            menuItem.DropDown.ForeColor = menuItem.ForeColor;
+
+            foreach (ToolStripItem subItem in menuItem.DropDownItems)
+            {
+                if (subItem is ToolStripDropDownItem subMenuItem)
+                {
+                    ApplyThemeToMenuItems(subMenuItem, enableDark);
+                }
+                else
+                {
+                    subItem.BackColor = menuItem.BackColor;
+                    subItem.ForeColor = menuItem.ForeColor;
+                }
+            }
+        }
+
+        //------------------\\
+        //-- AI UI Overlay --\\
+        //--------------------\\
+        private void CenterOverlay()
+        {
+            overlayPanel.Location = new Point((this.ClientSize.Width - overlayPanel.Width) / 2,
+                                              (this.ClientSize.Height - overlayPanel.Height) / 2);
+        }
+
+        private void InitializeOverlay()
+        {
+            overlayPanel = new Panel
+            {
+                Size = new Size(this.Width, 100),
+                BackColor = ColorTranslator.FromHtml("#181C14"),
+                Visible = false
+            };
+
+            overlayLabel = new Label
+            {
+                Text = "Running AI Detections...",
+                ForeColor = Color.White,
+                Font = new Font("Arial", 16, FontStyle.Bold),
+                AutoSize = false,
+                TextAlign = ContentAlignment.MiddleCenter,
+                Dock = DockStyle.Top,
+                Height = 50
+            };
+
+            Button cancelButton = new Button
+            {
+                Text = "Cancel",
+                Font = new Font("Arial", 12, FontStyle.Bold),
+                ForeColor = Color.White,
+                BackColor = Color.FromArgb(220, 200, 0, 0),
+                Size = new Size(100, 30),
+                Location = new Point((overlayPanel.Width - 100) / 2, 60), // Centered inside banner
+                Visible = true
+            };
+
+            // Modern button styling (flat, rounded corners)
+            cancelButton.FlatAppearance.BorderSize = 0;
+            cancelButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(250, 255, 0, 0); // Brighter red hover effect
+            cancelButton.FlatAppearance.MouseDownBackColor = Color.FromArgb(255, 180, 0, 0); // Slightly darker red click effect
+            cancelButton.Location = new Point((overlayPanel.Width - cancelButton.Width) / 2, 55);
+
+            cancelButton.Click += (s, e) =>
+            {
+                if (aiProcessingToken != null)
+                {
+                    aiProcessingToken.Cancel();
+                    overlayLabel.Text = "Cancelling AI Detections...";
+                }
+            };
+
+            overlayPanel.Controls.Add(overlayLabel);
+            overlayPanel.Controls.Add(cancelButton);
+            Controls.Add(overlayPanel);
         }
 
         //-----------------\\
@@ -278,21 +450,11 @@ namespace Yoble
                     ExecutionMode = ExecutionMode.ORT_PARALLEL
                 };
 
-                // Try DirectML first
-                try
-                {
-                    sessionOptions.AppendExecutionProvider_DML();
-                    yoloSession = new InferenceSession(yoloModelPath, sessionOptions);
-                    usingGPU = true; // DirectML successfully loaded
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"DirectML is not supported on this system. Falling back to CPU.\nError: {ex.Message}", "DirectML Error", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-
-                    sessionOptions.AppendExecutionProvider_CPU();
-                    yoloSession = new InferenceSession(yoloModelPath, sessionOptions);
-                    outputNames = new List<string>(yoloSession.OutputMetadata.Keys);
-                }
+                // Defaults to CPU, eventually we'll fix this..
+                sessionOptions.AppendExecutionProvider_CPU();
+                yoloSession = new InferenceSession(yoloModelPath, sessionOptions);
+                outputNames = new List<string>(yoloSession.OutputMetadata.Keys);
+                usingGPU = true; // DirectML successfully loaded
 
                 // Detect model type
                 int modelVersion = DetectYoloVersion();
@@ -417,32 +579,50 @@ namespace Yoble
             }
         }
 
-        private void AutoLabelImagesToolStrip_Click(object sender, EventArgs e)
+        private async void AutoLabelImagesToolStrip_Click(object sender, EventArgs e)
         {
-
-            // Reset on each run
-            TotalDetections = 0;
-
             if (yoloSession == null)
                 LoadYoloModel();
 
             if (yoloSession == null) return; // Exit if loading failed
 
-            foreach (var imagePath in imagePathMap.Values)
+            aiProcessingToken = new CancellationTokenSource();
+
+            // Show overlay and bring to front
+            overlayPanel.Visible = true;
+            overlayPanel.BringToFront();
+            CenterOverlay(); // Ensure it's centered
+
+            int totalDetections = 0;
+
+            await Task.Run(() =>
             {
-                Bitmap? image = new Bitmap(imagePath);
-                List<Rectangle> detectedBoxes = RunYoloInference(image);
-
-                if (!labelStorage.ContainsKey(imagePath))
-                    labelStorage[imagePath] = new List<LabelData>();
-
-                foreach (var box in detectedBoxes)
+                foreach (var imagePath in imagePathMap.Values)
                 {
-                    labelStorage[imagePath].Add(new LabelData { Rect = box, Name = "AI Label" });
-                }
-            }
+                    if (aiProcessingToken.IsCancellationRequested) return;
 
-            MessageBox.Show($"Auto-labeling complete, total detections: {TotalDetections}", "AI Labels", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    using Bitmap? image = new Bitmap(imagePath);
+                    List<Rectangle> detectedBoxes = RunYoloInference(image);
+
+                    lock (labelStorage)
+                    {
+                        if (!labelStorage.ContainsKey(imagePath))
+                            labelStorage[imagePath] = new List<LabelData>();
+
+                        foreach (var box in detectedBoxes)
+                        {
+                            labelStorage[imagePath].Add(new LabelData { Rect = box, Name = "AI Label" });
+                        }
+
+                        totalDetections += detectedBoxes.Count;
+                    }
+                }
+            });
+
+            // Hide overlay when done
+            overlayPanel.Visible = false;
+
+            MessageBox.Show($"Auto-labeling complete, total detections: {totalDetections}", "AI Labels", MessageBoxButtons.OK, MessageBoxIcon.Information);
             LoadedImage.Invalidate();
         }
 
@@ -472,9 +652,27 @@ namespace Yoble
                 if (settingsForm.ShowDialog() == DialogResult.OK)
                 {
                     confidenceThreshold = settingsForm.ConfidenceThreshold;
+
+                    // Save setting
+                    Yoable.Properties.Settings.Default.AIConfidence = confidenceThreshold;
+                    Yoable.Properties.Settings.Default.Save();
+
                     MessageBox.Show($"AI Confidence Threshold updated to: {(confidenceThreshold * 100):F0}%",
                                     "AI Settings Updated", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
+            }
+        }
+
+        private void DarkThemeToolStrip_Click(object sender, EventArgs e)
+        {
+            if (sender is ToolStripMenuItem menuItem)
+            {
+                menuItem.Checked = !menuItem.Checked;
+                ToggleDarkMode(menuItem.Checked);
+
+                // Save setting
+                Yoable.Properties.Settings.Default.DarkTheme = menuItem.Checked;
+                Yoable.Properties.Settings.Default.Save();
             }
         }
 
