@@ -33,18 +33,20 @@
             toolStripDropDownButton1 = new ToolStripDropDownButton();
             ImportDirectoryToolStrip = new ToolStripMenuItem();
             ImportImageToolStrip = new ToolStripMenuItem();
+            YOLOLabelImportToolStrip = new ToolStripMenuItem();
             ExportLabelsToolStrip = new ToolStripMenuItem();
             AIDropdownButton = new ToolStripDropDownButton();
             AutoLabelImagesToolStrip = new ToolStripMenuItem();
             AutoSuggestLabelsToolStrip = new ToolStripMenuItem();
             AISettingsToolStrip = new ToolStripMenuItem();
             UISettingsDropdown = new ToolStripDropDownButton();
+            DarkThemeToolStrip = new ToolStripMenuItem();
             AboutUsToolStrip = new ToolStripLabel();
             MainPanel = new Panel();
             LoadedImage = new PictureBox();
             LabelListBox = new ListBox();
             ImageListBox = new ListBox();
-            DarkThemeToolStrip = new ToolStripMenuItem();
+            ClearAllToolStrip = new ToolStripMenuItem();
             toolStrip1.SuspendLayout();
             MainPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)LoadedImage).BeginInit();
@@ -62,7 +64,7 @@
             // toolStripDropDownButton1
             // 
             toolStripDropDownButton1.DisplayStyle = ToolStripItemDisplayStyle.Text;
-            toolStripDropDownButton1.DropDownItems.AddRange(new ToolStripItem[] { ImportDirectoryToolStrip, ImportImageToolStrip, ExportLabelsToolStrip });
+            toolStripDropDownButton1.DropDownItems.AddRange(new ToolStripItem[] { ImportDirectoryToolStrip, ImportImageToolStrip, YOLOLabelImportToolStrip, ExportLabelsToolStrip, ClearAllToolStrip });
             toolStripDropDownButton1.Image = (Image)resources.GetObject("toolStripDropDownButton1.Image");
             toolStripDropDownButton1.ImageScaling = ToolStripItemImageScaling.None;
             toolStripDropDownButton1.ImageTransparentColor = Color.Magenta;
@@ -75,21 +77,28 @@
             // 
             ImportDirectoryToolStrip.BackColor = SystemColors.Control;
             ImportDirectoryToolStrip.Name = "ImportDirectoryToolStrip";
-            ImportDirectoryToolStrip.Size = new Size(161, 22);
+            ImportDirectoryToolStrip.Size = new Size(180, 22);
             ImportDirectoryToolStrip.Text = "Import Directory";
             ImportDirectoryToolStrip.Click += ImportDirectoryToolStrip_Click;
             // 
             // ImportImageToolStrip
             // 
             ImportImageToolStrip.Name = "ImportImageToolStrip";
-            ImportImageToolStrip.Size = new Size(161, 22);
+            ImportImageToolStrip.Size = new Size(180, 22);
             ImportImageToolStrip.Text = "Import Image";
             ImportImageToolStrip.Click += ImportImageToolStrip_Click;
+            // 
+            // YOLOLabelImportToolStrip
+            // 
+            YOLOLabelImportToolStrip.Name = "YOLOLabelImportToolStrip";
+            YOLOLabelImportToolStrip.Size = new Size(180, 22);
+            YOLOLabelImportToolStrip.Text = "Import YOLO Labels";
+            YOLOLabelImportToolStrip.Click += YOLOLabelImportToolStrip_Click;
             // 
             // ExportLabelsToolStrip
             // 
             ExportLabelsToolStrip.Name = "ExportLabelsToolStrip";
-            ExportLabelsToolStrip.Size = new Size(161, 22);
+            ExportLabelsToolStrip.Size = new Size(180, 22);
             ExportLabelsToolStrip.Text = "Export Labels";
             ExportLabelsToolStrip.Click += ExportLabelsToolStrip_Click;
             // 
@@ -134,6 +143,13 @@
             UISettingsDropdown.Name = "UISettingsDropdown";
             UISettingsDropdown.Size = new Size(76, 22);
             UISettingsDropdown.Text = "UI Settings";
+            // 
+            // DarkThemeToolStrip
+            // 
+            DarkThemeToolStrip.Name = "DarkThemeToolStrip";
+            DarkThemeToolStrip.Size = new Size(137, 22);
+            DarkThemeToolStrip.Text = "Dark Theme";
+            DarkThemeToolStrip.Click += DarkThemeToolStrip_Click;
             // 
             // AboutUsToolStrip
             // 
@@ -188,12 +204,12 @@
             ImageListBox.TabIndex = 1;
             ImageListBox.SelectedIndexChanged += ImageListBox_SelectedIndexChanged;
             // 
-            // DarkThemeToolStrip
+            // ClearAllToolStrip
             // 
-            DarkThemeToolStrip.Name = "DarkThemeToolStrip";
-            DarkThemeToolStrip.Size = new Size(180, 22);
-            DarkThemeToolStrip.Text = "Dark Theme";
-            DarkThemeToolStrip.Click += DarkThemeToolStrip_Click;
+            ClearAllToolStrip.Name = "ClearAllToolStrip";
+            ClearAllToolStrip.Size = new Size(180, 22);
+            ClearAllToolStrip.Text = "Clear All";
+            ClearAllToolStrip.Click += ClearAllToolStrip_Click;
             // 
             // Form1
             // 
@@ -232,5 +248,7 @@
         private ToolStripMenuItem AISettingsToolStrip;
         private ToolStripDropDownButton UISettingsDropdown;
         private ToolStripMenuItem DarkThemeToolStrip;
+        private ToolStripMenuItem YOLOLabelImportToolStrip;
+        private ToolStripMenuItem ClearAllToolStrip;
     }
 }

@@ -579,6 +579,93 @@ namespace Yoble
             }
         }
 
+        private void YOLOLabelImportToolStrip_Click(object sender, EventArgs e)
+        {
+            using FolderBrowserDialog folderDialog = new();
+            folderDialog.Description = "Select YOLO Label Directory";
+
+            if (folderDialog.ShowDialog() == DialogResult.OK)
+            {
+                LoadYOLOLabelsFromDirectory(folderDialog.SelectedPath);
+            }
+        }
+
+        private void ExportLabelsToolStrip_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(exportDirectory))
+            {
+                using FolderBrowserDialog folderDialog = new();
+                folderDialog.Description = "Select a directory to save YOLO labels";
+
+                if (folderDialog.ShowDialog() == DialogResult.OK)
+                {
+                    exportDirectory = folderDialog.SelectedPath;
+                }
+                else
+                {
+                    return; // User canceled, so don't export
+                }
+            }
+
+            int exportedFiles = 0;
+
+            foreach (var kvp in labelStorage)
+            {
+                string imagePath = kvp.Key; // Get the original image path
+                if (!File.Exists(imagePath)) continue; // Skip due to image file missing
+
+                List<LabelData> labels = kvp.Value;
+                if (labels.Count == 0) continue; // Skip images with no labels
+
+                string imageName = Path.GetFileNameWithoutExtension(imagePath);
+                string labelFilePath = Path.Combine(exportDirectory, imageName + ".txt");
+
+                try
+                {
+                    ExportLabelsToYolo(labelFilePath, imagePath, labels);
+                    exportedFiles++;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to export labels for {imageName}.\n\nError: {ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
+            }
+
+            if (exportedFiles > 0)
+            {
+                MessageBox.Show($"Export complete! {exportedFiles} label files saved in {exportDirectory}.", "Export Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                MessageBox.Show("No labels were found to export.", "Export Labels", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+        }
+
+        private void ClearAllToolStrip_Click(object sender, EventArgs e)
+        {
+            // Confirm before clearing
+            var result = MessageBox.Show("Are you sure you want to clear all images and labels?",
+                                         "Clear All", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+
+            if (result == DialogResult.Yes)
+            {
+                // Reset everything
+                imagePathMap.Clear();
+                labelStorage.Clear();
+                labels.Clear();
+                suggestedLabels.Clear();
+                currentImagePath = "";
+
+                // Clear UI elements
+                ImageListBox.Items.Clear();
+                LabelListBox.Items.Clear();
+                LoadedImage.Image = null;
+
+                // Invalidate UI to reflect changes
+                LoadedImage.Invalidate();
+            }
+        }
+
         private async void AutoLabelImagesToolStrip_Click(object sender, EventArgs e)
         {
             if (yoloSession == null)
@@ -974,57 +1061,79 @@ namespace Yoble
             }
         }
 
-        private void ExportLabelsToolStrip_Click(object sender, EventArgs e)
+        private List<LabelData> LoadYoloLabels(string labelFile, string imagePath)
         {
-            if (string.IsNullOrEmpty(exportDirectory))
+            List<LabelData> loadedLabels = new();
+
+            if (!File.Exists(labelFile)) return loadedLabels;
+
+            try
             {
-                using FolderBrowserDialog folderDialog = new();
-                folderDialog.Description = "Select a directory to save YOLO labels";
+                using StreamReader reader = new StreamReader(labelFile);
+                string? line;
+                Bitmap tempImage = new Bitmap(imagePath); // Get image dimensions
+                int imgWidth = tempImage.Width;
+                int imgHeight = tempImage.Height;
 
-                if (folderDialog.ShowDialog() == DialogResult.OK)
+                while ((line = reader.ReadLine()) != null)
                 {
-                    exportDirectory = folderDialog.SelectedPath;
-                }
-                else
-                {
-                    return; // User canceled, so don't export
-                }
-            }
+                    string[] parts = line.Split(' ');
+                    if (parts.Length != 5) continue; // Ensure correct format
 
-            int exportedFiles = 0;
+                    // Parse YOLO format
+                    float xCenter = float.Parse(parts[1]) * imgWidth;
+                    float yCenter = float.Parse(parts[2]) * imgHeight;
+                    float width = float.Parse(parts[3]) * imgWidth;
+                    float height = float.Parse(parts[4]) * imgHeight;
 
-            foreach (var kvp in labelStorage)
-            {
-                string imagePath = kvp.Key; // Get the original image path
-                if (!File.Exists(imagePath)) continue; // Skip due to image file missing
+                    int x = (int)(xCenter - width / 2);
+                    int y = (int)(yCenter - height / 2);
 
-                List<LabelData> labels = kvp.Value;
-                if (labels.Count == 0) continue; // Skip images with no labels
-
-                string imageName = Path.GetFileNameWithoutExtension(imagePath);
-                string labelFilePath = Path.Combine(exportDirectory, imageName + ".txt");
-
-                try
-                {
-                    ExportLabelsToYolo(labelFilePath, imagePath, labels);
-                    exportedFiles++;
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Failed to export labels for {imageName}.\n\nError: {ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    loadedLabels.Add(new LabelData { Rect = new Rectangle(x, y, (int)width, (int)height), Name = $"Label {loadedLabels.Count + 1}" });
                 }
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Error loading labels from {labelFile}:\n{ex.Message}", "Label Load Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
 
-            if (exportedFiles > 0)
-            {
-                MessageBox.Show($"Export complete! {exportedFiles} label files saved in {exportDirectory}.", "Export Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            else
-            {
-                MessageBox.Show("No labels were found to export.", "Export Labels", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
+            return loadedLabels;
         }
 
+
+        private void LoadYOLOLabelsFromDirectory(string directoryPath)
+        {
+            if (!Directory.Exists(directoryPath)) return;
+
+            string[] labelFiles = Directory.GetFiles(directoryPath, "*.txt");
+            int labelsLoaded = 0;
+
+            foreach (string labelFile in labelFiles)
+            {
+                string imageName = Path.GetFileNameWithoutExtension(labelFile);
+                string matchingImagePath = imagePathMap.Values.FirstOrDefault(img => Path.GetFileNameWithoutExtension(img) == imageName);
+
+                if (!string.IsNullOrEmpty(matchingImagePath))
+                {
+                    labelStorage[matchingImagePath] = LoadYoloLabels(labelFile, matchingImagePath);
+                    labelsLoaded++;
+                }
+            }
+
+            MessageBox.Show($"YOLO labels loaded: {labelsLoaded}", "YOLO Label Import", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            // Refresh current image if needed
+            if (!string.IsNullOrEmpty(currentImagePath) && labelStorage.ContainsKey(currentImagePath))
+            {
+                labels = labelStorage[currentImagePath];
+                LabelListBox.Items.Clear();
+                foreach (var label in labels)
+                {
+                    LabelListBox.Items.Add(label.Name);
+                }
+                LoadedImage.Invalidate();
+            }
+        }
 
         private void ExportLabelsToYolo(string filePath, string imagePath, List<LabelData> labelsToExport)
         {
