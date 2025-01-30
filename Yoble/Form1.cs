@@ -243,8 +243,7 @@ namespace Yoble
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error detecting YOLO version: {ex.Message}", "Model Detection Error",
-                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show($"Error detecting YOLO version: {ex.Message}", "Model Detection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
 
             return 0; // ERROR - Do not continue
@@ -420,6 +419,10 @@ namespace Yoble
 
         private void AutoLabelImagesToolStrip_Click(object sender, EventArgs e)
         {
+
+            // Reset on each run
+            TotalDetections = 0;
+
             if (yoloSession == null)
                 LoadYoloModel();
 
@@ -445,6 +448,8 @@ namespace Yoble
 
         private void AutoSuggestLabelsToolStrip_Click(object sender, EventArgs e)
         {
+            MessageBox.Show("Suggest labels is still a WIP");
+            return;
             if (string.IsNullOrEmpty(currentImagePath)) return;
 
             if (yoloSession == null)
@@ -788,32 +793,48 @@ namespace Yoble
                 }
             }
 
-            if (string.IsNullOrEmpty(currentImagePath) || !labelStorage.ContainsKey(currentImagePath) || labelStorage[currentImagePath].Count == 0)
+            int exportedFiles = 0;
+
+            foreach (var kvp in labelStorage)
             {
-                MessageBox.Show("No labels to export.", "Export Labels", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
+                string imagePath = kvp.Key;
+                List<LabelData> labels = kvp.Value;
+
+                if (labels.Count == 0) continue; // Skip images with no labels
+
+                string imageName = Path.GetFileNameWithoutExtension(imagePath);
+                string labelFilePath = Path.Combine(exportDirectory, imageName + ".txt");
+
+                try
+                {
+                    ExportLabelsToYolo(labelFilePath, labels);
+                    exportedFiles++;
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Failed to export labels for {imageName}.\n\nError: {ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
             }
 
-            string imageName = Path.GetFileNameWithoutExtension(currentImagePath); // Get image name without extension
-            string labelFilePath = Path.Combine(exportDirectory, imageName + ".txt"); // Save in user-chosen folder
-
-            try
+            if (exportedFiles > 0)
             {
-                ExportLabelsToYolo(labelFilePath, labelStorage[currentImagePath]);
-                MessageBox.Show($"Labels exported in YOLO format to:\n\n{labelFilePath}", "Export Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Export complete! {exportedFiles} label files saved.", "Export Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
-            catch (Exception ex)
+            else
             {
-                MessageBox.Show($"Failed to export labels.\n\nError: {ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("No labels were found to export.", "Export Labels", MessageBoxButtons.OK, MessageBoxIcon.Warning);
             }
         }
 
         private void ExportLabelsToYolo(string filePath, List<LabelData> labelsToExport)
         {
-            if (LoadedImage.Image == null) return;
+            string imagePath = Path.Combine(exportDirectory, Path.GetFileNameWithoutExtension(filePath) + ".jpg");
 
-            int imageWidth = LoadedImage.Image.Width;
-            int imageHeight = LoadedImage.Image.Height;
+            if (!File.Exists(imagePath)) return; // Ensure image exists
+
+            using Bitmap image = new Bitmap(imagePath);
+            int imageWidth = image.Width;
+            int imageHeight = image.Height;
 
             using StreamWriter writer = new(filePath);
             foreach (var label in labelsToExport)
