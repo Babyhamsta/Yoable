@@ -10,6 +10,14 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Costura.Fody" Version="6.0.0">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Fody" Version="6.9.1">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
     <PackageReference Include="Microsoft.AI.DirectML" Version="1.15.4" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.20.1" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.20.1" />
