@@ -797,9 +797,10 @@ namespace Yoble
 
             foreach (var kvp in labelStorage)
             {
-                string imagePath = kvp.Key;
-                List<LabelData> labels = kvp.Value;
+                string imagePath = kvp.Key; // Get the original image path
+                if (!File.Exists(imagePath)) continue; // Skip due to image file missing
 
+                List<LabelData> labels = kvp.Value;
                 if (labels.Count == 0) continue; // Skip images with no labels
 
                 string imageName = Path.GetFileNameWithoutExtension(imagePath);
@@ -807,7 +808,7 @@ namespace Yoble
 
                 try
                 {
-                    ExportLabelsToYolo(labelFilePath, labels);
+                    ExportLabelsToYolo(labelFilePath, imagePath, labels);
                     exportedFiles++;
                 }
                 catch (Exception ex)
@@ -818,7 +819,7 @@ namespace Yoble
 
             if (exportedFiles > 0)
             {
-                MessageBox.Show($"Export complete! {exportedFiles} label files saved.", "Export Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show($"Export complete! {exportedFiles} label files saved in {exportDirectory}.", "Export Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             else
             {
@@ -826,17 +827,18 @@ namespace Yoble
             }
         }
 
-        private void ExportLabelsToYolo(string filePath, List<LabelData> labelsToExport)
+
+        private void ExportLabelsToYolo(string filePath, string imagePath, List<LabelData> labelsToExport)
         {
-            string imagePath = Path.Combine(exportDirectory, Path.GetFileNameWithoutExtension(filePath) + ".jpg");
-
-            if (!File.Exists(imagePath)) return; // Ensure image exists
-
             using Bitmap image = new Bitmap(imagePath);
             int imageWidth = image.Width;
             int imageHeight = image.Height;
 
-            using StreamWriter writer = new(filePath);
+            using StreamWriter writer = new(filePath)
+            {
+                AutoFlush = true
+            };
+
             foreach (var label in labelsToExport)
             {
                 float x_center = (label.Rect.X + label.Rect.Width / 2f) / imageWidth;
