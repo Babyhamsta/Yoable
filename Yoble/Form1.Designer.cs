@@ -37,11 +37,13 @@
             AIDropdownButton = new ToolStripDropDownButton();
             AutoLabelImagesToolStrip = new ToolStripMenuItem();
             AutoSuggestLabelsToolStrip = new ToolStripMenuItem();
+            AISettingsToolStrip = new ToolStripMenuItem();
             AboutUsToolStrip = new ToolStripLabel();
             MainPanel = new Panel();
             LoadedImage = new PictureBox();
             LabelListBox = new ListBox();
             ImageListBox = new ListBox();
+            UISettingsDropdown = new ToolStripDropDownButton();
             toolStrip1.SuspendLayout();
             MainPanel.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)LoadedImage).BeginInit();
@@ -49,10 +51,10 @@
             // 
             // toolStrip1
             // 
-            toolStrip1.Items.AddRange(new ToolStripItem[] { toolStripDropDownButton1, AIDropdownButton, AboutUsToolStrip });
+            toolStrip1.Items.AddRange(new ToolStripItem[] { toolStripDropDownButton1, AIDropdownButton, UISettingsDropdown, AboutUsToolStrip });
             toolStrip1.Location = new Point(0, 0);
             toolStrip1.Name = "toolStrip1";
-            toolStrip1.Size = new Size(1338, 25);
+            toolStrip1.Size = new Size(1050, 25);
             toolStrip1.TabIndex = 0;
             toolStrip1.Text = "toolStrip1";
             // 
@@ -92,7 +94,7 @@
             // AIDropdownButton
             // 
             AIDropdownButton.DisplayStyle = ToolStripItemDisplayStyle.Text;
-            AIDropdownButton.DropDownItems.AddRange(new ToolStripItem[] { AutoLabelImagesToolStrip, AutoSuggestLabelsToolStrip });
+            AIDropdownButton.DropDownItems.AddRange(new ToolStripItem[] { AutoLabelImagesToolStrip, AutoSuggestLabelsToolStrip, AISettingsToolStrip });
             AIDropdownButton.Image = (Image)resources.GetObject("AIDropdownButton.Image");
             AIDropdownButton.ImageTransparentColor = Color.Magenta;
             AIDropdownButton.Name = "AIDropdownButton";
@@ -114,6 +116,13 @@
             AutoSuggestLabelsToolStrip.Text = "Auto Suggest Labels";
             AutoSuggestLabelsToolStrip.Click += AutoSuggestLabelsToolStrip_Click;
             // 
+            // AISettingsToolStrip
+            // 
+            AISettingsToolStrip.Name = "AISettingsToolStrip";
+            AISettingsToolStrip.Size = new Size(181, 22);
+            AISettingsToolStrip.Text = "AI Settings";
+            AISettingsToolStrip.Click += AISettingsToolStrip_Click;
+            // 
             // AboutUsToolStrip
             // 
             AboutUsToolStrip.Name = "AboutUsToolStrip";
@@ -129,7 +138,7 @@
             MainPanel.Dock = DockStyle.Fill;
             MainPanel.Location = new Point(0, 25);
             MainPanel.Name = "MainPanel";
-            MainPanel.Size = new Size(1338, 668);
+            MainPanel.Size = new Size(1050, 650);
             MainPanel.TabIndex = 1;
             // 
             // LoadedImage
@@ -137,8 +146,7 @@
             LoadedImage.Dock = DockStyle.Fill;
             LoadedImage.Location = new Point(205, 0);
             LoadedImage.Name = "LoadedImage";
-            LoadedImage.Size = new Size(928, 668);
-            LoadedImage.SizeMode = PictureBoxSizeMode.StretchImage;
+            LoadedImage.Size = new Size(640, 650);
             LoadedImage.TabIndex = 0;
             LoadedImage.TabStop = false;
             LoadedImage.Paint += PictureBox_Paint;
@@ -151,9 +159,9 @@
             LabelListBox.Dock = DockStyle.Right;
             LabelListBox.FormattingEnabled = true;
             LabelListBox.ItemHeight = 15;
-            LabelListBox.Location = new Point(1133, 0);
+            LabelListBox.Location = new Point(845, 0);
             LabelListBox.Name = "LabelListBox";
-            LabelListBox.Size = new Size(205, 668);
+            LabelListBox.Size = new Size(205, 650);
             LabelListBox.TabIndex = 2;
             LabelListBox.SelectedIndexChanged += LabelListBox_SelectedIndexChanged;
             // 
@@ -164,15 +172,24 @@
             ImageListBox.ItemHeight = 15;
             ImageListBox.Location = new Point(0, 0);
             ImageListBox.Name = "ImageListBox";
-            ImageListBox.Size = new Size(205, 668);
+            ImageListBox.Size = new Size(205, 650);
             ImageListBox.TabIndex = 1;
             ImageListBox.SelectedIndexChanged += ImageListBox_SelectedIndexChanged;
+            // 
+            // UISettingsDropdown
+            // 
+            UISettingsDropdown.DisplayStyle = ToolStripItemDisplayStyle.Text;
+            UISettingsDropdown.Image = (Image)resources.GetObject("UISettingsDropdown.Image");
+            UISettingsDropdown.ImageTransparentColor = Color.Magenta;
+            UISettingsDropdown.Name = "UISettingsDropdown";
+            UISettingsDropdown.Size = new Size(76, 22);
+            UISettingsDropdown.Text = "UI Settings";
             // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(7F, 15F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(1338, 693);
+            ClientSize = new Size(1050, 675);
             Controls.Add(MainPanel);
             Controls.Add(toolStrip1);
             Name = "Form1";
@@ -202,5 +219,7 @@
         private ToolStripMenuItem AutoLabelImagesToolStrip;
         private ToolStripMenuItem AutoSuggestLabelsToolStrip;
         private ToolStripLabel AboutUsToolStrip;
+        private ToolStripMenuItem AISettingsToolStrip;
+        private ToolStripDropDownButton UISettingsDropdown;
     }
 }

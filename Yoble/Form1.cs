@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Linq;
+using Yoable;
 
 namespace Yoble
 {
@@ -16,6 +17,7 @@ namespace Yoble
         private float confidenceThreshold = 0.5f; // Minimum confidence to accept a detection
         private bool isYoloV5 = true; // Flag to differentiate YOLOv5 vs YOLOv8
         private List<LabelData> suggestedLabels = new();
+        private int TotalDetections = 0;
 
         // Images and drawing
         private string currentImagePath = "";
@@ -61,6 +63,17 @@ namespace Yoble
         //-- AI Inference --\\
         //-------------------\\
 
+        Bitmap ConvertTo24bpp(Bitmap src)
+        {
+            Bitmap dst = new Bitmap(src.Width, src.Height, PixelFormat.Format24bppRgb);
+            using (Graphics g = Graphics.FromImage(dst))
+            {
+                g.DrawImage(src, new Rectangle(0, 0, src.Width, src.Height));
+            }
+            return dst;
+        }
+
+
         public static float[] BitmapToFloatArray(Bitmap image)
         {
             int height = image.Height;
@@ -102,9 +115,42 @@ namespace Yoble
             return result;
         }
 
+        private List<Rectangle> ApplyNMS(List<(Rectangle box, float confidence)> detections, float iouThreshold = 0.5f)
+        {
+            List<Rectangle> finalDetections = new();
+
+            // Sort detections by confidence descending
+            detections = detections.OrderByDescending(d => d.confidence).ToList();
+
+            while (detections.Count > 0)
+            {
+                var best = detections[0];
+                finalDetections.Add(best.box);
+
+                detections = detections.Skip(1)
+                    .Where(d => ComputeIoU(best.box, d.box) < iouThreshold)
+                    .ToList();
+            }
+
+            return finalDetections;
+        }
+
+        private float ComputeIoU(Rectangle a, Rectangle b)
+        {
+            int x1 = Math.Max(a.Left, b.Left);
+            int y1 = Math.Max(a.Top, b.Top);
+            int x2 = Math.Min(a.Right, b.Right);
+            int y2 = Math.Min(a.Bottom, b.Bottom);
+
+            int intersectionArea = Math.Max(0, x2 - x1) * Math.Max(0, y2 - y1);
+            int unionArea = a.Width * a.Height + b.Width * b.Height - intersectionArea;
+
+            return unionArea == 0 ? 0 : (float)intersectionArea / unionArea;
+        }
+
         private List<Rectangle> PostProcessYoloV5Output(Tensor<float> outputTensor, int imgWidth, int imgHeight)
         {
-            List<Rectangle> boxes = new();
+            List<(Rectangle box, float confidence)> detections = new();
             int numDetections = outputTensor.Dimensions[1]; // 25200 detections for YOLOv5
 
             for (int i = 0; i < numDetections; i++)
@@ -121,35 +167,31 @@ namespace Yoble
                 float height = outputTensor[0, i, 3];
 
                 // Convert to absolute coordinates
-                float xMin = (xCenter - width / 2) * imgWidth;
-                float yMin = (yCenter - height / 2) * imgHeight;
-                float xMax = (xCenter + width / 2) * imgWidth;
-                float yMax = (yCenter + height / 2) * imgHeight;
+                float xMin = xCenter - width / 2;
+                float yMin = yCenter - height / 2;
+                float xMax = xCenter + width / 2;
+                float yMax = yCenter + height / 2;
 
                 // Ensure bounding boxes are within the image bounds
                 if (xMin < 0 || xMax > imgWidth || yMin < 0 || yMax > imgHeight) continue;
-
-                boxes.Add(new Rectangle((int)xMin, (int)yMin, (int)(xMax - xMin), (int)(yMax - yMin)));
+                detections.Add((new Rectangle((int)xMin, (int)yMin, (int)(xMax - xMin), (int)(yMax - yMin)), objectness));
             }
 
-            return boxes;
-        }
+            var finalBoxes = ApplyNMS(detections);
+            TotalDetections = TotalDetections + finalBoxes.Count;
 
-        public static float Sigmoid(double value)
-        {
-            float k = (float)Math.Exp(value);
-            return k / (1.0f + k);
+            return finalBoxes;
         }
 
         private List<Rectangle> PostProcessYoloV8Output(Tensor<float> outputTensor, int imgWidth, int imgHeight)
         {
-            List<Rectangle> boxes = new();
+            List<(Rectangle box, float confidence)> detections = new();
             int numDetections = outputTensor.Dimensions[2]; // Typically 8400 for YOLOv8
 
             for (int i = 0; i < numDetections; i++)
             {
                 float objectness = outputTensor[0, 4, i]; // Confidence score
-                Debug.WriteLine($"new conf: {objectness}"); // bad numbers something is off
+                //Debug.WriteLine($"new conf: {objectness}"); // bad numbers something is off
                 if (objectness < confidenceThreshold) continue;
 
                 // Extract normalized coordinates
@@ -166,12 +208,13 @@ namespace Yoble
 
                 // Ignore if outside bounds of image
                 if (xMin < 0 || xMax > imgWidth || yMin < 0 || yMax > imgHeight) continue;
-
-                boxes.Add(new Rectangle((int)xMin, (int)yMin, (int)(xMax - xMin), (int)(yMax - yMin)));
+                detections.Add((new Rectangle((int)xMin, (int)yMin, (int)(xMax - xMin), (int)(yMax - yMin)), objectness));
             }
 
-            Debug.WriteLine($"[DEBUG] Total boxes detected: {boxes.Count}");
-            return boxes;
+            var finalBoxes = ApplyNMS(detections);
+            TotalDetections = TotalDetections + finalBoxes.Count;
+
+            return finalBoxes;
         }
 
 
@@ -263,10 +306,6 @@ namespace Yoble
                 }
 
                 isYoloV5 = (modelVersion == 5);
-
-                string executionProvider = usingGPU ? "DirectML (GPU)" : "CPU";
-                MessageBox.Show($"Model loaded successfully as YOLOv{modelVersion} using {executionProvider}:\n{yoloModelPath}",
-                                "Model Loaded", MessageBoxButtons.OK, MessageBoxIcon.Information);
             }
             catch (Exception ex)
             {
@@ -276,7 +315,8 @@ namespace Yoble
 
         private List<Rectangle> RunYoloInference(Bitmap? image)
         {
-            float[] inputArray = BitmapToFloatArray(image);
+            Bitmap image24 = ConvertTo24bpp(image);
+            float[] inputArray = BitmapToFloatArray(image24);
             if (inputArray == null) return null;
 
             Tensor<float> inputTensor = new DenseTensor<float>(inputArray, new int[] { 1, 3, image.Height, image.Width });
@@ -288,15 +328,37 @@ namespace Yoble
             var outputTensor = results.First().AsTensor<float>();
 
             // Use the correct post-processing based on the model type
-            return isYoloV5
-                ? PostProcessYoloV5Output(outputTensor, image.Width, image.Height)
-                : PostProcessYoloV8Output(outputTensor, image.Width, image.Height);
+            List<Rectangle> detections = isYoloV5
+             ? PostProcessYoloV5Output(outputTensor, image.Width, image.Height)
+             : PostProcessYoloV8Output(outputTensor, image.Width, image.Height);
+
+            // Refresh the UI
+            Invoke(new Action(() =>
+            {
+                labels = labelStorage[currentImagePath]; // Sync labels
+                RefreshLabelList(); // Update the ListBox
+            }));
+
+            return detections;
         }
 
 
         //----------------\\
         //-- Form EVENTS --\\
         //------------------\\
+
+        private void RefreshLabelList()
+        {
+            LabelListBox.Items.Clear();
+
+            foreach (var label in labels)
+            {
+                LabelListBox.Items.Add(label.Name);
+            }
+
+            LabelListBox.ClearSelected();
+        }
+
 
         private void ImageListBox_SelectedIndexChanged(object sender, EventArgs e)
         {
@@ -366,7 +428,6 @@ namespace Yoble
             foreach (var imagePath in imagePathMap.Values)
             {
                 Bitmap? image = new Bitmap(imagePath);
-                Debug.WriteLine($"Loaded Image - Width:{image.Width}, Height:{image.Height}, {imagePath}");
                 List<Rectangle> detectedBoxes = RunYoloInference(image);
 
                 if (!labelStorage.ContainsKey(imagePath))
@@ -378,7 +439,7 @@ namespace Yoble
                 }
             }
 
-            MessageBox.Show("Auto-labeling complete!", "AI Labels", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show($"Auto-labeling complete, total detections: {TotalDetections}", "AI Labels", MessageBoxButtons.OK, MessageBoxIcon.Information);
             LoadedImage.Invalidate();
         }
 
@@ -399,9 +460,22 @@ namespace Yoble
             LoadedImage.Invalidate();
         }
 
+        private void AISettingsToolStrip_Click(object sender, EventArgs e)
+        {
+            using (var settingsForm = new AiSettings(confidenceThreshold))
+            {
+                if (settingsForm.ShowDialog() == DialogResult.OK)
+                {
+                    confidenceThreshold = settingsForm.ConfidenceThreshold;
+                    MessageBox.Show($"AI Confidence Threshold updated to: {(confidenceThreshold * 100):F0}%",
+                                    "AI Settings Updated", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+        }
+
         private void AboutUsToolStrip_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("Yoable was created by Babyhamsta to help users label images faster for YOLO training.\n\nYoble is free to use and open source, if you paid for it you've been scammed.\n\nPlease check out our github for updates!\nYoable V1.0");
+            MessageBox.Show("- Yoable was created by Babyhamsta to help users label images faster for YOLO training.\n\n- Yoable is free to use and open source, if you paid for it you've been scammed.\n\n- Please check out our github for updates!", "About Yoable (V1.0)");
         }
 
         //---------------------------------\\
