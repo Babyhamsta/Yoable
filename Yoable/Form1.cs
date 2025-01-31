@@ -501,6 +501,12 @@ namespace Yoble
                 transformMatrix.Scale(zoomFactor / oldZoomFactor, zoomFactor / oldZoomFactor, MatrixOrder.Append);
                 transformMatrix.Translate(mouseBeforeZoom.X - offsetX, mouseBeforeZoom.Y - offsetY, MatrixOrder.Append);
 
+                // Smooth transition to the center when zooming out
+                if (zoomFactor < oldZoomFactor && zoomFactor == 1.0f)
+                {
+                    transformMatrix.Reset(); // Ensure reset when fully zoomed out
+                }
+
                 LoadedImage.Invalidate();
             }
         }
