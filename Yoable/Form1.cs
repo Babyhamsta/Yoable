@@ -125,6 +125,10 @@ namespace Yoble
                     LabelListBox.Items.Add(label.Name);
                 }
 
+                // Reset zoom when switching images
+                zoomFactor = 1.0f;
+                transformMatrix.Reset();
+
                 LoadedImage.Invalidate();
             }
         }
@@ -440,7 +444,7 @@ namespace Yoble
         {
             if (cursorPosition == Point.Empty) return;
 
-            using Pen crosshairPen = new(crosshairColor, crosshairSize);
+            using Pen crosshairPen = new Pen(crosshairColor, crosshairSize / zoomFactor);
 
             // Draw horizontal line
             g.DrawLine(crosshairPen, new Point(0, cursorPosition.Y), new Point(LoadedImage.Width, cursorPosition.Y));
@@ -449,21 +453,14 @@ namespace Yoble
             g.DrawLine(crosshairPen, new Point(cursorPosition.X, 0), new Point(cursorPosition.X, LoadedImage.Height));
         }
 
-        // Adjusts a rectangle based on the current zoom transformation
-        private Rectangle TransformRectangle(Rectangle rect)
-        {
-            return new Rectangle(
-                (int)(rect.X * zoomFactor),
-                (int)(rect.Y * zoomFactor),
-                (int)(rect.Width * zoomFactor),
-                (int)(rect.Height * zoomFactor)
-            );
-        }
-
         // Convert mouse coordinates to actual image coordinates
         private Point TransformPoint(Point p)
         {
-            return new Point((int)(p.X / zoomFactor), (int)(p.Y / zoomFactor));
+            Point[] points = { p };
+            Matrix invertedMatrix = transformMatrix.Clone();
+            invertedMatrix.Invert();
+            invertedMatrix.TransformPoints(points);
+            return new Point((int)points[0].X, (int)points[0].Y);
         }
 
         private void PictureBox_MouseWheel(object sender, MouseEventArgs e)
@@ -471,23 +468,38 @@ namespace Yoble
             if (Control.ModifierKeys == Keys.Control && LoadedImage.Image != null)
             {
                 float oldZoomFactor = zoomFactor;
+                PointF mouseBeforeZoom = TransformPoint(e.Location);
 
                 if (e.Delta > 0)
-                    zoomFactor *= 1 + zoomStep;
+                {
+                    zoomFactor *= 1 + zoomStep; // Zoom In
+                }
                 else if (e.Delta < 0)
-                    zoomFactor /= 1 + zoomStep;
+                {
+                    zoomFactor /= 1 + zoomStep; // Zoom Out
+                }
 
-                // Prevent zooming out beyond the original image size
+                // Prevent zooming out beyond original size
                 zoomFactor = Math.Max(1.0f, Math.Min(zoomFactor, 5.0f));
 
-                // Calculate zoom center relative to image
-                zoomCenter = e.Location;
+                // Reset transformation if zoomFactor is back to normal (prevents drifting)
+                if (zoomFactor == 1.0f)
+                {
+                    transformMatrix.Reset();
+                    LoadedImage.Invalidate();
+                    return;
+                }
 
-                // Update transformation matrix
-                transformMatrix.Reset();
-                transformMatrix.Translate(-zoomCenter.X, -zoomCenter.Y, MatrixOrder.Append);
-                transformMatrix.Scale(zoomFactor, zoomFactor, MatrixOrder.Append);
-                transformMatrix.Translate(zoomCenter.X, zoomCenter.Y, MatrixOrder.Append);
+                // Get new mouse position after zoom
+                PointF mouseAfterZoom = TransformPoint(e.Location);
+
+                // Gradually adjust translation instead of jumping
+                float offsetX = mouseAfterZoom.X - mouseBeforeZoom.X;
+                float offsetY = mouseAfterZoom.Y - mouseBeforeZoom.Y;
+
+                transformMatrix.Translate(-mouseBeforeZoom.X, -mouseBeforeZoom.Y, MatrixOrder.Append);
+                transformMatrix.Scale(zoomFactor / oldZoomFactor, zoomFactor / oldZoomFactor, MatrixOrder.Append);
+                transformMatrix.Translate(mouseBeforeZoom.X - offsetX, mouseBeforeZoom.Y - offsetY, MatrixOrder.Append);
 
                 LoadedImage.Invalidate();
             }
@@ -576,7 +588,6 @@ namespace Yoble
                     LabelListBox.Items.Add(newLabel.Name);
                 }
             }
-
             isDragging = false;
             isResizing = false;
         }
@@ -585,29 +596,14 @@ namespace Yoble
         {
             if (LoadedImage.Image == null) return;
             e.Graphics.Transform = transformMatrix;
-
-            // Draw image
             e.Graphics.DrawImage(LoadedImage.Image, new Rectangle(0, 0, LoadedImage.Image.Width, LoadedImage.Image.Height));
-
-            // Draw labels at the correct scale
-            using Pen pen = new(Color.Red, 2 / zoomFactor); // Adjust pen thickness
+            using Pen pen = new Pen(Color.Red, 2 / zoomFactor);
             foreach (var label in labels)
             {
-                Rectangle zoomedRect = TransformRectangle(label.Rect);
-                e.Graphics.DrawRectangle(pen, zoomedRect);
-                if (selectedLabel == label)
-                {
-                    DrawResizeHandles(e.Graphics, zoomedRect);
-                }
+                e.Graphics.DrawRectangle(pen, label.Rect);
+                if (selectedLabel == label) DrawResizeHandles(e.Graphics, label.Rect);
             }
-
-            // Draw current drawing rectangle correctly scaled
-            if (isDrawing)
-            {
-                Rectangle zoomedRect = TransformRectangle(currentRect);
-                e.Graphics.DrawRectangle(pen, zoomedRect);
-            }
-
+            if (isDrawing) e.Graphics.DrawRectangle(pen, currentRect);
             DrawCrosshair(e.Graphics);
         }
 
