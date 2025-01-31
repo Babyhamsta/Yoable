@@ -1,6 +1,7 @@
 using Dark.Net;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.ML.OnnxRuntime.Tensors;
+using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using Yoable;
 
@@ -8,20 +9,11 @@ namespace Yoble
 {
     public partial class Form1 : Form
     {
-        // Onnx Runtime
-        private InferenceSession yoloSession;
-        private List<string>? outputNames;
-        private string yoloModelPath = "";
-        private float confidenceThreshold = 0.5f; // Minimum confidence to accept a detection
-        private bool isYoloV5 = true; // Flag to differentiate YOLOv5 vs YOLOv8
-        private List<LabelData> suggestedLabels = new();
-        private int TotalDetections = 0;
 
-        // UI Overlay
-        private Panel overlayPanel;
-        private Label overlayLabel;
-        private CancellationTokenSource? aiProcessingToken;
-        private Button cancelButton;
+        // Managers/Handlers
+        private YoloAI yoloAI;
+        private ThemeManager themeManager;
+        private OverlayManager overlayManager;
 
         // Images and drawing
         private string currentImagePath = "";
@@ -36,10 +28,16 @@ namespace Yoble
         private int crosshairSize = 1;
         private Color crosshairColor = Color.Black;
 
+        // Zoom
+        private float zoomFactor = 1.0f;
+        private const float zoomStep = 0.1f;
+        private Point zoomCenter = Point.Empty;
+        private Matrix transformMatrix = new Matrix();
+
         // Labeling
         private List<LabelData> labels = new();
-        private Dictionary<string, List<LabelData>> labelStorage = new(); // Labels per imageDrawResizeHandles
-        private LabelData selectedLabel = null;  // The currently selected label
+        private Dictionary<string, List<LabelData>> labelStorage = new();
+        private LabelData selectedLabel = null;
         private bool isResizing = false;
         private bool isDragging = false;
         private int resizeHandleSize = 4;
@@ -61,448 +59,22 @@ namespace Yoble
         public Form1()
         {
             InitializeComponent();
-            InitializeOverlay();
+
+            LoadedImage.MouseWheel += PictureBox_MouseWheel;
 
             // Load saved settings
             bool isDarkTheme = Yoable.Properties.Settings.Default.DarkTheme;
             float confidence = Yoable.Properties.Settings.Default.AIConfidence;
 
-            // Apply settings
-            ToggleDarkMode(isDarkTheme);
-            confidenceThreshold = confidence;
-            DarkThemeToolStrip.Checked = isDarkTheme;
+            yoloAI = new YoloAI(confidence);
+            overlayManager = new OverlayManager(this);
+            themeManager = new ThemeManager(this);
 
-            // Auto dark theme title bar
+            // Apply Dark Theme
+            themeManager.ToggleDarkMode(isDarkTheme);
+            DarkThemeToolStrip.Checked = isDarkTheme;
             DarkNet.Instance.SetWindowThemeForms(this, Theme.Auto);
         }
-
-        //-----------------------\\
-        //-- Dark Theme Handler --\\
-        //-------------------------\\
-        public void ToggleDarkMode(bool enableDark)
-        {
-            // Update Form colors
-            this.BackColor = enableDark ? Color.FromArgb(30, 30, 30) : SystemColors.Control;
-            this.ForeColor = enableDark ? Color.White : SystemColors.ControlText;
-
-            foreach (Control control in this.Controls)
-            {
-                ApplyThemeToControl(control, enableDark);
-            }
-        }
-
-        private void ApplyThemeToControl(Control control, bool enableDark)
-        {
-            Color backgroundColor = enableDark ? Color.FromArgb(40, 40, 40) : SystemColors.Control;
-            Color textColor = enableDark ? Color.White : SystemColors.ControlText;
-
-            switch (control)
-            {
-                case Panel or GroupBox:
-                    control.BackColor = backgroundColor;
-                    control.ForeColor = textColor;
-                    break;
-
-                case Label:
-                    control.ForeColor = textColor;
-                    break;
-
-                case Button button:
-                    button.BackColor = enableDark ? Color.FromArgb(50, 50, 50) : SystemColors.ButtonFace;
-                    button.ForeColor = textColor;
-                    button.FlatStyle = FlatStyle.Flat;
-                    button.FlatAppearance.BorderSize = 0;
-                    button.FlatAppearance.MouseOverBackColor = enableDark ? Color.FromArgb(70, 70, 70) : SystemColors.ButtonHighlight;
-                    button.FlatAppearance.MouseDownBackColor = enableDark ? Color.FromArgb(90, 90, 90) : SystemColors.ButtonShadow;
-                    break;
-
-                case ListBox listBox:
-                    listBox.BackColor = backgroundColor;
-                    listBox.ForeColor = textColor;
-                    listBox.BorderStyle = BorderStyle.FixedSingle;
-                    break;
-
-                case TextBox textBox:
-                    textBox.BackColor = enableDark ? Color.FromArgb(50, 50, 50) : SystemColors.Window;
-                    textBox.ForeColor = textColor;
-                    textBox.BorderStyle = BorderStyle.FixedSingle;
-                    break;
-
-                case ToolStrip toolStrip:
-                    toolStrip.BackColor = enableDark ? Color.FromArgb(50, 50, 50) : SystemColors.Control;
-                    toolStrip.ForeColor = textColor;
-                    foreach (ToolStripItem item in toolStrip.Items)
-                    {
-                        item.BackColor = toolStrip.BackColor;
-                        item.ForeColor = textColor;
-                        if (item is ToolStripDropDownItem menuItem)
-                        {
-                            ApplyThemeToMenuItems(menuItem, enableDark);
-                        }
-                    }
-                    break;
-            }
-
-            // Apply theme recursively to nested controls
-            foreach (Control child in control.Controls)
-            {
-                ApplyThemeToControl(child, enableDark);
-            }
-        }
-
-        private void ApplyThemeToMenuItems(ToolStripDropDownItem menuItem, bool enableDark)
-        {
-            menuItem.BackColor = enableDark ? Color.FromArgb(50, 50, 50) : SystemColors.Control;
-            menuItem.ForeColor = enableDark ? Color.White : SystemColors.ControlText;
-            menuItem.DropDown.BackColor = menuItem.BackColor;
-            menuItem.DropDown.ForeColor = menuItem.ForeColor;
-
-            foreach (ToolStripItem subItem in menuItem.DropDownItems)
-            {
-                if (subItem is ToolStripDropDownItem subMenuItem)
-                {
-                    ApplyThemeToMenuItems(subMenuItem, enableDark);
-                }
-                else
-                {
-                    subItem.BackColor = menuItem.BackColor;
-                    subItem.ForeColor = menuItem.ForeColor;
-                }
-            }
-        }
-
-        //------------------\\
-        //-- AI UI Overlay --\\
-        //--------------------\\
-        private void CenterOverlay()
-        {
-            overlayPanel.Location = new Point((this.ClientSize.Width - overlayPanel.Width) / 2,
-                                              (this.ClientSize.Height - overlayPanel.Height) / 2);
-        }
-
-        private void InitializeOverlay()
-        {
-            overlayPanel = new Panel
-            {
-                Size = new Size(this.Width, 100),
-                BackColor = ColorTranslator.FromHtml("#181C14"),
-                Visible = false
-            };
-
-            overlayLabel = new Label
-            {
-                Text = "Running AI Detections...",
-                ForeColor = Color.White,
-                Font = new Font("Arial", 16, FontStyle.Bold),
-                AutoSize = false,
-                TextAlign = ContentAlignment.MiddleCenter,
-                Dock = DockStyle.Top,
-                Height = 50
-            };
-
-            Button cancelButton = new Button
-            {
-                Text = "Cancel",
-                Font = new Font("Arial", 12, FontStyle.Bold),
-                ForeColor = Color.White,
-                BackColor = Color.FromArgb(220, 200, 0, 0),
-                Size = new Size(100, 30),
-                Location = new Point((overlayPanel.Width - 100) / 2, 60), // Centered inside banner
-                Visible = true
-            };
-
-            // Modern button styling (flat, rounded corners)
-            cancelButton.FlatAppearance.BorderSize = 0;
-            cancelButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(250, 255, 0, 0); // Brighter red hover effect
-            cancelButton.FlatAppearance.MouseDownBackColor = Color.FromArgb(255, 180, 0, 0); // Slightly darker red click effect
-            cancelButton.Location = new Point((overlayPanel.Width - cancelButton.Width) / 2, 55);
-
-            cancelButton.Click += (s, e) =>
-            {
-                if (aiProcessingToken != null)
-                {
-                    aiProcessingToken.Cancel();
-                    overlayLabel.Text = "Cancelling AI Detections...";
-                }
-            };
-
-            overlayPanel.Controls.Add(overlayLabel);
-            overlayPanel.Controls.Add(cancelButton);
-            Controls.Add(overlayPanel);
-        }
-
-        //-----------------\\
-        //-- AI Inference --\\
-        //-------------------\\
-
-        Bitmap ConvertTo24bpp(Bitmap src)
-        {
-            Bitmap dst = new Bitmap(src.Width, src.Height, PixelFormat.Format24bppRgb);
-            using (Graphics g = Graphics.FromImage(dst))
-            {
-                g.DrawImage(src, new Rectangle(0, 0, src.Width, src.Height));
-            }
-            return dst;
-        }
-
-
-        public static float[] BitmapToFloatArray(Bitmap image)
-        {
-            int height = image.Height;
-            int width = image.Width;
-            float[] result = new float[3 * height * width];
-            float multiplier = 1.0f / 255.0f;
-
-            Rectangle rect = new(0, 0, width, height);
-            BitmapData bmpData = image.LockBits(rect, ImageLockMode.ReadOnly, PixelFormat.Format24bppRgb);
-
-            int stride = bmpData.Stride;
-            int offset = stride - width * 3;
-
-            try
-            {
-                unsafe
-                {
-                    byte* ptr = (byte*)bmpData.Scan0.ToPointer();
-                    int baseIndex = 0;
-                    for (int i = 0; i < height; i++)
-                    {
-                        for (int x = 0; x < width; x++)
-                        {
-                            result[baseIndex] = ptr[2] * multiplier; // R
-                            result[height * width + baseIndex] = ptr[1] * multiplier; // G
-                            result[2 * height * width + baseIndex] = ptr[0] * multiplier; // B
-                            ptr += 3;
-                            baseIndex++;
-                        }
-                        ptr += offset;
-                    }
-                }
-            }
-            finally
-            {
-                image.UnlockBits(bmpData);
-            }
-
-            return result;
-        }
-
-        private List<Rectangle> ApplyNMS(List<(Rectangle box, float confidence)> detections, float iouThreshold = 0.5f)
-        {
-            List<Rectangle> finalDetections = new();
-
-            // Sort detections by confidence descending
-            detections = detections.OrderByDescending(d => d.confidence).ToList();
-
-            while (detections.Count > 0)
-            {
-                var best = detections[0];
-                finalDetections.Add(best.box);
-
-                detections = detections.Skip(1)
-                    .Where(d => ComputeIoU(best.box, d.box) < iouThreshold)
-                    .ToList();
-            }
-
-            return finalDetections;
-        }
-
-        private float ComputeIoU(Rectangle a, Rectangle b)
-        {
-            int x1 = Math.Max(a.Left, b.Left);
-            int y1 = Math.Max(a.Top, b.Top);
-            int x2 = Math.Min(a.Right, b.Right);
-            int y2 = Math.Min(a.Bottom, b.Bottom);
-
-            int intersectionArea = Math.Max(0, x2 - x1) * Math.Max(0, y2 - y1);
-            int unionArea = a.Width * a.Height + b.Width * b.Height - intersectionArea;
-
-            return unionArea == 0 ? 0 : (float)intersectionArea / unionArea;
-        }
-
-        private List<Rectangle> PostProcessYoloV5Output(Tensor<float> outputTensor, int imgWidth, int imgHeight)
-        {
-            List<(Rectangle box, float confidence)> detections = new();
-            int numDetections = outputTensor.Dimensions[1]; // 25200 detections for YOLOv5
-
-            for (int i = 0; i < numDetections; i++)
-            {
-                float objectness = outputTensor[0, i, 4]; // Objectness score
-                float classConfidence = outputTensor[0, i, 5]; // Class confidence
-
-                if (objectness < confidenceThreshold) continue; // Filter out weak detections
-
-                // Extract normalized bounding box values
-                float xCenter = outputTensor[0, i, 0];
-                float yCenter = outputTensor[0, i, 1];
-                float width = outputTensor[0, i, 2];
-                float height = outputTensor[0, i, 3];
-
-                // Convert to absolute coordinates
-                float xMin = xCenter - width / 2;
-                float yMin = yCenter - height / 2;
-                float xMax = xCenter + width / 2;
-                float yMax = yCenter + height / 2;
-
-                // Ensure bounding boxes are within the image bounds
-                if (xMin < 0 || xMax > imgWidth || yMin < 0 || yMax > imgHeight) continue;
-                detections.Add((new Rectangle((int)xMin, (int)yMin, (int)(xMax - xMin), (int)(yMax - yMin)), objectness));
-            }
-
-            var finalBoxes = ApplyNMS(detections);
-            TotalDetections = TotalDetections + finalBoxes.Count;
-
-            return finalBoxes;
-        }
-
-        private List<Rectangle> PostProcessYoloV8Output(Tensor<float> outputTensor, int imgWidth, int imgHeight)
-        {
-            List<(Rectangle box, float confidence)> detections = new();
-            int numDetections = outputTensor.Dimensions[2]; // Typically 8400 for YOLOv8
-
-            for (int i = 0; i < numDetections; i++)
-            {
-                float objectness = outputTensor[0, 4, i]; // Confidence score
-                //Debug.WriteLine($"new conf: {objectness}"); // bad numbers something is off
-                if (objectness < confidenceThreshold) continue;
-
-                // Extract normalized coordinates
-                float xCenter = outputTensor[0, 0, i];
-                float yCenter = outputTensor[0, 1, i];
-                float width = outputTensor[0, 2, i];
-                float height = outputTensor[0, 3, i];
-
-                // Convert YOLO format (center-x, center-y, width, height) to (x_min, y_min, width, height)
-                float xMin = xCenter - width / 2;
-                float yMin = yCenter - height / 2;
-                float xMax = xCenter + width / 2;
-                float yMax = yCenter + height / 2;
-
-                // Ignore if outside bounds of image
-                if (xMin < 0 || xMax > imgWidth || yMin < 0 || yMax > imgHeight) continue;
-                detections.Add((new Rectangle((int)xMin, (int)yMin, (int)(xMax - xMin), (int)(yMax - yMin)), objectness));
-            }
-
-            var finalBoxes = ApplyNMS(detections);
-            TotalDetections = TotalDetections + finalBoxes.Count;
-
-            return finalBoxes;
-        }
-
-
-        private int DetectYoloVersion()
-        {
-            try
-            {
-                var modelOutput = yoloSession.OutputMetadata.First();
-                int[] shape = modelOutput.Value.Dimensions.ToArray();
-                string shapeString = string.Join(", ", shape);
-
-                if (shape.Length == 3)
-                {
-                    if (shape.SequenceEqual(new int[] { 1, 5, 8400 }))
-                    {
-                        return 8; // YOLOv8 detected
-                    }
-
-                    if (shape.SequenceEqual(new int[] { 1, 25200, 6 }))
-                    {
-                        return 5; // YOLOv5 detected
-                    }
-
-                    MessageBox.Show($"Unable to detect YOLO version from shape: {shapeString}", "YOLO Model Shape");
-                }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error detecting YOLO version: {ex.Message}", "Model Detection Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-
-            return 0; // ERROR - Do not continue
-        }
-
-        private void LoadYoloModel()
-        {
-            using OpenFileDialog openFileDialog = new()
-            {
-                Filter = "ONNX Model Files|*.onnx",
-                Title = "Select YOLO ONNX Model"
-            };
-
-            if (openFileDialog.ShowDialog() != DialogResult.OK)
-                return; // User canceled
-
-            if (!string.IsNullOrEmpty(yoloModelPath) && yoloModelPath != openFileDialog.FileName)
-            {
-                yoloSession?.Dispose();
-            }
-
-            yoloModelPath = openFileDialog.FileName;
-            bool usingGPU = false; // Track if DirectML was successfully used
-
-            try
-            {
-                var sessionOptions = new SessionOptions
-                {
-                    EnableCpuMemArena = true,
-                    EnableMemoryPattern = true,
-                    GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL,
-                    ExecutionMode = ExecutionMode.ORT_PARALLEL
-                };
-
-                // Defaults to CPU, eventually we'll fix this..
-                sessionOptions.AppendExecutionProvider_CPU();
-                yoloSession = new InferenceSession(yoloModelPath, sessionOptions);
-                outputNames = new List<string>(yoloSession.OutputMetadata.Keys);
-                usingGPU = true; // DirectML successfully loaded
-
-                // Detect model type
-                int modelVersion = DetectYoloVersion();
-                if (modelVersion == 0) // Detection failed
-                {
-                    yoloSession.Dispose();
-                    yoloSession = null;
-                    MessageBox.Show("Failed to detect YOLO model version. Please select a valid YOLOv5 or YOLOv8 ONNX model.", "Model Load Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    return;
-                }
-
-                isYoloV5 = (modelVersion == 5);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Failed to load model.\nError: {ex.Message}", "Model Load Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
-        }
-
-        private List<Rectangle> RunYoloInference(Bitmap? image)
-        {
-            Bitmap image24 = ConvertTo24bpp(image);
-            float[] inputArray = BitmapToFloatArray(image24);
-            if (inputArray == null) return null;
-
-            Tensor<float> inputTensor = new DenseTensor<float>(inputArray, new int[] { 1, 3, image.Height, image.Width });
-            var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("images", inputTensor) };
-
-            using IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = yoloSession.Run(inputs, outputNames);
-
-            // Extract the first output tensor
-            var outputTensor = results.First().AsTensor<float>();
-
-            // Use the correct post-processing based on the model type
-            List<Rectangle> detections = isYoloV5
-             ? PostProcessYoloV5Output(outputTensor, image.Width, image.Height)
-             : PostProcessYoloV8Output(outputTensor, image.Width, image.Height);
-
-            // Refresh the UI
-            Invoke(new Action(() =>
-            {
-                labels = labelStorage[currentImagePath]; // Sync labels
-                RefreshLabelList(); // Update the ListBox
-            }));
-
-            return detections;
-        }
-
 
         //----------------\\
         //-- Form EVENTS --\\
@@ -527,10 +99,11 @@ namespace Yoble
             {
                 // Store previous image labels before switching
                 if (!string.IsNullOrEmpty(currentImagePath))
+                {
                     labelStorage[currentImagePath] = new List<LabelData>(labels);
+                }
 
                 currentImagePath = imagePathMap[fileName];
-
                 LoadedImage.Image = Image.FromFile(currentImagePath);
 
                 // Load labels for the new selected image
@@ -653,7 +226,6 @@ namespace Yoble
                 imagePathMap.Clear();
                 labelStorage.Clear();
                 labels.Clear();
-                suggestedLabels.Clear();
                 currentImagePath = "";
 
                 // Clear UI elements
@@ -668,17 +240,16 @@ namespace Yoble
 
         private async void AutoLabelImagesToolStrip_Click(object sender, EventArgs e)
         {
-            if (yoloSession == null)
-                LoadYoloModel();
+            if (yoloAI.yoloSession == null)
+                yoloAI.LoadYoloModel();
 
-            if (yoloSession == null) return; // Exit if loading failed
+            if (yoloAI.yoloSession == null) return; // Exit if loading failed
 
-            aiProcessingToken = new CancellationTokenSource();
+            overlayManager.aiProcessingToken = new CancellationTokenSource();
 
-            // Show overlay and bring to front
-            overlayPanel.Visible = true;
-            overlayPanel.BringToFront();
-            CenterOverlay(); // Ensure it's centered
+            // Show overlay
+            overlayManager.ShowOverlay();
+            overlayManager.CenterOverlay();
 
             int totalDetections = 0;
 
@@ -686,10 +257,10 @@ namespace Yoble
             {
                 foreach (var imagePath in imagePathMap.Values)
                 {
-                    if (aiProcessingToken.IsCancellationRequested) return;
+                    if (overlayManager.aiProcessingToken.IsCancellationRequested) return;
 
                     using Bitmap? image = new Bitmap(imagePath);
-                    List<Rectangle> detectedBoxes = RunYoloInference(image);
+                    List<Rectangle> detectedBoxes = yoloAI.RunInference(image);
 
                     lock (labelStorage)
                     {
@@ -707,7 +278,7 @@ namespace Yoble
             });
 
             // Hide overlay when done
-            overlayPanel.Visible = false;
+            overlayManager.HideOverlay();
 
             MessageBox.Show($"Auto-labeling complete, total detections: {totalDetections}", "AI Labels", MessageBoxButtons.OK, MessageBoxIcon.Information);
             LoadedImage.Invalidate();
@@ -717,34 +288,21 @@ namespace Yoble
         {
             MessageBox.Show("Suggest labels is still a WIP");
             return;
-            if (string.IsNullOrEmpty(currentImagePath)) return;
-
-            if (yoloSession == null)
-                LoadYoloModel();
-
-            if (yoloSession == null) return; // Exit if loading failed
-
-            Bitmap? image = new Bitmap(currentImagePath);
-            suggestedLabels = RunYoloInference(image)
-                .Select(rect => new LabelData { Rect = rect, Name = "Suggested Label" })
-                .ToList();
-
-            LoadedImage.Invalidate();
         }
 
         private void AISettingsToolStrip_Click(object sender, EventArgs e)
         {
-            using (var settingsForm = new AiSettings(confidenceThreshold))
+            using (var settingsForm = new AiSettings(yoloAI.confidenceThreshold))
             {
                 if (settingsForm.ShowDialog() == DialogResult.OK)
                 {
-                    confidenceThreshold = settingsForm.ConfidenceThreshold;
+                    yoloAI.confidenceThreshold = settingsForm.ConfidenceThreshold;
 
                     // Save setting
-                    Yoable.Properties.Settings.Default.AIConfidence = confidenceThreshold;
+                    Yoable.Properties.Settings.Default.AIConfidence = yoloAI.confidenceThreshold;
                     Yoable.Properties.Settings.Default.Save();
 
-                    MessageBox.Show($"AI Confidence Threshold updated to: {(confidenceThreshold * 100):F0}%",
+                    MessageBox.Show($"AI Confidence Threshold updated to: {(yoloAI.confidenceThreshold * 100):F0}%",
                                     "AI Settings Updated", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
@@ -755,7 +313,7 @@ namespace Yoble
             if (sender is ToolStripMenuItem menuItem)
             {
                 menuItem.Checked = !menuItem.Checked;
-                ToggleDarkMode(menuItem.Checked);
+                themeManager.ToggleDarkMode(menuItem.Checked);
 
                 // Save setting
                 Yoable.Properties.Settings.Default.DarkTheme = menuItem.Checked;
@@ -891,36 +449,74 @@ namespace Yoble
             g.DrawLine(crosshairPen, new Point(cursorPosition.X, 0), new Point(cursorPosition.X, LoadedImage.Height));
         }
 
+        // Adjusts a rectangle based on the current zoom transformation
+        private Rectangle TransformRectangle(Rectangle rect)
+        {
+            return new Rectangle(
+                (int)(rect.X * zoomFactor),
+                (int)(rect.Y * zoomFactor),
+                (int)(rect.Width * zoomFactor),
+                (int)(rect.Height * zoomFactor)
+            );
+        }
+
+        // Convert mouse coordinates to actual image coordinates
+        private Point TransformPoint(Point p)
+        {
+            return new Point((int)(p.X / zoomFactor), (int)(p.Y / zoomFactor));
+        }
+
+        private void PictureBox_MouseWheel(object sender, MouseEventArgs e)
+        {
+            if (Control.ModifierKeys == Keys.Control && LoadedImage.Image != null)
+            {
+                float oldZoomFactor = zoomFactor;
+
+                if (e.Delta > 0)
+                    zoomFactor *= 1 + zoomStep;
+                else if (e.Delta < 0)
+                    zoomFactor /= 1 + zoomStep;
+
+                // Prevent zooming out beyond the original image size
+                zoomFactor = Math.Max(1.0f, Math.Min(zoomFactor, 5.0f));
+
+                // Calculate zoom center relative to image
+                zoomCenter = e.Location;
+
+                // Update transformation matrix
+                transformMatrix.Reset();
+                transformMatrix.Translate(-zoomCenter.X, -zoomCenter.Y, MatrixOrder.Append);
+                transformMatrix.Scale(zoomFactor, zoomFactor, MatrixOrder.Append);
+                transformMatrix.Translate(zoomCenter.X, zoomCenter.Y, MatrixOrder.Append);
+
+                LoadedImage.Invalidate();
+            }
+        }
 
         private void PictureBox_MouseDown(object sender, MouseEventArgs e)
         {
             if (LoadedImage.Image == null) return;
+            Point imagePoint = TransformPoint(e.Location);
 
             bool clickedOnLabel = false;
-
             foreach (var label in labels)
             {
-                resizeHandleType = GetResizeHandle(e.Location, label.Rect);
+                resizeHandleType = GetResizeHandle(imagePoint, label.Rect);
 
                 if (resizeHandleType != ResizeHandleType.None)
                 {
                     selectedLabel = label;
                     isResizing = true;
-                    dragStart = e.Location;
+                    dragStart = imagePoint;
                     clickedOnLabel = true;
                     break;
                 }
 
-                if (label.Rect.Contains(e.Location))
+                if (label.Rect.Contains(imagePoint))
                 {
                     selectedLabel = label;
                     isDragging = true;
-                    dragStart = e.Location;
-
-                    // Highlight the label in the listbox
-                    int index = labels.IndexOf(label);
-                    LabelListBox.SelectedIndex = index;
-
+                    dragStart = imagePoint;
                     clickedOnLabel = true;
                     break;
                 }
@@ -928,28 +524,26 @@ namespace Yoble
 
             if (!clickedOnLabel)
             {
-                // Start drawing a new label if dragging
                 isDrawing = true;
-                startPoint = e.Location;
+                startPoint = imagePoint;
                 currentRect = new Rectangle(startPoint, Size.Empty);
                 selectedLabel = null;
                 LabelListBox.ClearSelected();
-                LoadedImage.Invalidate();
             }
         }
 
         private void PictureBox_MouseMove(object sender, MouseEventArgs e)
         {
-            cursorPosition = e.Location; // Update cursor position
-            LoadedImage.Invalidate(); // Redraw the image to include the crosshair
+            cursorPosition = TransformPoint(e.Location);
+            LoadedImage.Invalidate();
 
             if (isDrawing)
             {
                 currentRect = new Rectangle(
-                    Math.Min(startPoint.X, e.X),
-                    Math.Min(startPoint.Y, e.Y),
-                    Math.Abs(e.X - startPoint.X),
-                    Math.Abs(e.Y - startPoint.Y)
+                    Math.Min(startPoint.X, cursorPosition.X),
+                    Math.Min(startPoint.Y, cursorPosition.Y),
+                    Math.Abs(cursorPosition.X - startPoint.X),
+                    Math.Abs(cursorPosition.Y - startPoint.Y)
                 );
                 return;
             }
@@ -958,15 +552,15 @@ namespace Yoble
 
             if (isResizing)
             {
-                ResizeLabel(selectedLabel, resizeHandleType, e.Location);
+                ResizeLabel(selectedLabel, resizeHandleType, TransformPoint(e.Location));
             }
             else if (isDragging)
             {
-                int dx = e.X - dragStart.X;
-                int dy = e.Y - dragStart.Y;
+                int dx = cursorPosition.X - dragStart.X;
+                int dy = cursorPosition.Y - dragStart.Y;
                 selectedLabel.Rect = new Rectangle(selectedLabel.Rect.X + dx, selectedLabel.Rect.Y + dy,
                                                    selectedLabel.Rect.Width, selectedLabel.Rect.Height);
-                dragStart = e.Location;
+                dragStart = cursorPosition;
             }
         }
 
@@ -975,14 +569,12 @@ namespace Yoble
             if (isDrawing)
             {
                 isDrawing = false;
-                if (currentRect.Width > 10 && currentRect.Height > 10) // Avoid tiny labels
+                if (currentRect.Width > 10 && currentRect.Height > 10)
                 {
                     var newLabel = new LabelData { Rect = currentRect, Name = $"Label {labels.Count + 1}" };
                     labels.Add(newLabel);
                     LabelListBox.Items.Add(newLabel.Name);
                 }
-                LoadedImage.Invalidate();
-                return;
             }
 
             isDragging = false;
@@ -992,26 +584,30 @@ namespace Yoble
         private void PictureBox_Paint(object sender, PaintEventArgs e)
         {
             if (LoadedImage.Image == null) return;
-            using Pen pen = new(Color.Red, 2);
-            using Brush brush = new SolidBrush(Color.Blue);
+            e.Graphics.Transform = transformMatrix;
 
+            // Draw image
+            e.Graphics.DrawImage(LoadedImage.Image, new Rectangle(0, 0, LoadedImage.Image.Width, LoadedImage.Image.Height));
+
+            // Draw labels at the correct scale
+            using Pen pen = new(Color.Red, 2 / zoomFactor); // Adjust pen thickness
             foreach (var label in labels)
             {
-                e.Graphics.DrawRectangle(pen, label.Rect);
-
+                Rectangle zoomedRect = TransformRectangle(label.Rect);
+                e.Graphics.DrawRectangle(pen, zoomedRect);
                 if (selectedLabel == label)
                 {
-                    DrawResizeHandles(e.Graphics, label.Rect);
+                    DrawResizeHandles(e.Graphics, zoomedRect);
                 }
             }
 
-            // Draw the new label while dragging
+            // Draw current drawing rectangle correctly scaled
             if (isDrawing)
             {
-                e.Graphics.DrawRectangle(pen, currentRect);
+                Rectangle zoomedRect = TransformRectangle(currentRect);
+                e.Graphics.DrawRectangle(pen, zoomedRect);
             }
 
-            // Draw crosshair for precise placement
             DrawCrosshair(e.Graphics);
         }
 
