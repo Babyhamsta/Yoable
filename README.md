@@ -41,7 +41,7 @@ Yoable is a **powerful yet simple image labeling tool** built in **C# .NET 8.0**
 ### **🔹 How to Run**
 1. **Clone the Repository**
    ```sh
-   git clone https://github.com/yourusername/yoable.git
+   git clone https://github.com/Babyhamsta/Yoable.git
    cd yoable
    ```
 
