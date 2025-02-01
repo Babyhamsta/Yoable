@@ -80,6 +80,7 @@ namespace Yoble
         //-- Form EVENTS --\\
         //------------------\\
 
+        /* Potential Remove..
         private void RefreshLabelList()
         {
             LabelListBox.Items.Clear();
@@ -90,7 +91,7 @@ namespace Yoble
             }
 
             LabelListBox.ClearSelected();
-        }
+        }*/
 
 
         private void ImageListBox_SelectedIndexChanged(object sender, EventArgs e)
@@ -221,8 +222,7 @@ namespace Yoble
         private void ClearAllToolStrip_Click(object sender, EventArgs e)
         {
             // Confirm before clearing
-            var result = MessageBox.Show("Are you sure you want to clear all images and labels?",
-                                         "Clear All", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+            var result = MessageBox.Show("Are you sure you want to clear all images and labels?", "Clear All", MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 
             if (result == DialogResult.Yes)
             {
@@ -306,8 +306,7 @@ namespace Yoble
                     Yoable.Properties.Settings.Default.AIConfidence = yoloAI.confidenceThreshold;
                     Yoable.Properties.Settings.Default.Save();
 
-                    MessageBox.Show($"AI Confidence Threshold updated to: {(yoloAI.confidenceThreshold * 100):F0}%",
-                                    "AI Settings Updated", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    MessageBox.Show($"AI Confidence Threshold updated to: {(yoloAI.confidenceThreshold * 100):F0}%", "AI Settings Updated", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
             }
         }
@@ -327,7 +326,7 @@ namespace Yoble
 
         private void AboutUsToolStrip_Click(object sender, EventArgs e)
         {
-            MessageBox.Show("- Yoable was created by Babyhamsta to help users label images faster for YOLO training.\n\n- Yoable is free to use and open source, if you paid for it you've been scammed.\n\n- Please check out our github for updates!", "About Yoable (V1.0)");
+            MessageBox.Show("- Yoable was created by Babyhamsta to help users label images faster for YOLO training.\n\n- Yoable is free to use and open source, if you paid for it you've been scammed.\n\n- Please check out our github for updates!", "About Yoable (V1.2.0)");
         }
 
         //---------------------------------\\
@@ -763,27 +762,22 @@ namespace Yoble
             if (selectedLabel != null && labels.Contains(selectedLabel))
             {
                 int moveAmount = 1; // Amount of pixels to move
-
                 switch (keyData)
                 {
                     case Keys.Up:
-                        selectedLabel.Rect = new Rectangle(selectedLabel.Rect.X, selectedLabel.Rect.Y - moveAmount,
-                                                           selectedLabel.Rect.Width, selectedLabel.Rect.Height);
+                        selectedLabel.Rect = new Rectangle(selectedLabel.Rect.X, selectedLabel.Rect.Y - moveAmount, selectedLabel.Rect.Width, selectedLabel.Rect.Height);
                         break;
 
                     case Keys.Down:
-                        selectedLabel.Rect = new Rectangle(selectedLabel.Rect.X, selectedLabel.Rect.Y + moveAmount,
-                                                           selectedLabel.Rect.Width, selectedLabel.Rect.Height);
+                        selectedLabel.Rect = new Rectangle(selectedLabel.Rect.X, selectedLabel.Rect.Y + moveAmount, selectedLabel.Rect.Width, selectedLabel.Rect.Height);
                         break;
 
                     case Keys.Left:
-                        selectedLabel.Rect = new Rectangle(selectedLabel.Rect.X - moveAmount, selectedLabel.Rect.Y,
-                                                           selectedLabel.Rect.Width, selectedLabel.Rect.Height);
+                        selectedLabel.Rect = new Rectangle(selectedLabel.Rect.X - moveAmount, selectedLabel.Rect.Y, selectedLabel.Rect.Width, selectedLabel.Rect.Height);
                         break;
 
                     case Keys.Right:
-                        selectedLabel.Rect = new Rectangle(selectedLabel.Rect.X + moveAmount, selectedLabel.Rect.Y,
-                                                           selectedLabel.Rect.Width, selectedLabel.Rect.Height);
+                        selectedLabel.Rect = new Rectangle(selectedLabel.Rect.X + moveAmount, selectedLabel.Rect.Y, selectedLabel.Rect.Width, selectedLabel.Rect.Height);
                         break;
 
                     case Keys.Delete:
