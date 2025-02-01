@@ -14,6 +14,7 @@ namespace Yoble
         private YoloAI yoloAI;
         private ThemeManager themeManager;
         private OverlayManager overlayManager;
+        private CloudUploader cloudUploader;
 
         // Images and drawing
         private string currentImagePath = "";
@@ -69,6 +70,7 @@ namespace Yoble
             yoloAI = new YoloAI(confidence);
             overlayManager = new OverlayManager(this);
             themeManager = new ThemeManager(this);
+            cloudUploader = new CloudUploader(this, overlayManager);
 
             // Apply Dark Theme
             themeManager.ToggleDarkMode(isDarkTheme);
@@ -168,7 +170,7 @@ namespace Yoble
             }
         }
 
-        private void ExportLabelsToolStrip_Click(object sender, EventArgs e)
+        private async void ExportLabelsToolStrip_Click(object sender, EventArgs e)
         {
             if (string.IsNullOrEmpty(exportDirectory))
             {
@@ -185,38 +187,62 @@ namespace Yoble
                 }
             }
 
+            CancellationTokenSource tokenSource = new CancellationTokenSource();
+            overlayManager.ShowOverlayWithProgress("Exporting labels...", tokenSource);
+
+            List<string> labelFilesToUpload = new List<string>();
+            List<string> imageFilesToUpload = new List<string>(imagePathMap.Values);
+
             int exportedFiles = 0;
+            int totalFiles = labelStorage.Count;
+            int processedFiles = 0;
 
-            foreach (var kvp in labelStorage)
+            bool canceled = await Task.Run(() =>
             {
-                string imagePath = kvp.Key; // Get the original image path
-                if (!File.Exists(imagePath)) continue; // Skip due to image file missing
-
-                List<LabelData> labels = kvp.Value;
-                if (labels.Count == 0) continue; // Skip images with no labels
-
-                string imageName = Path.GetFileNameWithoutExtension(imagePath);
-                string labelFilePath = Path.Combine(exportDirectory, imageName + ".txt");
-
-                try
+                foreach (var kvp in labelStorage)
                 {
-                    ExportLabelsToYolo(labelFilePath, imagePath, labels);
-                    exportedFiles++;
+                    if (tokenSource.Token.IsCancellationRequested) return true;
+
+                    string imagePath = kvp.Key;
+                    if (!File.Exists(imagePath)) continue;
+
+                    List<LabelData> labels = kvp.Value;
+                    if (labels.Count == 0) continue;
+
+                    string imageName = Path.GetFileNameWithoutExtension(imagePath);
+                    string labelFilePath = Path.Combine(exportDirectory, imageName + ".txt");
+
+                    try
+                    {
+                        ExportLabelsToYolo(labelFilePath, imagePath, labels);
+                        labelFilesToUpload.Add(labelFilePath);
+                        exportedFiles++;
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Failed to export labels for {imageName}.\n\nError: {ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+
+                    processedFiles++;
+                    overlayManager.UpdateProgress((processedFiles * 100) / totalFiles);
+                    overlayManager.UpdateMessage($"Exporting {processedFiles}/{totalFiles} files...");
                 }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Failed to export labels for {imageName}.\n\nError: {ex.Message}", "Export Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                return false;
+            });
+
+            if (canceled)
+            {
+                overlayManager.HideOverlay();
+                MessageBox.Show("Export canceled by user.", "Export Canceled", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
-            if (exportedFiles > 0)
-            {
-                MessageBox.Show($"Export complete! {exportedFiles} label files saved in {exportDirectory}.", "Export Successful", MessageBoxButtons.OK, MessageBoxIcon.Information);
-            }
-            else
-            {
-                MessageBox.Show("No labels were found to export.", "Export Labels", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-            }
+            overlayManager.UpdateMessage("Export complete. Uploading dataset...");
+            bool uploadSuccess = await cloudUploader.AskForUploadAsync(labelFilesToUpload, imageFilesToUpload);
+
+            overlayManager.HideOverlay();
+
+            MessageBox.Show($"Export and upload {(uploadSuccess ? "completed" : "partially completed")} successfully!", "Process Complete", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         private void ClearAllToolStrip_Click(object sender, EventArgs e)
@@ -242,28 +268,27 @@ namespace Yoble
             }
         }
 
-        private async void AutoLabelImagesToolStrip_Click(object sender, EventArgs e)
+        public async void AutoLabelImagesToolStrip_Click(object sender, EventArgs e)
         {
             if (yoloAI.yoloSession == null)
                 yoloAI.LoadYoloModel();
 
-            if (yoloAI.yoloSession == null) return; // Exit if loading failed
+            if (yoloAI.yoloSession == null) return;  // Exit if model loading failed
 
-            overlayManager.aiProcessingToken = new CancellationTokenSource();
-
-            // Show overlay
-            overlayManager.ShowOverlay();
-            overlayManager.CenterOverlay();
+            CancellationTokenSource tokenSource = new CancellationTokenSource();
+            overlayManager.ShowOverlayWithProgress("Running AI Detections...", tokenSource);
 
             int totalDetections = 0;
+            int totalImages = imagePathMap.Count;
+            int processedImages = 0;
 
             await Task.Run(() =>
             {
                 foreach (var imagePath in imagePathMap.Values)
                 {
-                    if (overlayManager.aiProcessingToken.IsCancellationRequested) return;
+                    if (tokenSource.Token.IsCancellationRequested) break;
 
-                    using Bitmap? image = new Bitmap(imagePath);
+                    using Bitmap image = new Bitmap(imagePath);
                     List<Rectangle> detectedBoxes = yoloAI.RunInference(image);
 
                     lock (labelStorage)
@@ -278,10 +303,13 @@ namespace Yoble
 
                         totalDetections += detectedBoxes.Count;
                     }
-                }
-            });
 
-            // Hide overlay when done
+                    processedImages++;
+                    overlayManager.UpdateProgress((processedImages * 100) / totalImages);
+                    overlayManager.UpdateMessage($"Processing image {processedImages}/{totalImages}...");
+                }
+            }, tokenSource.Token);
+
             overlayManager.HideOverlay();
 
             MessageBox.Show($"Auto-labeling complete, total detections: {totalDetections}", "AI Labels", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -698,28 +726,55 @@ namespace Yoble
         }
 
 
-        private void LoadYOLOLabelsFromDirectory(string directoryPath)
+        private async void LoadYOLOLabelsFromDirectory(string directoryPath)
         {
             if (!Directory.Exists(directoryPath)) return;
 
             string[] labelFiles = Directory.GetFiles(directoryPath, "*.txt");
-            int labelsLoaded = 0;
+            int totalFiles = labelFiles.Length;
+            int processedFiles = 0;
 
-            foreach (string labelFile in labelFiles)
+            if (totalFiles == 0)
             {
-                string imageName = Path.GetFileNameWithoutExtension(labelFile);
-                string matchingImagePath = imagePathMap.Values.FirstOrDefault(img => Path.GetFileNameWithoutExtension(img) == imageName);
-
-                if (!string.IsNullOrEmpty(matchingImagePath))
-                {
-                    labelStorage[matchingImagePath] = LoadYoloLabels(labelFile, matchingImagePath);
-                    labelsLoaded++;
-                }
+                MessageBox.Show("No YOLO label files found in the selected directory.", "Label Import", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
-            MessageBox.Show($"YOLO labels loaded: {labelsLoaded}", "YOLO Label Import", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            CancellationTokenSource tokenSource = new CancellationTokenSource();
+            overlayManager.ShowOverlayWithProgress("Importing YOLO labels...", tokenSource);
 
-            // Refresh current image if needed
+            int labelsLoaded = 0;
+
+            await Task.Run(() =>
+            {
+                foreach (string labelFile in labelFiles)
+                {
+                    if (tokenSource.Token.IsCancellationRequested) break;
+
+                    string imageName = Path.GetFileNameWithoutExtension(labelFile);
+                    string matchingImagePath = imagePathMap.Values.FirstOrDefault(img => Path.GetFileNameWithoutExtension(img) == imageName);
+
+                    if (!string.IsNullOrEmpty(matchingImagePath))
+                    {
+                        var loadedLabels = LoadYoloLabels(labelFile, matchingImagePath);
+                        if (loadedLabels.Count > 0)
+                        {
+                            labelStorage[matchingImagePath] = loadedLabels;
+                            labelsLoaded++;
+                        }
+                    }
+
+                    processedFiles++;
+                    overlayManager.UpdateProgress((processedFiles * 100) / totalFiles);
+                    overlayManager.UpdateMessage($"Importing labels {processedFiles}/{totalFiles}...");
+                }
+            }, tokenSource.Token);
+
+            overlayManager.HideOverlay();
+
+            MessageBox.Show($"YOLO labels imported: {labelsLoaded}", "YOLO Label Import", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+            // Refresh UI if needed
             if (!string.IsNullOrEmpty(currentImagePath) && labelStorage.ContainsKey(currentImagePath))
             {
                 labels = labelStorage[currentImagePath];

@@ -1,35 +1,48 @@
-﻿using System.Windows.Forms;
-
-namespace Yoble
+﻿namespace Yoable
 {
     public class OverlayManager
     {
         private Panel overlayPanel;
         private Label overlayLabel;
+        private ProgressBar overlayProgressBar;
         private Button cancelButton;
-        public CancellationTokenSource aiProcessingToken;
-        private Form MainForm;
+        private Form mainForm;
+        private CancellationTokenSource cancellationTokenSource;
 
         public OverlayManager(Form form)
         {
-            MainForm = form;
+            mainForm = form;
+            InitializeOverlayUI();
+        }
 
+        private void InitializeOverlayUI()
+        {
             overlayPanel = new Panel
             {
-                Size = new Size(form.Width, 100),
+                Size = new Size(mainForm.ClientSize.Width, 120),
                 BackColor = ColorTranslator.FromHtml("#181C14"),
-                Visible = false
+                Visible = false,
+                Location = new Point(0, (mainForm.ClientSize.Height - 120) / 2),
+                Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right
             };
 
             overlayLabel = new Label
             {
-                Text = "Running AI Detections...",
+                Text = "Processing...",
                 ForeColor = Color.White,
                 Font = new Font("Arial", 16, FontStyle.Bold),
                 AutoSize = false,
                 TextAlign = ContentAlignment.MiddleCenter,
                 Dock = DockStyle.Top,
-                Height = 50
+                Height = 40
+            };
+
+            overlayProgressBar = new ProgressBar
+            {
+                Size = new Size(overlayPanel.Width - 40, 20),
+                Location = new Point(20, 50),
+                Maximum = 100,
+                Visible = false
             };
 
             cancelButton = new Button
@@ -39,41 +52,68 @@ namespace Yoble
                 ForeColor = Color.White,
                 BackColor = Color.FromArgb(220, 200, 0, 0),
                 Size = new Size(100, 30),
-                Location = new Point((overlayPanel.Width - 100) / 2, 60), // Centered inside banner
-                Visible = true
+                Location = new Point((overlayPanel.Width - 100) / 2, 80),
+                Visible = false
             };
 
-            // Modern button styling (flat, rounded corners)
             cancelButton.FlatAppearance.BorderSize = 0;
-            cancelButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(250, 255, 0, 0); // Brighter red hover effect
-            cancelButton.FlatAppearance.MouseDownBackColor = Color.FromArgb(255, 180, 0, 0); // Slightly darker red click effect
-            cancelButton.Location = new Point((overlayPanel.Width - cancelButton.Width) / 2, 55);
-
-            cancelButton.Click += (s, e) =>
-            {
-                if (aiProcessingToken != null)
-                {
-                    aiProcessingToken.Cancel();
-                    overlayLabel.Text = "Cancelling AI Detections...";
-                }
-            };
+            cancelButton.FlatAppearance.MouseOverBackColor = Color.FromArgb(250, 255, 0, 0);
+            cancelButton.FlatAppearance.MouseDownBackColor = Color.FromArgb(255, 180, 0, 0);
+            cancelButton.Click += (s, e) => cancellationTokenSource?.Cancel();
 
             overlayPanel.Controls.Add(overlayLabel);
+            overlayPanel.Controls.Add(overlayProgressBar);
             overlayPanel.Controls.Add(cancelButton);
-            form.Controls.Add(overlayPanel);
+            mainForm.Controls.Add(overlayPanel);
             overlayPanel.BringToFront();
         }
 
-        public void CenterOverlay()
+        public void ShowOverlay(string message = "Processing...")
         {
-            overlayPanel.Location = new Point(
-                (MainForm.ClientSize.Width - overlayPanel.Width) / 2,
-                (MainForm.ClientSize.Height - overlayPanel.Height) / 2
-            );
+            mainForm.Invoke((MethodInvoker)delegate
+            {
+                overlayLabel.Text = message;
+                overlayProgressBar.Visible = false;
+                cancelButton.Visible = false;
+                overlayPanel.Visible = true;
+            });
         }
 
-        public void ShowOverlay() => overlayPanel.Visible = true;
+        public void ShowOverlayWithProgress(string message, CancellationTokenSource tokenSource)
+        {
+            mainForm.Invoke((MethodInvoker)delegate
+            {
+                cancellationTokenSource = tokenSource;
+                overlayLabel.Text = message;
+                overlayProgressBar.Value = 0;
+                overlayProgressBar.Visible = true;
+                cancelButton.Visible = true;
+                overlayPanel.Visible = true;
+            });
+        }
 
-        public void HideOverlay() => overlayPanel.Visible = false;
+        public void UpdateMessage(string message)
+        {
+            mainForm.Invoke((MethodInvoker)delegate
+            {
+                overlayLabel.Text = message;
+            });
+        }
+
+        public void UpdateProgress(int progress)
+        {
+            mainForm.Invoke((MethodInvoker)delegate
+            {
+                overlayProgressBar.Value = progress;
+            });
+        }
+
+        public void HideOverlay()
+        {
+            mainForm.Invoke((MethodInvoker)delegate
+            {
+                overlayPanel.Visible = false;
+            });
+        }
     }
 }
