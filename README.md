@@ -1,7 +1,5 @@
 # Yoable
 
-![Yoable Logo](https://github.com/YOUR-ORG/YOUR-REPO/assets/logo.png)
-
 **Yoable** is an AI-powered image annotation tool designed to make dataset labeling faster and more efficient. It supports **YOLO v5/v8 (ONNX)** models for automatic object detection and labeling. Yoable provides an intuitive interface for managing images, running AI-assisted labeling, and exporting labels in a format compatible with machine learning models.
 
 ## 🚀 Features
