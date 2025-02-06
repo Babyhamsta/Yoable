@@ -1,0 +1,61 @@
+﻿<Window
+    x:Class="YoableWPF.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.modernwpf.com/2019"
+    xmlns:local="clr-namespace:YoableWPF"
+    ui:WindowHelper.UseModernWindowStyle="True"
+    Title="Yoable"
+    WindowStyle="None"
+    ResizeMode="CanResize"
+    Height="700" 
+    Width="1100"
+    WindowStartupLocation="CenterScreen"
+    KeyDown="Window_KeyDown">
+
+    <Grid>
+        <!-- Grid Layout -->
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="200"/>
+        </Grid.ColumnDefinitions>
+
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Menu -->
+        <Menu Grid.Row="1" Grid.ColumnSpan="3">
+            <MenuItem Header="File">
+                <MenuItem Header="Import Directory" Click="ImportDirectory_Click"/>
+                <MenuItem Header="Import Image" Click="ImportImage_Click"/>
+                <MenuItem Header="Import Labels" Click="ImportLabels_Click"/>
+                <MenuItem Header="Export Labels" Click="ExportLabels_Click"/>
+                <MenuItem Header="Clear All" Click="ClearAll_Click"/>
+            </MenuItem>
+            <MenuItem Header="AI">
+                <MenuItem Header="Auto Label Images" Click="AutoLabelImages_Click"/>
+                <MenuItem Header="Auto Suggest Labels" Click="AutoSuggestLabels_Click"/>
+                <MenuItem Header="AI Settings" Click="AISettings_Click"/>
+            </MenuItem>
+            <MenuItem Header="Settings" x:Name="SettingsMenuItem" Click="SettingsMenuItem_Click"/>
+        </Menu>
+
+        <!-- Content Panels -->
+        <ListBox x:Name="ImageListBox" Grid.Row="2" Grid.Column="0" SelectionMode="Single" SelectionChanged="ImageListBox_SelectionChanged"/>
+
+        <!-- Center Content Panel with ScrollViewer -->
+        <Border Grid.Row="2" Grid.Column="1" BorderBrush="Gray" BorderThickness="2">
+            <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                          VerticalScrollBarVisibility="Auto"
+                          ClipToBounds="True">
+                <local:DrawingCanvas x:Name="drawingCanvas"/>
+            </ScrollViewer>
+        </Border>
+
+        <ListBox x:Name="LabelListBox" Grid.Row="2" Grid.Column="2" SelectionMode="Single" SelectionChanged="LabelListBox_SelectionChanged"/>
+    </Grid>
+</Window>
