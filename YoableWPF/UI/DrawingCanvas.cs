@@ -60,6 +60,7 @@ namespace YoableWPF
             MouseMove += DrawingCanvas_MouseMove;
             MouseUp += DrawingCanvas_MouseUp;
             MouseDown += DrawingCanvas_MouseDown;
+            MouseLeave += DrawingCanvas_MouseLeave;
         }
 
         private Rect ScaleRectToCanvas(Rect originalRect)
@@ -336,12 +337,23 @@ namespace YoableWPF
                 }
             }
 
+            // Select label in listbox too
+            LabelListBox.SelectedItem = SelectedLabel?.Name;
+
             if (!clickedOnLabel)
             {
                 IsDrawing = true;
                 StartPoint = mousePos;
                 CurrentRect = new Rect(StartPoint, new Size(0, 0));
                 SelectedLabel = null;
+            }
+        }
+
+        private void DrawingCanvas_MouseLeave(object sender, MouseEventArgs e)
+        {
+            if (IsDrawing || IsResizing || IsDragging)
+            {
+                DrawingCanvas_MouseUp(sender, null);
             }
         }
 

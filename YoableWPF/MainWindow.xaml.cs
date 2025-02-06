@@ -21,6 +21,7 @@ namespace YoableWPF
         private YoloAI yoloAI;
         private OverlayManager overlayManager;
         private CloudUploader cloudUploader;
+        private YoutubeDownloader youtubeDownloader;
 
         // Images and drawing
         private string currentImagePath = "";
@@ -60,11 +61,12 @@ namespace YoableWPF
             yoloAI = new YoloAI();
             overlayManager = new OverlayManager(this);
             cloudUploader = new CloudUploader(this, overlayManager);
+            youtubeDownloader = new YoutubeDownloader(this, overlayManager);
 
             // Check for updates from Github
             if (Properties.Settings.Default.CheckUpdatesOnLaunch)
             {
-                var autoUpdater = new UpdateManager(this, overlayManager, "2.0.0"); // Current version
+                var autoUpdater = new UpdateManager(this, overlayManager, "2.1.0"); // Current version
                 autoUpdater.CheckForUpdatesAsync();
             }
         }
@@ -175,6 +177,16 @@ namespace YoableWPF
             }
         }
 
+        private async void YTToImage_Click(object sender, RoutedEventArgs e)
+        {
+            var downloadWindow = new YoutubeDownloadWindow();
+            downloadWindow.Owner = this;
+            if (downloadWindow.ShowDialog() == true)
+            {
+                await youtubeDownloader.DownloadAndProcessVideo(downloadWindow.YoutubeUrl, downloadWindow.desiredFps, downloadWindow.FrameSize);
+            }
+        }
+
         private async void ExportLabels_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog
@@ -198,6 +210,7 @@ namespace YoableWPF
         private void ClearAll_Click(object sender, RoutedEventArgs e)
         {
             imagePathMap.Clear();
+            labelStorage.Clear();
             drawingCanvas.Labels.Clear(); // Clear labels inside DrawingCanvas
             ImageListBox.Items.Clear();
             LabelListBox.Items.Clear();
@@ -257,7 +270,6 @@ namespace YoableWPF
                         if (drawingCanvas != null && drawingCanvas.Image != null &&
                             drawingCanvas.Image.ToString().Contains(fileName))
                         {
-                            drawingCanvas.Labels.Clear();
                             drawingCanvas.Labels.AddRange(labelStorage[fileName]);
                             drawingCanvas.LabelListBox?.Items.Clear();
                             foreach (var label in labelStorage[fileName])
@@ -295,9 +307,9 @@ namespace YoableWPF
         private void AISettings_Click(object sender, RoutedEventArgs e)
         {
             var settingsWindow = new SettingsWindow();
-    settingsWindow.AISettingsGroup.Visibility = Visibility.Visible;
-    settingsWindow.Owner = this;
-    settingsWindow.ShowDialog();
+            settingsWindow.AISettingsGroup.Visibility = Visibility.Visible;
+            settingsWindow.Owner = this;
+            settingsWindow.ShowDialog();
         }
 
         private void DarkTheme_Click(object sender, RoutedEventArgs e)
@@ -312,7 +324,7 @@ namespace YoableWPF
             }
         }
 
-        private void LoadImages(string directoryPath)
+        public void LoadImages(string directoryPath)
         {
             if (!Directory.Exists(directoryPath)) return;
 

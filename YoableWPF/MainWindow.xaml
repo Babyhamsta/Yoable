@@ -33,6 +33,7 @@
                 <MenuItem Header="Import Directory" Click="ImportDirectory_Click"/>
                 <MenuItem Header="Import Image" Click="ImportImage_Click"/>
                 <MenuItem Header="Import Labels" Click="ImportLabels_Click"/>
+                <MenuItem Header="Youtube To Images" Click="YTToImage_Click"/>
                 <MenuItem Header="Export Labels" Click="ExportLabels_Click"/>
                 <MenuItem Header="Clear All" Click="ClearAll_Click"/>
             </MenuItem>
