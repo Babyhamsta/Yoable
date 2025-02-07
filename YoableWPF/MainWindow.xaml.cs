@@ -12,9 +12,34 @@ using Color = System.Windows.Media.Color;
 using ColorConverter = System.Windows.Media.ColorConverter;
 using System.Diagnostics;
 using System.Globalization;
+using System.Windows.Media;
 
 namespace YoableWPF
 {
+    public class ImageListItem
+    {
+        public string FileName { get; set; }
+        public ImageStatus Status { get; set; }
+
+        public ImageListItem(string fileName, ImageStatus status)
+        {
+            FileName = fileName;
+            Status = status;
+        }
+
+        public override string ToString()
+        {
+            return FileName;
+        }
+    }
+
+    public enum ImageStatus
+    {
+        NoLabel,
+        VerificationNeeded,
+        Verified
+    }
+
     public partial class MainWindow : Window
     {
         // Managers/Handlers
@@ -26,6 +51,7 @@ namespace YoableWPF
         // Images and drawing
         private string currentImagePath = "";
         private Dictionary<string, ImageInfo> imagePathMap = new();
+        private Dictionary<string, ImageStatus> imageStatuses = new();
 
         // Image info stored for scaling and ect
         private class ImageInfo
@@ -66,7 +92,7 @@ namespace YoableWPF
             // Check for updates from Github
             if (Properties.Settings.Default.CheckUpdatesOnLaunch)
             {
-                var autoUpdater = new UpdateManager(this, overlayManager, "2.1.0"); // Current version
+                var autoUpdater = new UpdateManager(this, overlayManager, "2.1.1"); // Current version
                 autoUpdater.CheckForUpdatesAsync();
             }
         }
@@ -80,11 +106,67 @@ namespace YoableWPF
             }
         }
 
+        public void OnLabelsChanged()
+        {
+            if (string.IsNullOrEmpty(currentImagePath)) return;
+
+            // Get currently selected index
+            int currentIndex = ImageListBox.SelectedIndex;
+            if (currentIndex < 0 || currentIndex >= ImageListBox.Items.Count) return;
+
+
+            // Update the status based on whether there are any labels
+            var hasLabels = drawingCanvas.Labels.Any();
+            var isImportedOrAI = hasLabels && drawingCanvas.Labels.Any(l => l.Name.StartsWith("AI") || l.Name.StartsWith("Imported"));
+
+            ImageStatus newStatus;
+            if (!hasLabels)
+            {
+                newStatus = ImageStatus.NoLabel;
+            }
+            else
+            {
+                // If the image is currently loaded in Canvas, mark it as Verified since the user is actively working with it
+                if (drawingCanvas.Image != null &&
+                    drawingCanvas.Image.ToString().Contains(currentImagePath))
+                {
+                    newStatus = ImageStatus.Verified;
+                }
+                else if (isImportedOrAI)
+                {
+                    newStatus = ImageStatus.VerificationNeeded;
+                }
+                else
+                {
+                    newStatus = ImageStatus.Verified;
+                }
+            }
+
+            imageStatuses[currentImagePath] = newStatus;
+
+            // Update ListBox item while preserving selection
+            ImageListBox.SelectionChanged -= ImageListBox_SelectionChanged;
+
+            // Find the item in the ListBox
+            for (int i = 0; i < ImageListBox.Items.Count; i++)
+            {
+                if (ImageListBox.Items[i] is ImageListItem item && item.FileName == currentImagePath)
+                {
+                    ImageListBox.Items.RemoveAt(i);
+                    ImageListBox.Items.Insert(i, new ImageListItem(currentImagePath, newStatus));
+                    ImageListBox.SelectedIndex = i;
+                    break;
+                }
+            }
+
+            ImageListBox.SelectionChanged += ImageListBox_SelectionChanged;
+            UpdateStatusCounts();
+        }
 
         private void ImageListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (ImageListBox.SelectedItem is string fileName &&
-             imagePathMap.TryGetValue(fileName, out ImageInfo imageInfo))
+            if (ImageListBox.SelectedItem is ImageListItem selected &&
+                imagePathMap.TryGetValue(selected.FileName, out ImageInfo imageInfo))
             {
                 // Save existing labels
                 if (!string.IsNullOrEmpty(currentImagePath))
@@ -92,13 +174,45 @@ namespace YoableWPF
                     labelStorage[currentImagePath] = new List<LabelData>(drawingCanvas.Labels);
                 }
 
-                currentImagePath = fileName;
+                currentImagePath = selected.FileName;
                 drawingCanvas.LoadImage(imageInfo.Path, imageInfo.OriginalDimensions);
 
+                // Reset zoom on image change
+                drawingCanvas.ResetZoom();
+
                 // Load labels for this image if they exist
-                if (labelStorage.ContainsKey(fileName))
+                if (labelStorage.ContainsKey(selected.FileName))
                 {
-                    drawingCanvas.Labels = new List<LabelData>(labelStorage[fileName]);
+                    drawingCanvas.Labels = new List<LabelData>(labelStorage[selected.FileName]);
+
+                    // Update status when viewing an image with AI or imported labels
+                    if (labelStorage[selected.FileName].Any(l => l.Name.StartsWith("AI") || l.Name.StartsWith("Imported")))
+                    {
+                        // Only update to Verified if it was previously VerificationNeeded
+                        if (imageStatuses[selected.FileName] == ImageStatus.VerificationNeeded)
+                        {
+                            imageStatuses[selected.FileName] = ImageStatus.Verified;
+
+                            // Find the current item's index
+                            var currentIndex = ImageListBox.SelectedIndex;
+                            if (currentIndex >= 0)
+                            {
+                                // Temporarily disable SelectionChanged event
+                                ImageListBox.SelectionChanged -= ImageListBox_SelectionChanged;
+
+                                // Update the item
+                                ImageListBox.Items.RemoveAt(currentIndex);
+                                ImageListBox.Items.Insert(currentIndex, new ImageListItem(selected.FileName, ImageStatus.Verified));
+
+                                // Restore selection and scroll position
+                                ImageListBox.SelectedIndex = currentIndex;
+                                ImageListBox.ScrollIntoView(ImageListBox.SelectedItem);
+
+                                // Re-enable SelectionChanged event
+                                ImageListBox.SelectionChanged += ImageListBox_SelectionChanged;
+                            }
+                        }
+                    }
                 }
                 else
                 {
@@ -106,6 +220,7 @@ namespace YoableWPF
                 }
 
                 // Update UI
+                UpdateStatusCounts();
                 RefreshLabelList();
             }
         }
@@ -207,22 +322,34 @@ namespace YoableWPF
             }
         }
 
+        private void UpdateAllImageStatuses()
+        {
+            foreach (var fileName in imagePathMap.Keys.ToList())
+            {
+                UpdateImageStatus(fileName);
+            }
+        }
+
         private void ClearAll_Click(object sender, RoutedEventArgs e)
         {
             imagePathMap.Clear();
+            imageStatuses.Clear();
             labelStorage.Clear();
             drawingCanvas.Labels.Clear(); // Clear labels inside DrawingCanvas
             ImageListBox.Items.Clear();
             LabelListBox.Items.Clear();
             drawingCanvas.Image = null; // Clear the image in DrawingCanvas
             drawingCanvas.InvalidateVisual(); // Force a redraw
+            UpdateStatusCounts();
         }
 
         private async void AutoLabelImages_Click(object sender, RoutedEventArgs e)
         {
             yoloAI.LoadYoloModel();
-
             if (yoloAI.yoloSession == null) return;  // Exit if model loading failed
+
+            // Store current selection
+            var currentSelection = ImageListBox.SelectedItem as ImageListItem;
 
             CancellationTokenSource tokenSource = new CancellationTokenSource();
             overlayManager.ShowOverlayWithProgress("Running AI Detections...", tokenSource);
@@ -295,6 +422,25 @@ namespace YoableWPF
             Dispatcher.Invoke(() =>
             {
                 overlayManager.HideOverlay();
+                UpdateAllImageStatuses();
+
+                // Restore selection if it was lost
+                if (currentSelection != null && ImageListBox.SelectedItem == null)
+                {
+                    for (int i = 0; i < ImageListBox.Items.Count; i++)
+                    {
+                        if (ImageListBox.Items[i] is ImageListItem item &&
+                            item.FileName == currentSelection.FileName)
+                        {
+                            ImageListBox.SelectedIndex = i;
+                            ImageListBox.ScrollIntoView(ImageListBox.SelectedItem);
+                            break;
+                        }
+                    }
+                }
+
+                OnLabelsChanged();
+                UpdateStatusCounts();
                 MessageBox.Show($"Auto-labeling complete, total detections: {totalDetections}", "AI Labels", MessageBoxButton.OK, MessageBoxImage.Information);
             });
         }
@@ -344,6 +490,8 @@ namespace YoableWPF
             {
                 ImageListBox.SelectedIndex = 0;
             }
+
+            UpdateStatusCounts();
         }
 
         private void AddImage(string filePath)
@@ -352,7 +500,6 @@ namespace YoableWPF
 
             string fileName = Path.GetFileName(filePath);
 
-            // Get image dimensions without loading the full image into memory
             using (var imageStream = File.OpenRead(filePath))
             {
                 var decoder = BitmapDecoder.Create(
@@ -361,13 +508,13 @@ namespace YoableWPF
                     BitmapCacheOption.None);
 
                 var dimensions = new Size(decoder.Frames[0].PixelWidth, decoder.Frames[0].PixelHeight);
-
                 imagePathMap[fileName] = new ImageInfo(filePath, dimensions);
+                imageStatuses[fileName] = ImageStatus.NoLabel;
             }
 
-            if (!ImageListBox.Items.Contains(fileName))
+            if (!ImageListBox.Items.Contains(new ImageListItem(fileName, ImageStatus.NoLabel)))
             {
-                ImageListBox.Items.Add(fileName);
+                ImageListBox.Items.Add(new ImageListItem(fileName, ImageStatus.NoLabel));
             }
 
             if (ImageListBox.Items.Count == 1)
@@ -379,6 +526,9 @@ namespace YoableWPF
         private async Task LoadYOLOLabelsFromDirectory(string directoryPath)
         {
             if (!Directory.Exists(directoryPath)) return;
+
+            // Store current selection
+            var currentSelection = ImageListBox.SelectedItem as ImageListItem;
 
             string[] labelFiles = Directory.GetFiles(directoryPath, "*.txt");
             int totalFiles = labelFiles.Length;
@@ -427,6 +577,25 @@ namespace YoableWPF
             {
                 drawingCanvas.Labels = labelStorage[currentImagePath];
                 RefreshLabelList();
+                UpdateAllImageStatuses();
+                UpdateStatusCounts();
+
+                // Restore selection if it was lost
+                if (currentSelection != null && ImageListBox.SelectedItem == null)
+                {
+                    for (int i = 0; i < ImageListBox.Items.Count; i++)
+                    {
+                        if (ImageListBox.Items[i] is ImageListItem item &&
+                            item.FileName == currentSelection.FileName)
+                        {
+                            ImageListBox.SelectedIndex = i;
+                            ImageListBox.ScrollIntoView(ImageListBox.SelectedItem);
+                            break;
+                        }
+                    }
+                }
+
+                OnLabelsChanged();
                 drawingCanvas.InvalidateVisual();
             }
         }
@@ -496,11 +665,13 @@ namespace YoableWPF
                 return;
             }
 
-            overlayManager.UpdateMessage("Export complete. Uploading dataset...");
-            bool uploadSuccess = await cloudUploader.AskForUploadAsync(labelFilesToUpload, imageFilesToUpload);
+            if (Properties.Settings.Default.AskForUpload)
+            {
+                overlayManager.UpdateMessage("Export complete. Uploading dataset...");
+                await cloudUploader.AskForUploadAsync(labelFilesToUpload, imageFilesToUpload);
+            }
 
             overlayManager.HideOverlay();
-
             MessageBox.Show($"Labels exported successfully!", "Process Complete", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
@@ -585,19 +756,109 @@ namespace YoableWPF
             }
         }
 
-        private void Window_KeyDown(object sender, KeyEventArgs e)
+        private void UpdateStatusCounts()
         {
-            OnKeyDown(e);
+            var needsReview = ImageListBox.Items.Cast<ImageListItem>()
+                .Count(x => x.Status == ImageStatus.VerificationNeeded);
+            var unverified = ImageListBox.Items.Cast<ImageListItem>()
+                .Count(x => x.Status == ImageStatus.NoLabel);
+
+            // Update the text blocks with counts
+            NeedsReviewCount.Text = needsReview > 0
+                ? $"{needsReview} need{(needsReview == 1 ? "s" : "")} review"
+                : "0 need review";
+            NeedsReviewCount.Foreground = needsReview > 0
+                ? (SolidColorBrush)(new BrushConverter().ConvertFrom("#CC7A00"))
+                : NeedsReviewCount.Foreground;
+
+            UnverifiedCount.Text = unverified > 0
+                ? $"{unverified} unverified"
+                : "0 unverified";
+            UnverifiedCount.Foreground = unverified > 0
+                ? (SolidColorBrush)(new BrushConverter().ConvertFrom("#CC3300"))
+                : UnverifiedCount.Foreground;
         }
 
-        // Same as DrawingCanvas, we need in both to support Label Listbox select and move/delete.
-        protected override void OnKeyDown(KeyEventArgs e)
+        private void UpdateImageStatus(string fileName)
         {
-            base.OnKeyDown(e);
+            if (!imagePathMap.ContainsKey(fileName)) return;
 
+            var hasLabels = labelStorage.ContainsKey(fileName) && labelStorage[fileName].Any();
+            var isImportedOrAI = hasLabels && labelStorage[fileName].Any(l => l.Name.StartsWith("Imported") || l.Name.StartsWith("AI"));
+
+            ImageStatus newStatus;
+            if (!hasLabels)
+                newStatus = ImageStatus.NoLabel;
+            else if (isImportedOrAI)
+                newStatus = ImageStatus.VerificationNeeded;
+            else
+                newStatus = ImageStatus.Verified;
+
+            imageStatuses[fileName] = newStatus;
+
+            // Refresh ListBox item
+            var index = -1;
+            for (int i = 0; i < ImageListBox.Items.Count; i++)
+            {
+                if (ImageListBox.Items[i] is ImageListItem item && item.FileName == fileName)
+                {
+                    index = i;
+                    break;
+                }
+            }
+
+            if (index >= 0)
+            {
+                ImageListBox.Items.RemoveAt(index);
+                ImageListBox.Items.Insert(index, new ImageListItem(fileName, newStatus));
+            }
+        }
+
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            OnPreviewKeyDown(e);
+        }
+
+        protected override void OnPreviewKeyDown(KeyEventArgs e)
+        {
+            base.OnPreviewKeyDown(e);
+
+            int index = -1;
+
+            // Check for both top number keys (D1-D9) and numpad keys (NumPad1-NumPad9)
+            if (e.Key >= Key.D1 && e.Key <= Key.D9)
+            {
+                index = (int)e.Key - (int)Key.D1; // Convert key to index (0-based)
+            }
+            else if (e.Key >= Key.NumPad1 && e.Key <= Key.NumPad9)
+            {
+                index = (int)e.Key - (int)Key.NumPad1; // Convert numpad key to index (0-based)
+            }
+
+            if (index >= 0 && index < LabelListBox.Items.Count)
+            {
+                LabelListBox.SelectedIndex = index;
+
+                // Ensure the selected label is updated in DrawingCanvas
+                string selectedLabelName = LabelListBox.SelectedItem as string;
+                if (!string.IsNullOrEmpty(selectedLabelName))
+                {
+                    drawingCanvas.SelectedLabel = drawingCanvas.Labels.FirstOrDefault(label => label.Name == selectedLabelName);
+                    drawingCanvas.InvalidateVisual();
+                }
+
+                // Force focus back to the window to keep key events working
+                this.Focus();
+                Keyboard.Focus(this);
+
+                e.Handled = true;
+                return; // Prevent further processing
+            }
+
+            // Handle label movement and deletion
             if (drawingCanvas.SelectedLabel != null)
             {
-                int moveAmount = 1; // Amount of pixels to move
+                int moveAmount = 1;
 
                 switch (e.Key)
                 {
@@ -618,16 +879,93 @@ namespace YoableWPF
                         break;
 
                     case Key.Delete:
-                        // Remove the selected label from canvas and list
                         drawingCanvas.Labels.Remove(drawingCanvas.SelectedLabel);
                         LabelListBox.Items.Remove(drawingCanvas.SelectedLabel.Name);
                         drawingCanvas.SelectedLabel = null;
+                        if (Application.Current.MainWindow is MainWindow mainWindow)
+                        {
+                            mainWindow.OnLabelsChanged();
+                        }
                         break;
                 }
 
-                drawingCanvas.InvalidateVisual(); // Refresh canvas
+                drawingCanvas.InvalidateVisual();
                 e.Handled = true;
             }
+        }
+
+        private void SortByName_Click(object sender, RoutedEventArgs e)
+        {
+            var items = ImageListBox.Items.Cast<ImageListItem>().ToList();
+            var selectedItem = ImageListBox.SelectedItem as ImageListItem;
+
+            // Sort by filename
+            var sorted = items.OrderBy(x => x.FileName).ToList();
+
+            // Update ListBox while preserving selection
+            ImageListBox.SelectionChanged -= ImageListBox_SelectionChanged;
+            ImageListBox.Items.Clear();
+            foreach (var item in sorted)
+            {
+                ImageListBox.Items.Add(item);
+            }
+
+            // Restore selection
+            if (selectedItem != null)
+            {
+                for (int i = 0; i < ImageListBox.Items.Count; i++)
+                {
+                    if (ImageListBox.Items[i] is ImageListItem item &&
+                        item.FileName == selectedItem.FileName)
+                    {
+                        ImageListBox.SelectedIndex = i;
+                        ImageListBox.ScrollIntoView(ImageListBox.SelectedItem);
+                        break;
+                    }
+                }
+            }
+            ImageListBox.SelectionChanged += ImageListBox_SelectionChanged;
+        }
+
+        private void SortByStatus_Click(object sender, RoutedEventArgs e)
+        {
+            var items = ImageListBox.Items.Cast<ImageListItem>().ToList();
+            var selectedItem = ImageListBox.SelectedItem as ImageListItem;
+
+            // Custom sort order: VerificationNeeded first, then NoLabel, then Verified
+            var sorted = items.OrderBy(x => {
+                switch (x.Status)
+                {
+                    case ImageStatus.VerificationNeeded: return 0;
+                    case ImageStatus.NoLabel: return 1;
+                    case ImageStatus.Verified: return 2;
+                    default: return 3;
+                }
+            }).ThenBy(x => x.FileName).ToList();
+
+            // Update ListBox while preserving selection
+            ImageListBox.SelectionChanged -= ImageListBox_SelectionChanged;
+            ImageListBox.Items.Clear();
+            foreach (var item in sorted)
+            {
+                ImageListBox.Items.Add(item);
+            }
+
+            // Restore selection
+            if (selectedItem != null)
+            {
+                for (int i = 0; i < ImageListBox.Items.Count; i++)
+                {
+                    if (ImageListBox.Items[i] is ImageListItem item &&
+                        item.FileName == selectedItem.FileName)
+                    {
+                        ImageListBox.SelectedIndex = i;
+                        ImageListBox.ScrollIntoView(ImageListBox.SelectedItem);
+                        break;
+                    }
+                }
+            }
+            ImageListBox.SelectionChanged += ImageListBox_SelectionChanged;
         }
 
         private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)

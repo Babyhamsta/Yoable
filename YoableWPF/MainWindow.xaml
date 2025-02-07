@@ -16,7 +16,7 @@
     <Grid>
         <!-- Grid Layout -->
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="200"/>
+            <ColumnDefinition Width="250"/>
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="200"/>
         </Grid.ColumnDefinitions>
@@ -42,21 +42,130 @@
                 <MenuItem Header="Auto Suggest Labels" Click="AutoSuggestLabels_Click"/>
                 <MenuItem Header="AI Settings" Click="AISettings_Click"/>
             </MenuItem>
+            <MenuItem Header="Sort">
+                <MenuItem Header="Images By Name" Click="SortByName_Click"/>
+                <MenuItem Header="Images By Status" Click="SortByStatus_Click"/>
+            </MenuItem>
             <MenuItem Header="Settings" x:Name="SettingsMenuItem" Click="SettingsMenuItem_Click"/>
         </Menu>
 
-        <!-- Content Panels -->
-        <ListBox x:Name="ImageListBox" Grid.Row="2" Grid.Column="0" SelectionMode="Single" SelectionChanged="ImageListBox_SelectionChanged"/>
+        <!-- Left Panel with ImageListBox and Status Summary -->
+        <Grid Grid.Row="2" Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <!-- ImageListBox -->
+            <ListBox x:Name="ImageListBox" 
+                    Grid.Row="0"
+                    SelectionMode="Single" 
+                    SelectionChanged="ImageListBox_SelectionChanged">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <Grid Margin="4,2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+
+                            <!-- Filename -->
+                            <TextBlock Text="{Binding FileName}" 
+                                     VerticalAlignment="Center"
+                                     TextTrimming="CharacterEllipsis"
+                                     Margin="0,0,8,0"/>
+
+                            <!-- Status Label -->
+                            <Border Grid.Column="1" 
+                                    CornerRadius="4" 
+                                    Padding="6,3"
+                                    BorderThickness="1">
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding Status}" Value="NoLabel">
+                                                <Setter Property="Background" Value="#22FF0000"/>
+                                                <Setter Property="BorderBrush" Value="#66FF0000"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="VerificationNeeded">
+                                                <Setter Property="Background" Value="#22FFA500"/>
+                                                <Setter Property="BorderBrush" Value="#66FFA500"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding Status}" Value="Verified">
+                                                <Setter Property="Background" Value="#2200FF00"/>
+                                                <Setter Property="BorderBrush" Value="#6600FF00"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+
+                                <TextBlock FontSize="11" FontWeight="SemiBold">
+                                    <TextBlock.Style>
+                                        <Style TargetType="TextBlock">
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding Status}" Value="NoLabel">
+                                                    <Setter Property="Text" Value="NO LABEL"/>
+                                                    <Setter Property="Foreground" Value="#CC3300"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="VerificationNeeded">
+                                                    <Setter Property="Text" Value="REVIEW"/>
+                                                    <Setter Property="Foreground" Value="#CC7A00"/>
+                                                </DataTrigger>
+                                                <DataTrigger Binding="{Binding Status}" Value="Verified">
+                                                    <Setter Property="Text" Value="VERIFIED"/>
+                                                    <Setter Property="Foreground" Value="#2E7D32"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </TextBlock.Style>
+                                </TextBlock>
+                            </Border>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Status Summary -->
+            <Border Grid.Row="1" 
+                    BorderThickness="0,1,0,0" 
+                    Padding="12,8">
+                <StackPanel x:Name="StatusSummaryPanel" Orientation="Horizontal">
+                    <TextBlock x:Name="NeedsReviewCount" 
+                             FontSize="11" 
+                             FontWeight="SemiBold"
+                             Foreground="#CC7A00"/>
+                    <TextBlock x:Name="SpacerCount" 
+                             FontSize="11" 
+                             FontWeight="SemiBold"
+                             Foreground="#FFFFFF"
+                             Text=" | "/>
+                    <TextBlock x:Name="UnverifiedCount" 
+                             FontSize="11" 
+                             FontWeight="SemiBold"
+                             Foreground="#CC3300"/>
+                </StackPanel>
+            </Border>
+        </Grid>
 
         <!-- Center Content Panel with ScrollViewer -->
         <Border Grid.Row="2" Grid.Column="1" BorderBrush="Gray" BorderThickness="2">
             <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                          VerticalScrollBarVisibility="Auto"
-                          ClipToBounds="True">
+                         VerticalScrollBarVisibility="Auto"
+                         ClipToBounds="True">
                 <local:DrawingCanvas x:Name="drawingCanvas"/>
             </ScrollViewer>
         </Border>
 
-        <ListBox x:Name="LabelListBox" Grid.Row="2" Grid.Column="2" SelectionMode="Single" SelectionChanged="LabelListBox_SelectionChanged"/>
+        <!-- Labels List -->
+        <ListBox x:Name="LabelListBox" 
+                Grid.Row="2" 
+                Grid.Column="2" 
+                SelectionMode="Single" 
+                SelectionChanged="LabelListBox_SelectionChanged"/>
     </Grid>
 </Window>

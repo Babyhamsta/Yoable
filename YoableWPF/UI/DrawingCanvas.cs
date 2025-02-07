@@ -63,6 +63,14 @@ namespace YoableWPF
             MouseLeave += DrawingCanvas_MouseLeave;
         }
 
+        public void ResetZoom()
+        {
+            zoomFactor = 1.0;
+            transformMatrix = Matrix.Identity;
+            RenderTransform = new MatrixTransform(transformMatrix);
+            InvalidateVisual(); // Force redraw
+        }
+
         private Rect ScaleRectToCanvas(Rect originalRect)
         {
             if (Image == null) return originalRect;
@@ -187,46 +195,66 @@ namespace YoableWPF
 
         private void DrawingCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
         {
-            if (!Keyboard.IsKeyDown(Key.LeftCtrl) && !Keyboard.IsKeyDown(Key.RightCtrl))
-                return;
-
-            double oldZoomFactor = zoomFactor;
-            zoomCenter = e.GetPosition(this); // Get mouse position relative to the canvas
-
-            if (e.Delta > 0)
+            if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
             {
-                zoomFactor *= 1 + zoomStep; // Zoom In
-            }
-            else if (e.Delta < 0)
-            {
-                zoomFactor /= 1 + zoomStep; // Zoom Out
-            }
+                // Existing zoom functionality
+                double oldZoomFactor = zoomFactor;
+                zoomCenter = e.GetPosition(this); // Get mouse position relative to the canvas
 
-            // Prevent zooming out beyond original size
-            zoomFactor = Math.Max(1.0, Math.Min(zoomFactor, 5.0));
+                if (e.Delta > 0)
+                {
+                    zoomFactor *= 1 + zoomStep; // Zoom In
+                }
+                else if (e.Delta < 0)
+                {
+                    zoomFactor /= 1 + zoomStep; // Zoom Out
+                }
 
-            // Reset transformation if zoomFactor is back to normal (prevents drifting)
-            if (zoomFactor == 1.0)
-            {
-                transformMatrix = Matrix.Identity;
+                // Prevent zooming out beyond original size
+                zoomFactor = Math.Max(1.0, Math.Min(zoomFactor, 5.0));
+
+                // Reset transformation if zoomFactor is back to normal (prevents drifting)
+                if (zoomFactor == 1.0)
+                {
+                    transformMatrix = Matrix.Identity;
+                    RenderTransform = new MatrixTransform(transformMatrix);
+                    InvalidateVisual();
+                    return;
+                }
+
+                // Get new mouse position after zoom
+                Point newZoomCenter = e.GetPosition(this);
+
+                // Adjust translation smoothly instead of jumping
+                double offsetX = newZoomCenter.X - zoomCenter.X;
+                double offsetY = newZoomCenter.Y - zoomCenter.Y;
+
+                transformMatrix.Translate(-zoomCenter.X, -zoomCenter.Y);
+                transformMatrix.Scale(zoomFactor / oldZoomFactor, zoomFactor / oldZoomFactor);
+                transformMatrix.Translate(zoomCenter.X - offsetX, zoomCenter.Y - offsetY);
+
                 RenderTransform = new MatrixTransform(transformMatrix);
                 InvalidateVisual();
-                return;
+            }
+            else
+            {
+                // Switch images when CTRL is NOT held
+                if (Application.Current.MainWindow is MainWindow mainWindow)
+                {
+                    ListBox imageListBox = mainWindow.ImageListBox;
+                    if (imageListBox.Items.Count == 0) return;
+
+                    int newIndex = imageListBox.SelectedIndex + (e.Delta > 0 ? -1 : 1);
+
+                    if (newIndex >= 0 && newIndex < imageListBox.Items.Count)
+                    {
+                        imageListBox.SelectedIndex = newIndex;
+                        imageListBox.ScrollIntoView(imageListBox.SelectedItem);
+                    }
+                }
             }
 
-            // Get new mouse position after zoom
-            Point newZoomCenter = e.GetPosition(this);
-
-            // Adjust translation smoothly instead of jumping
-            double offsetX = newZoomCenter.X - zoomCenter.X;
-            double offsetY = newZoomCenter.Y - zoomCenter.Y;
-
-            transformMatrix.Translate(-zoomCenter.X, -zoomCenter.Y);
-            transformMatrix.Scale(zoomFactor / oldZoomFactor, zoomFactor / oldZoomFactor);
-            transformMatrix.Translate(zoomCenter.X - offsetX, zoomCenter.Y - offsetY);
-
-            RenderTransform = new MatrixTransform(transformMatrix);
-            InvalidateVisual();
+            e.Handled = true; // Prevent default behavior
         }
 
         private void DrawingCanvas_MouseMove(object sender, MouseEventArgs e)
@@ -301,6 +329,11 @@ namespace YoableWPF
                     if (LabelListBox != null)
                     {
                         LabelListBox.Items.Add(newLabel.Name);
+                    }
+
+                    if (Application.Current.MainWindow is MainWindow mainWindow)
+                    {
+                        mainWindow.OnLabelsChanged();
                     }
                 }
                 CurrentRect = new Rect(0, 0, 0, 0);
