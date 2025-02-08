@@ -161,8 +161,11 @@ namespace YoableWPF
         {
             // Convert the rect to canvas coordinates before drawing handles
             Rect scaledRect = ScaleRectToCanvas(rect);
-            double s = 4; // Resize handle size
 
+            // Adjust handle size based on zoom factor
+            double s = resizeHandleSize * Math.Sqrt(zoomFactor) / zoomFactor;
+
+            // Create handles with adjusted size
             Rect[] handles =
             {
                 new Rect(scaledRect.Left - s, scaledRect.Top - s, s * 2, s * 2), // Top Left
@@ -310,7 +313,7 @@ namespace YoableWPF
             if (IsDrawing)
             {
                 IsDrawing = false;
-                if (CurrentRect.Width > 10 && CurrentRect.Height > 10)
+                if (CurrentRect.Width > 1 && CurrentRect.Height > 1)
                 {
                     // Convert final canvas coordinates to image coordinates for storage
                     double scaleX = originalImageDimensions.Width / ActualWidth;
@@ -345,41 +348,65 @@ namespace YoableWPF
         private void DrawingCanvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
             Point mousePos = e.GetPosition(this);
+            bool handled = false;
 
-            bool clickedOnLabel = false;
-            foreach (var label in Labels)
+            // First check resize handles of selected label if any
+            if (SelectedLabel != null)
             {
+                resizeHandleType = GetResizeHandle(mousePos, SelectedLabel.Rect);
+                if (resizeHandleType != ResizeHandleType.None)
+                {
+                    IsResizing = true;
+                    DragStart = mousePos;
+                    handled = true;
+                    InvalidateVisual();
+                    return;
+                }
+            }
+
+            // If not resizing, check for label selection
+            // Iterate through labels in reverse order (newest first)
+            for (int i = Labels.Count - 1; i >= 0; i--)
+            {
+                var label = Labels[i];
+
+                // First check if clicking on resize handles
                 resizeHandleType = GetResizeHandle(mousePos, label.Rect);
                 if (resizeHandleType != ResizeHandleType.None)
                 {
                     SelectedLabel = label;
                     IsResizing = true;
                     DragStart = mousePos;
-                    clickedOnLabel = true;
+                    handled = true;
                     break;
                 }
 
+                // Then check if clicking on the label itself
                 Rect scaledRect = ScaleRectToCanvas(label.Rect);
                 if (scaledRect.Contains(mousePos))
                 {
                     SelectedLabel = label;
                     IsDragging = true;
                     DragStart = mousePos;
-                    clickedOnLabel = true;
+                    handled = true;
                     break;
                 }
             }
 
-            // Select label in listbox too
+            // Update ListBox selection to match
             LabelListBox.SelectedItem = SelectedLabel?.Name;
 
-            if (!clickedOnLabel)
+            if (!handled)
             {
+                // If we didn't click on any label or resize handle, start drawing
                 IsDrawing = true;
                 StartPoint = mousePos;
                 CurrentRect = new Rect(StartPoint, new Size(0, 0));
                 SelectedLabel = null;
             }
+
+            InvalidateVisual();
+            Keyboard.Focus(this);
         }
 
         private void DrawingCanvas_MouseLeave(object sender, MouseEventArgs e)
@@ -394,7 +421,9 @@ namespace YoableWPF
         {
             // Convert the rect to canvas coordinates for hit testing
             Rect scaledRect = ScaleRectToCanvas(rect);
-            double s = resizeHandleSize;
+
+            // Adjust handle size based on zoom factor but square it
+            double s = resizeHandleSize * Math.Sqrt(zoomFactor) / zoomFactor;
 
             Rect[] handles =
             {
@@ -483,7 +512,7 @@ namespace YoableWPF
             }
 
             // Ensure minimum size
-            label.Rect = new Rect(x, y, Math.Max(10, width), Math.Max(10, height));
+            label.Rect = new Rect(x, y, Math.Max(1, width), Math.Max(1, height));
         }
 
         protected override void OnMouseDown(MouseButtonEventArgs e)

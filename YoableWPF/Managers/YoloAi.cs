@@ -4,9 +4,27 @@ using Microsoft.Win32;
 using System.Drawing.Imaging;
 using System.Windows;
 using System.Drawing;
+using Point = System.Drawing.Point;
 
 namespace YoableWPF.Managers
 {
+    public class Detection
+    {
+        public Rectangle Box { get; }
+        public float Confidence { get; }
+        public float ClassConfidence { get; }
+        public int ClassId { get; }
+        public float Score => Confidence * ClassConfidence;
+
+        public Detection(Rectangle box, float confidence, float classConfidence = 1.0f, int classId = 0)
+        {
+            Box = box;
+            Confidence = confidence;
+            ClassConfidence = classConfidence;
+            ClassId = classId;
+        }
+    }
+
     public class YoloAI
     {
         public InferenceSession yoloSession;
@@ -95,24 +113,79 @@ namespace YoableWPF.Managers
             return 0; // ERROR - Do not continue
         }
 
-        private List<Rectangle> ApplyNMS(List<(Rectangle box, float confidence)> detections, float iouThreshold = 0.5f)
+        private List<Detection> ApplyImprovedNMS(List<Detection> detections, float iouThreshold = 0.5f)
         {
-            List<Rectangle> finalDetections = new();
+            if (detections.Count == 0) return new List<Detection>();
 
-            // Sort detections by confidence descending
-            detections = detections.OrderByDescending(d => d.confidence).ToList();
+            // Sort by total score (objectness * class confidence)
+            detections = detections.OrderByDescending(d => d.Score).ToList();
+            List<Detection> kept = new();
 
-            while (detections.Count > 0)
+            for (int i = 0; i < detections.Count; i++)
             {
-                var best = detections[0];
-                finalDetections.Add(best.box);
+                var current = detections[i];
+                bool shouldKeep = true;
 
-                detections = detections.Skip(1)
-                    .Where(d => ComputeIoU(best.box, d.box) < iouThreshold)
-                    .ToList();
+                foreach (var previous in kept)
+                {
+                    float iou = ComputeIoU(current.Box, previous.Box);
+
+                    if (iou >= iouThreshold)
+                    {
+                        // Additional checks for keeping potentially distinct objects
+                        if (IsDistinctObject(current, previous))
+                        {
+                            continue;
+                        }
+
+                        shouldKeep = false;
+                        break;
+                    }
+                }
+
+                if (shouldKeep)
+                {
+                    kept.Add(current);
+                }
             }
 
-            return finalDetections;
+            return kept;
+        }
+
+        private bool IsDistinctObject(Detection d1, Detection d2)
+        {
+            // Different classes should be kept
+            if (d1.ClassId != d2.ClassId) return true;
+
+            // Calculate relative size difference
+            float area1 = d1.Box.Width * d1.Box.Height;
+            float area2 = d2.Box.Width * d2.Box.Height;
+            float sizeDiff = Math.Abs(area1 - area2) / Math.Max(area1, area2);
+
+            // Calculate center points
+            Point center1 = new(d1.Box.X + d1.Box.Width / 2, d1.Box.Y + d1.Box.Height / 2);
+            Point center2 = new(d2.Box.X + d2.Box.Width / 2, d2.Box.Y + d2.Box.Height / 2);
+
+            // Calculate relative distance between centers
+            float distance = GetDistance(center1, center2);
+            float avgSize = (float)Math.Sqrt((area1 + area2) / 2);
+            float relativeDistance = distance / avgSize;
+
+            // Check confidence delta
+            float confidenceDelta = Math.Abs(d1.Score - d2.Score);
+
+            // Criteria for distinct objects:
+            // 1. Very different sizes (> 50% difference)
+            // 2. Centers are far apart relative to size
+            // 3. Similar confidence scores (suggesting both might be valid)
+            return sizeDiff > 0.5f ||
+                   relativeDistance > 0.5f ||
+                   (confidenceDelta < 0.1f && sizeDiff > 0.3f);
+        }
+
+        private float GetDistance(Point p1, Point p2)
+        {
+            return (float)Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
         }
 
         private float ComputeIoU(Rectangle a, Rectangle b)
@@ -128,50 +201,79 @@ namespace YoableWPF.Managers
             return unionArea == 0 ? 0 : (float)intersectionArea / unionArea;
         }
 
-        private List<Rectangle> PostProcessYoloV5Output(Tensor<float> outputTensor, int imgWidth, int imgHeight)
+        private List<Detection> PostProcessYoloV5Output(Tensor<float> outputTensor, int imgWidth, int imgHeight)
         {
-            List<(Rectangle box, float confidence)> detections = new();
+            List<Detection> detections = new();
             int numDetections = outputTensor.Dimensions[1]; // 25200 detections for YOLOv5
 
             for (int i = 0; i < numDetections; i++)
             {
                 float objectness = outputTensor[0, i, 4]; // Objectness score
-                float classConfidence = outputTensor[0, i, 5]; // Class confidence
+                if (objectness < Properties.Settings.Default.AIConfidence) continue;
 
-                if (objectness < Properties.Settings.Default.AIConfidence) continue; // Filter out weak detections
+                // Get class confidence and id
+                float maxClassConf = 0;
+                int classId = 0;
+                for (int c = 5; c < outputTensor.Dimensions[2]; c++)
+                {
+                    float classConf = outputTensor[0, i, c];
+                    if (classConf > maxClassConf)
+                    {
+                        maxClassConf = classConf;
+                        classId = c - 5;
+                    }
+                }
 
-                // Extract normalized bounding box values
+                // Extract normalized coordinates
                 float xCenter = outputTensor[0, i, 0];
                 float yCenter = outputTensor[0, i, 1];
                 float width = outputTensor[0, i, 2];
                 float height = outputTensor[0, i, 3];
 
-                // Convert to absolute coordinates
-                float xMin = xCenter - width / 2;
-                float yMin = yCenter - height / 2;
-                float xMax = xCenter + width / 2;
-                float yMax = yCenter + height / 2;
+                // Convert to pixel coordinates with boundary checking
+                float xMin = Math.Max(0, xCenter - width / 2);
+                float yMin = Math.Max(0, yCenter - height / 2);
+                float xMax = Math.Min(imgWidth, xCenter + width / 2);
+                float yMax = Math.Min(imgHeight, yCenter + height / 2);
 
-                // Ensure bounding boxes are within the image bounds
-                if (xMin < 0 || xMax > imgWidth || yMin < 0 || yMax > imgHeight) continue;
-                detections.Add((new Rectangle((int)xMin, (int)yMin, (int)(xMax - xMin), (int)(yMax - yMin)), objectness));
+                // Skip if box is too small
+                if (xMax - xMin < 1 || yMax - yMin < 1) continue;
+
+                detections.Add(new Detection(
+                    new Rectangle((int)xMin, (int)yMin, (int)(xMax - xMin), (int)(yMax - yMin)),
+                    objectness,
+                    maxClassConf,
+                    classId
+                ));
             }
 
-            var finalBoxes = ApplyNMS(detections);
-            TotalDetections = TotalDetections + finalBoxes.Count;
-
+            var finalBoxes = ApplyImprovedNMS(detections);
+            TotalDetections += finalBoxes.Count;
             return finalBoxes;
         }
 
-        private List<Rectangle> PostProcessYoloV8Output(Tensor<float> outputTensor, int imgWidth, int imgHeight)
+        private List<Detection> PostProcessYoloV8Output(Tensor<float> outputTensor, int imgWidth, int imgHeight)
         {
-            List<(Rectangle box, float confidence)> detections = new();
-            int numDetections = outputTensor.Dimensions[2]; // Typically 8400 for YOLOv8
+            List<Detection> detections = new();
+            int numDetections = outputTensor.Dimensions[2];
 
             for (int i = 0; i < numDetections; i++)
             {
-                float objectness = outputTensor[0, 4, i]; // Confidence score
+                float objectness = outputTensor[0, 4, i];
                 if (objectness < Properties.Settings.Default.AIConfidence) continue;
+
+                // Get class confidence and id
+                float maxClassConf = 0;
+                int classId = 0;
+                for (int c = 5; c < outputTensor.Dimensions[1]; c++)
+                {
+                    float classConf = outputTensor[0, c, i];
+                    if (classConf > maxClassConf)
+                    {
+                        maxClassConf = classConf;
+                        classId = c - 5;
+                    }
+                }
 
                 // Extract normalized coordinates
                 float xCenter = outputTensor[0, 0, i];
@@ -179,20 +281,25 @@ namespace YoableWPF.Managers
                 float width = outputTensor[0, 2, i];
                 float height = outputTensor[0, 3, i];
 
-                // Convert YOLO format (center-x, center-y, width, height) to (x_min, y_min, width, height)
-                float xMin = xCenter - width / 2;
-                float yMin = yCenter - height / 2;
-                float xMax = xCenter + width / 2;
-                float yMax = yCenter + height / 2;
+                // Convert to pixel coordinates with boundary checking
+                float xMin = Math.Max(0, xCenter - width / 2);
+                float yMin = Math.Max(0, yCenter - height / 2);
+                float xMax = Math.Min(imgWidth, xCenter + width / 2);
+                float yMax = Math.Min(imgHeight, yCenter + height / 2);
 
-                // Ignore if outside bounds of image
-                if (xMin < 0 || xMax > imgWidth || yMin < 0 || yMax > imgHeight) continue;
-                detections.Add((new Rectangle((int)xMin, (int)yMin, (int)(xMax - xMin), (int)(yMax - yMin)), objectness));
+                // Skip if box is too small
+                if (xMax - xMin < 1 || yMax - yMin < 1) continue;
+
+                detections.Add(new Detection(
+                    new Rectangle((int)xMin, (int)yMin, (int)(xMax - xMin), (int)(yMax - yMin)),
+                    objectness,
+                    maxClassConf,
+                    classId
+                ));
             }
 
-            var finalBoxes = ApplyNMS(detections);
-            TotalDetections = TotalDetections + finalBoxes.Count;
-
+            var finalBoxes = ApplyImprovedNMS(detections);
+            TotalDetections += finalBoxes.Count;
             return finalBoxes;
         }
 
@@ -206,8 +313,11 @@ namespace YoableWPF.Managers
             using var results = yoloSession.Run(inputs, outputNames);
             var outputTensor = results.First().AsTensor<float>();
 
-            return isYoloV5 ? PostProcessYoloV5Output(outputTensor, image.Width, image.Height)
-                            : PostProcessYoloV8Output(outputTensor, image.Width, image.Height);
+            var detections = isYoloV5
+                ? PostProcessYoloV5Output(outputTensor, image.Width, image.Height)
+                : PostProcessYoloV8Output(outputTensor, image.Width, image.Height);
+
+            return detections.Select(d => d.Box).ToList();
         }
 
         public void LoadYoloModel()

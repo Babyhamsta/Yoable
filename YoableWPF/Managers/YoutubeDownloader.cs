@@ -116,6 +116,7 @@ public class YoutubeDownloader
             overlayManager.HideOverlay();
         }
     }
+
     private async Task ExtractFrames(string videoPath, string videoDirectory, double desiredFps, Action<double> progressCallback)
     {
         using (var capture = new VideoCapture(videoPath))
@@ -125,50 +126,96 @@ public class YoutubeDownloader
 
             int frameCount = (int)capture.Get(VideoCaptureProperties.FrameCount);
             double fps = capture.Get(VideoCaptureProperties.Fps);
-            if (desiredFps > fps) desiredFps = fps;
+            double videoDurationMs = (frameCount / fps) * 1000;
 
-            int frameStep = (int)(fps / desiredFps);
-            int totalFramesToProcess = (int)Math.Ceiling((double)frameCount / frameStep);
+            // Ensure we don't exceed the source fps
+            desiredFps = Math.Min(desiredFps, fps);
+
+            // Pre-calculate all frame positions we'll need
+            var framePositions = new List<int>();
+            double sourceIntervalMs = 1000.0 / fps;
+            double targetIntervalMs = 1000.0 / desiredFps;
+            double currentTimeMs = 0;
+            int lastPosition = -2;
+
+            while (currentTimeMs < videoDurationMs)
+            {
+                int framePosition = (int)(currentTimeMs / sourceIntervalMs);
+                if (framePosition - lastPosition >= 2 && framePosition < frameCount)
+                {
+                    framePositions.Add(framePosition);
+                    lastPosition = framePosition;
+                }
+                currentTimeMs += targetIntervalMs;
+            }
+
+            int totalFramesToProcess = framePositions.Count;
             int processedFrames = 0;
-
             var tasks = new List<Task>();
             string framesDirectory = Path.Combine(videoDirectory, "frames");
 
+            // Reuse Mats outside the loop
             using (var frame = new Mat())
             using (var resized = new Mat())
             {
-                for (int currentFrame = 0; currentFrame < frameCount; currentFrame += frameStep)
+                foreach (int framePosition in framePositions)
                 {
-                    if (downloadCancellationToken.Token.IsCancellationRequested) break;
+                    if (downloadCancellationToken.Token.IsCancellationRequested)
+                        break;
 
-                    if (!capture.Read(frame)) break;
+                    // Read frame directly without setting position if possible
+                    bool needsSeek = false;
+                    if (framePosition != capture.Get(VideoCaptureProperties.PosFrames))
+                    {
+                        needsSeek = true;
+                        capture.Set(VideoCaptureProperties.PosFrames, framePosition);
+                    }
 
-                    // Scale to maintain aspect ratio, ensuring the smallest dimension is >= FrameSize
+                    if (!capture.Read(frame))
+                        break;
+
+                    // Skip frames if we had to seek (helps avoid duplicate frames)
+                    if (needsSeek)
+                    {
+                        capture.Read(frame); // Skip one frame to avoid potential duplicates
+                    }
+
+                    // Optimize resize operation
                     double scale = Math.Max((double)FrameSize / frame.Width, (double)FrameSize / frame.Height);
-                    int newWidth = (int)(frame.Width * scale);
-                    int newHeight = (int)(frame.Height * scale);
+                    var newSize = new Size(
+                        (int)(frame.Width * scale),
+                        (int)(frame.Height * scale)
+                    );
 
-                    Cv2.Resize(frame, resized, new Size(newWidth, newHeight));
+                    Cv2.Resize(frame, resized, newSize, 0, 0, InterpolationFlags.Linear);
 
-                    // Compute the center crop
-                    int x = (newWidth - FrameSize) / 2;
-                    int y = (newHeight - FrameSize) / 2;
+                    // Compute crop coordinates
+                    int x = (newSize.Width - FrameSize) / 2;
+                    int y = (newSize.Height - FrameSize) / 2;
                     var roi = new Rect(x, y, FrameSize, FrameSize);
 
-                    // Allocate a new Mat for cropped image
-                    Mat cropped = new Mat(resized, roi);
-
-                    string framePath = Path.Combine(framesDirectory, $"frame_{Guid.NewGuid()}.jpg");
-
-                    // Offload image writing asynchronously
-                    tasks.Add(Task.Run(() =>
+                    // Create a new Mat for the cropped image
+                    using (Mat cropped = new Mat(resized, roi))
                     {
-                        Cv2.ImWrite(framePath, cropped);
-                        cropped.Dispose(); // Free memory after writing
-                    }));
+                        string framePath = Path.Combine(framesDirectory, $"frame_{processedFrames:D6}.jpg");
+
+                        // Clone and compress in parallel
+                        Mat croppedClone = cropped.Clone();
+                        tasks.Add(Task.Run(() =>
+                        {
+                            try
+                            {
+                                var params_ = new int[] { (int)ImwriteFlags.JpegQuality, 98 };
+                                Cv2.ImWrite(framePath, croppedClone, params_);
+                            }
+                            finally
+                            {
+                                croppedClone.Dispose();
+                            }
+                        }));
+                    }
 
                     processedFrames++;
-
                     double progress = (processedFrames * 100.0) / totalFramesToProcess;
                     progressCallback(progress);
 
@@ -176,11 +223,22 @@ public class YoutubeDownloader
                     {
                         overlayManager.UpdateMessage($"Extracting frames... ({processedFrames} / {totalFramesToProcess})");
                     });
+
+                    // Process tasks in batches to balance memory and speed
+                    if (tasks.Count >= 16)
+                    {
+                        await Task.WhenAll(tasks.Take(8));
+                        tasks.RemoveRange(0, 8);
+                    }
+                }
+
+                // Wait for remaining tasks
+                while (tasks.Any())
+                {
+                    await Task.WhenAll(tasks.Take(8));
+                    tasks.RemoveRange(0, Math.Min(8, tasks.Count));
                 }
             }
-
-            // Wait for all image write operations to complete
-            await Task.WhenAll(tasks);
         }
     }
 

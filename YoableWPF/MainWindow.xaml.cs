@@ -92,7 +92,7 @@ namespace YoableWPF
             // Check for updates from Github
             if (Properties.Settings.Default.CheckUpdatesOnLaunch)
             {
-                var autoUpdater = new UpdateManager(this, overlayManager, "2.2.0"); // Current version
+                var autoUpdater = new UpdateManager(this, overlayManager, "2.3.0"); // Current version
                 autoUpdater.CheckForUpdatesAsync();
             }
         }
