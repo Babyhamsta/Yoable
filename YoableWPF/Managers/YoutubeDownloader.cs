@@ -197,7 +197,9 @@ public class YoutubeDownloader
                     // Create a new Mat for the cropped image
                     using (Mat cropped = new Mat(resized, roi))
                     {
-                        string framePath = Path.Combine(framesDirectory, $"frame_{processedFrames:D6}.jpg");
+                        // Generate UUID for frame name
+                        string frameUuid = Guid.NewGuid().ToString();
+                        string framePath = Path.Combine(framesDirectory, $"frame_{frameUuid}.jpg");
 
                         // Clone and compress in parallel
                         Mat croppedClone = cropped.Clone();
