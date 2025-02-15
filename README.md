@@ -4,6 +4,8 @@
 
 For non-WPF version you can build the legacy source or use v1.2.0 from releases - [Legacy branch](https://github.com/Babyhamsta/Yoable/tree/legacy).
 
+![image](https://github.com/user-attachments/assets/a1888cf1-09e0-427d-aef2-1e3890bcf445)
+
 ## 🚀 Features
 
 - **AI-Powered Auto Labeling** - Automatically detects objects using **YOLO v5/v8 (ONNX)** models.
