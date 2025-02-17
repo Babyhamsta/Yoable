@@ -78,7 +78,7 @@ This program is free software: you can redistribute it and/or modify it under th
 
 This program is distributed in the hope that it will be useful, but without any warranty; without even the implied warranty of merchantability or fitness for a particular purpose. See the GNU General Public License for more details.
 
-📜 You can read the full license [here](https://github.com/Babyhamsta/Yoble/blob/master/LICENSE.txt).
+📜 You can read the full license [here](https://github.com/Babyhamsta/Yoble/blob/legacy/LICENSE.txt).
 
 ## 🤝 Contributing
 Want to improve Yoable? Fork the repo and submit a PR!
