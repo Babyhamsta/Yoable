@@ -17,6 +17,13 @@ namespace YoableWPF
             Name = name;
             Rect = rect;
         }
+
+        // Deep copy constructor
+        public LabelData(LabelData source)
+        {
+            Name = source.Name;
+            Rect = source.Rect;
+        }
     }
 
     public class DrawingCanvas : Canvas
@@ -25,6 +32,18 @@ namespace YoableWPF
         private Size originalImageDimensions;
         public List<LabelData> Labels { get; set; } = new();
         public LabelData SelectedLabel { get; set; }
+
+        // Multi-selection support
+        public HashSet<LabelData> SelectedLabels { get; set; } = new();
+
+        // Copy/Paste support
+        private static List<LabelData> clipboard = new();
+
+        // Undo/Redo support
+        private Stack<List<LabelData>> undoStack = new();
+        private Stack<List<LabelData>> redoStack = new();
+        private const int MaxUndoSteps = 20;
+
         public ListBox LabelListBox { get; set; }
         public Rect CurrentRect { get; set; }
         public bool IsDrawing { get; set; }
@@ -43,6 +62,7 @@ namespace YoableWPF
         private Matrix transformMatrix = Matrix.Identity;
 
         private ResizeHandleType resizeHandleType;
+        private bool hasMovedOrResized = false; // Track if actual movement occurred
 
         private enum ResizeHandleType
         {
@@ -61,6 +81,169 @@ namespace YoableWPF
             MouseUp += DrawingCanvas_MouseUp;
             MouseDown += DrawingCanvas_MouseDown;
             MouseLeave += DrawingCanvas_MouseLeave;
+
+            // Use PreviewKeyDown to catch events before they're handled elsewhere
+            PreviewKeyDown += DrawingCanvas_PreviewKeyDown;
+        }
+
+        // Save current state for undo
+        private void SaveUndoState()
+        {
+            var state = Labels.Select(l => new LabelData(l)).ToList();
+            undoStack.Push(state);
+
+            // Limit undo stack size
+            if (undoStack.Count > MaxUndoSteps)
+            {
+                var items = undoStack.ToArray();
+                undoStack.Clear();
+                foreach (var item in items.Take(MaxUndoSteps))
+                {
+                    undoStack.Push(item);
+                }
+            }
+
+            // Clear redo stack when new action is performed
+            redoStack.Clear();
+        }
+
+        // Perform undo
+        private void Undo()
+        {
+            if (undoStack.Count > 0)
+            {
+                // Save current state to redo stack
+                var currentState = Labels.Select(l => new LabelData(l)).ToList();
+                redoStack.Push(currentState);
+
+                // Restore previous state
+                var previousState = undoStack.Pop();
+                Labels.Clear();
+                Labels.AddRange(previousState);
+
+                // Update UI
+                RefreshLabelListBox();
+                SelectedLabel = null;
+                SelectedLabels.Clear();
+                InvalidateVisual();
+
+                if (Application.Current.MainWindow is MainWindow mainWindow)
+                {
+                    mainWindow.OnLabelsChanged();
+                }
+            }
+        }
+
+        // Perform redo
+        private void Redo()
+        {
+            if (redoStack.Count > 0)
+            {
+                // Save current state to undo stack
+                var currentState = Labels.Select(l => new LabelData(l)).ToList();
+                undoStack.Push(currentState);
+
+                // Restore next state
+                var nextState = redoStack.Pop();
+                Labels.Clear();
+                Labels.AddRange(nextState);
+
+                // Update UI
+                RefreshLabelListBox();
+                SelectedLabel = null;
+                SelectedLabels.Clear();
+                InvalidateVisual();
+
+                if (Application.Current.MainWindow is MainWindow mainWindow)
+                {
+                    mainWindow.OnLabelsChanged();
+                }
+            }
+        }
+
+        // Copy selected labels
+        private void CopyLabels()
+        {
+            clipboard.Clear();
+
+            if (SelectedLabels.Count > 0)
+            {
+                // Copy all selected labels
+                foreach (var label in SelectedLabels)
+                {
+                    clipboard.Add(new LabelData(label));
+                }
+
+                // Optional: Show feedback
+                if (Application.Current.MainWindow is MainWindow mainWindow)
+                {
+                    mainWindow.Title = $"YoableWPF - Copied {clipboard.Count} label(s)";
+                }
+            }
+            else if (SelectedLabel != null)
+            {
+                // Copy single selected label
+                clipboard.Add(new LabelData(SelectedLabel));
+
+                // Optional: Show feedback
+                if (Application.Current.MainWindow is MainWindow mainWindow)
+                {
+                    mainWindow.Title = "YoableWPF - Copied 1 label";
+                }
+            }
+        }
+
+        // Paste labels
+        private void PasteLabels()
+        {
+            if (clipboard.Count == 0) return;
+
+            SaveUndoState();
+
+            // Clear current selection
+            SelectedLabels.Clear();
+
+            // Calculate offset for pasted labels (slight offset from original position)
+            double offsetX = 20;
+            double offsetY = 20;
+
+            foreach (var clipboardLabel in clipboard)
+            {
+                // Create new label with unique name
+                var newLabel = new LabelData($"Label {Labels.Count + 1}",
+                    new Rect(
+                        clipboardLabel.Rect.X + offsetX,
+                        clipboardLabel.Rect.Y + offsetY,
+                        clipboardLabel.Rect.Width,
+                        clipboardLabel.Rect.Height
+                    ));
+
+                Labels.Add(newLabel);
+                SelectedLabels.Add(newLabel);
+            }
+
+            // Update UI
+            RefreshLabelListBox();
+            InvalidateVisual();
+
+            if (Application.Current.MainWindow is MainWindow mainWindow)
+            {
+                mainWindow.OnLabelsChanged();
+                mainWindow.Title = $"YoableWPF - Pasted {clipboard.Count} label(s)";
+            }
+        }
+
+        // Refresh label list box
+        private void RefreshLabelListBox()
+        {
+            if (LabelListBox != null)
+            {
+                LabelListBox.Items.Clear();
+                foreach (var label in Labels)
+                {
+                    LabelListBox.Items.Add(label.Name);
+                }
+            }
         }
 
         public void ResetZoom()
@@ -68,7 +251,7 @@ namespace YoableWPF
             zoomFactor = 1.0;
             transformMatrix = Matrix.Identity;
             RenderTransform = new MatrixTransform(transformMatrix);
-            InvalidateVisual(); // Force redraw
+            InvalidateVisual();
         }
 
         private Rect ScaleRectToCanvas(Rect originalRect)
@@ -83,21 +266,6 @@ namespace YoableWPF
                 originalRect.Y * scaleY,
                 originalRect.Width * scaleX,
                 originalRect.Height * scaleY
-            );
-        }
-
-        private Rect ScaleRectToOriginal(Rect canvasRect)
-        {
-            if (Image == null) return canvasRect;
-
-            double scaleX = originalImageDimensions.Width / ActualWidth;
-            double scaleY = originalImageDimensions.Height / ActualHeight;
-
-            return new Rect(
-                canvasRect.X * scaleX,
-                canvasRect.Y * scaleY,
-                canvasRect.Width * scaleX,
-                canvasRect.Height * scaleY
             );
         }
 
@@ -116,6 +284,9 @@ namespace YoableWPF
 
             Labels.Clear();
             SelectedLabel = null;
+            SelectedLabels.Clear();
+            undoStack.Clear();
+            redoStack.Clear();
             LabelListBox?.Items.Clear();
             InvalidateVisual();
         }
@@ -131,15 +302,22 @@ namespace YoableWPF
 
             // Draw existing labels
             var labelBrush = (SolidColorBrush)(new BrushConverter().ConvertFrom(Properties.Settings.Default.LabelColor));
+            var selectedBrush = Brushes.Yellow; // Highlight color for selected labels
             double labelSize = Properties.Settings.Default.LabelThickness;
 
-            Pen pen = new Pen(labelBrush, labelSize);
+            Pen normalPen = new Pen(labelBrush, labelSize);
+            Pen selectedPen = new Pen(selectedBrush, labelSize + 1);
+
             foreach (var label in Labels)
             {
                 // Convert stored image coordinates to canvas coordinates for display
                 Rect scaledRect = ScaleRectToCanvas(label.Rect);
-                dc.DrawRectangle(null, pen, scaledRect);
-                if (label == SelectedLabel)
+
+                // Draw with different pen if selected
+                bool isSelected = SelectedLabels.Contains(label) || label == SelectedLabel;
+                dc.DrawRectangle(null, isSelected ? selectedPen : normalPen, scaledRect);
+
+                if (isSelected)
                 {
                     DrawResizeHandles(dc, label.Rect);
                 }
@@ -148,7 +326,7 @@ namespace YoableWPF
             // Draw the current rectangle while drawing - use canvas coordinates directly
             if (IsDrawing)
             {
-                dc.DrawRectangle(null, pen, CurrentRect);
+                dc.DrawRectangle(null, normalPen, CurrentRect);
             }
 
             if (Properties.Settings.Default.EnableCrosshair)
@@ -202,21 +380,19 @@ namespace YoableWPF
             {
                 // Existing zoom functionality
                 double oldZoomFactor = zoomFactor;
-                zoomCenter = e.GetPosition(this); // Get mouse position relative to the canvas
+                zoomCenter = e.GetPosition(this);
 
                 if (e.Delta > 0)
                 {
-                    zoomFactor *= 1 + zoomStep; // Zoom In
+                    zoomFactor *= 1 + zoomStep;
                 }
                 else if (e.Delta < 0)
                 {
-                    zoomFactor /= 1 + zoomStep; // Zoom Out
+                    zoomFactor /= 1 + zoomStep;
                 }
 
-                // Prevent zooming out beyond original size
                 zoomFactor = Math.Max(1.0, Math.Min(zoomFactor, 5.0));
 
-                // Reset transformation if zoomFactor is back to normal (prevents drifting)
                 if (zoomFactor == 1.0)
                 {
                     transformMatrix = Matrix.Identity;
@@ -225,10 +401,7 @@ namespace YoableWPF
                     return;
                 }
 
-                // Get new mouse position after zoom
                 Point newZoomCenter = e.GetPosition(this);
-
-                // Adjust translation smoothly instead of jumping
                 double offsetX = newZoomCenter.X - zoomCenter.X;
                 double offsetY = newZoomCenter.Y - zoomCenter.Y;
 
@@ -257,7 +430,7 @@ namespace YoableWPF
                 }
             }
 
-            e.Handled = true; // Prevent default behavior
+            e.Handled = true;
         }
 
         private void DrawingCanvas_MouseMove(object sender, MouseEventArgs e)
@@ -278,10 +451,16 @@ namespace YoableWPF
                 return;
             }
 
-            if (SelectedLabel == null) return;
+            if (SelectedLabel == null && SelectedLabels.Count == 0) return;
 
-            if (IsResizing)
+            if (IsResizing && SelectedLabel != null)
             {
+                // Save undo state on first movement
+                if (!hasMovedOrResized)
+                {
+                    SaveUndoState();
+                    hasMovedOrResized = true;
+                }
                 ResizeLabel(SelectedLabel, resizeHandleType, e.GetPosition(this));
             }
             else if (IsDragging)
@@ -289,22 +468,48 @@ namespace YoableWPF
                 double dx = cursorPosition.X - DragStart.X;
                 double dy = cursorPosition.Y - DragStart.Y;
 
-                // Convert canvas movement to image space
-                double scaleX = originalImageDimensions.Width / ActualWidth;
-                double scaleY = originalImageDimensions.Height / ActualHeight;
+                // Only process if there's actual movement
+                if (Math.Abs(dx) > 0.1 || Math.Abs(dy) > 0.1)
+                {
+                    // Save undo state on first movement
+                    if (!hasMovedOrResized)
+                    {
+                        SaveUndoState();
+                        hasMovedOrResized = true;
+                    }
 
-                double imageDx = dx * scaleX;
-                double imageDy = dy * scaleY;
+                    // Convert canvas movement to image space
+                    double scaleX = originalImageDimensions.Width / ActualWidth;
+                    double scaleY = originalImageDimensions.Height / ActualHeight;
 
-                // Update label position in original image coordinates
-                SelectedLabel.Rect = new Rect(
-                    SelectedLabel.Rect.X + imageDx,
-                    SelectedLabel.Rect.Y + imageDy,
-                    SelectedLabel.Rect.Width,
-                    SelectedLabel.Rect.Height
-                );
+                    double imageDx = dx * scaleX;
+                    double imageDy = dy * scaleY;
 
-                DragStart = cursorPosition; // Update start position
+                    // Move all selected labels
+                    if (SelectedLabels.Count > 0)
+                    {
+                        foreach (var label in SelectedLabels)
+                        {
+                            label.Rect = new Rect(
+                                label.Rect.X + imageDx,
+                                label.Rect.Y + imageDy,
+                                label.Rect.Width,
+                                label.Rect.Height
+                            );
+                        }
+                    }
+                    else if (SelectedLabel != null)
+                    {
+                        SelectedLabel.Rect = new Rect(
+                            SelectedLabel.Rect.X + imageDx,
+                            SelectedLabel.Rect.Y + imageDy,
+                            SelectedLabel.Rect.Width,
+                            SelectedLabel.Rect.Height
+                        );
+                    }
+
+                    DragStart = cursorPosition;
+                }
             }
         }
 
@@ -315,6 +520,8 @@ namespace YoableWPF
                 IsDrawing = false;
                 if (CurrentRect.Width > 1 && CurrentRect.Height > 1)
                 {
+                    SaveUndoState();
+
                     // Convert final canvas coordinates to image coordinates for storage
                     double scaleX = originalImageDimensions.Width / ActualWidth;
                     double scaleY = originalImageDimensions.Height / ActualHeight;
@@ -341,14 +548,33 @@ namespace YoableWPF
                 }
                 CurrentRect = new Rect(0, 0, 0, 0);
             }
+
+            // Only call OnLabelsChanged if we actually moved or resized something
+            if ((IsDragging || IsResizing) && hasMovedOrResized)
+            {
+                if (Application.Current.MainWindow is MainWindow mainWin)
+                {
+                    mainWin.OnLabelsChanged();
+                }
+            }
+
             IsDragging = false;
             IsResizing = false;
+            hasMovedOrResized = false;
         }
 
         private void DrawingCanvas_MouseDown(object sender, MouseButtonEventArgs e)
         {
+            // Ensure this canvas has keyboard focus
+            Focus();
+            Keyboard.Focus(this);
+
             Point mousePos = e.GetPosition(this);
             bool handled = false;
+            bool ctrlPressed = Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl);
+
+            // Reset movement flag
+            hasMovedOrResized = false;
 
             // First check resize handles of selected label if any
             if (SelectedLabel != null)
@@ -365,7 +591,6 @@ namespace YoableWPF
             }
 
             // If not resizing, check for label selection
-            // Iterate through labels in reverse order (newest first)
             for (int i = Labels.Count - 1; i >= 0; i--)
             {
                 var label = Labels[i];
@@ -375,6 +600,11 @@ namespace YoableWPF
                 if (resizeHandleType != ResizeHandleType.None)
                 {
                     SelectedLabel = label;
+                    if (!ctrlPressed)
+                    {
+                        SelectedLabels.Clear();
+                    }
+                    SelectedLabels.Add(label);
                     IsResizing = true;
                     DragStart = mousePos;
                     handled = true;
@@ -385,7 +615,28 @@ namespace YoableWPF
                 Rect scaledRect = ScaleRectToCanvas(label.Rect);
                 if (scaledRect.Contains(mousePos))
                 {
-                    SelectedLabel = label;
+                    if (ctrlPressed)
+                    {
+                        // Toggle selection
+                        if (SelectedLabels.Contains(label))
+                        {
+                            SelectedLabels.Remove(label);
+                            SelectedLabel = SelectedLabels.FirstOrDefault();
+                        }
+                        else
+                        {
+                            SelectedLabels.Add(label);
+                            SelectedLabel = label;
+                        }
+                    }
+                    else
+                    {
+                        // Single selection
+                        SelectedLabels.Clear();
+                        SelectedLabels.Add(label);
+                        SelectedLabel = label;
+                    }
+
                     IsDragging = true;
                     DragStart = mousePos;
                     handled = true;
@@ -394,7 +645,21 @@ namespace YoableWPF
             }
 
             // Update ListBox selection to match
-            LabelListBox.SelectedItem = SelectedLabel?.Name;
+            if (!ctrlPressed && SelectedLabel != null)
+            {
+                // For single selection, update the ListBox
+                LabelListBox.SelectedItem = SelectedLabel.Name;
+            }
+            else if (ctrlPressed && SelectedLabels.Count == 1 && SelectedLabel != null)
+            {
+                // If only one label is selected after Ctrl+click, update ListBox
+                LabelListBox.SelectedItem = SelectedLabel.Name;
+            }
+            else if (SelectedLabels.Count == 0 || SelectedLabels.Count > 1)
+            {
+                // Clear ListBox selection for no selection or multi-selection
+                LabelListBox.SelectedItem = null;
+            }
 
             if (!handled)
             {
@@ -403,6 +668,7 @@ namespace YoableWPF
                 StartPoint = mousePos;
                 CurrentRect = new Rect(StartPoint, new Size(0, 0));
                 SelectedLabel = null;
+                SelectedLabels.Clear();
             }
 
             InvalidateVisual();
@@ -422,7 +688,7 @@ namespace YoableWPF
             // Convert the rect to canvas coordinates for hit testing
             Rect scaledRect = ScaleRectToCanvas(rect);
 
-            // Adjust handle size based on zoom factor but square it
+            // Adjust handle size based on zoom factor
             double s = resizeHandleSize * Math.Sqrt(zoomFactor) / zoomFactor;
 
             Rect[] handles =
@@ -527,6 +793,11 @@ namespace YoableWPF
                 if (scaledRect.Contains(mousePos))
                 {
                     SelectedLabel = label;
+
+                    // Clear multi-selection and add only this label
+                    SelectedLabels.Clear();
+                    SelectedLabels.Add(label);
+
                     clickedOnLabel = true;
                     break;
                 }
@@ -535,6 +806,7 @@ namespace YoableWPF
             if (!clickedOnLabel)
             {
                 SelectedLabel = null;
+                SelectedLabels.Clear();
                 LabelListBox.SelectedItem = null;
             }
 
@@ -542,44 +814,166 @@ namespace YoableWPF
             Keyboard.Focus(this);
         }
 
-        protected override void OnKeyDown(KeyEventArgs e)
+        private void DrawingCanvas_PreviewKeyDown(object sender, KeyEventArgs e)
         {
-            base.OnKeyDown(e);
+            // Handle copy/paste/undo/redo shortcuts
+            if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
+            {
+                switch (e.Key)
+                {
+                    case Key.C:
+                        CopyLabels();
+                        e.Handled = true;
+                        return;
 
-            if (SelectedLabel != null && Labels.Contains(SelectedLabel))
+                    case Key.V:
+                        PasteLabels();
+                        e.Handled = true;
+                        return;
+
+                    case Key.Z:
+                        Undo();
+                        e.Handled = true;
+                        return;
+
+                    case Key.Y:
+                        Redo();
+                        e.Handled = true;
+                        return;
+
+                    case Key.A:
+                        // Select all
+                        SelectedLabels.Clear();
+                        foreach (var label in Labels)
+                        {
+                            SelectedLabels.Add(label);
+                        }
+                        SelectedLabel = Labels.FirstOrDefault();
+                        InvalidateVisual();
+                        e.Handled = true;
+                        return;
+                }
+            }
+
+            // Handle movement and deletion for selected labels
+            if ((SelectedLabel != null && Labels.Contains(SelectedLabel)) || SelectedLabels.Count > 0)
             {
                 int moveAmount = 1; // Amount of pixels to move
+                bool needsUndo = false;
 
                 switch (e.Key)
                 {
                     case Key.Up:
-                        SelectedLabel.Rect = new Rect(SelectedLabel.Rect.X, SelectedLabel.Rect.Y - moveAmount, SelectedLabel.Rect.Width, SelectedLabel.Rect.Height);
-                        break;
-
                     case Key.Down:
-                        SelectedLabel.Rect = new Rect(SelectedLabel.Rect.X, SelectedLabel.Rect.Y + moveAmount, SelectedLabel.Rect.Width, SelectedLabel.Rect.Height);
-                        break;
-
                     case Key.Left:
-                        SelectedLabel.Rect = new Rect(SelectedLabel.Rect.X - moveAmount, SelectedLabel.Rect.Y, SelectedLabel.Rect.Width, SelectedLabel.Rect.Height);
-                        break;
-
                     case Key.Right:
-                        SelectedLabel.Rect = new Rect(SelectedLabel.Rect.X + moveAmount, SelectedLabel.Rect.Y, SelectedLabel.Rect.Width, SelectedLabel.Rect.Height);
-                        break;
-
-                    case Key.Delete:
-                        Labels.Remove(SelectedLabel);
-                        if (LabelListBox != null)
+                        // Only save undo state once per movement action
+                        if (!e.IsRepeat)
                         {
-                            LabelListBox.Items.Remove(SelectedLabel.Name);
+                            SaveUndoState();
                         }
-                        SelectedLabel = null;
+                        needsUndo = true;
                         break;
                 }
 
-                InvalidateVisual(); // Refresh canvas
-                e.Handled = true; // Prevent further event propagation
+                switch (e.Key)
+                {
+                    case Key.Up:
+                        if (SelectedLabels.Count > 0)
+                        {
+                            foreach (var label in SelectedLabels)
+                            {
+                                label.Rect = new Rect(label.Rect.X, label.Rect.Y - moveAmount, label.Rect.Width, label.Rect.Height);
+                            }
+                        }
+                        else if (SelectedLabel != null)
+                        {
+                            SelectedLabel.Rect = new Rect(SelectedLabel.Rect.X, SelectedLabel.Rect.Y - moveAmount, SelectedLabel.Rect.Width, SelectedLabel.Rect.Height);
+                        }
+                        break;
+
+                    case Key.Down:
+                        if (SelectedLabels.Count > 0)
+                        {
+                            foreach (var label in SelectedLabels)
+                            {
+                                label.Rect = new Rect(label.Rect.X, label.Rect.Y + moveAmount, label.Rect.Width, label.Rect.Height);
+                            }
+                        }
+                        else if (SelectedLabel != null)
+                        {
+                            SelectedLabel.Rect = new Rect(SelectedLabel.Rect.X, SelectedLabel.Rect.Y + moveAmount, SelectedLabel.Rect.Width, SelectedLabel.Rect.Height);
+                        }
+                        break;
+
+                    case Key.Left:
+                        if (SelectedLabels.Count > 0)
+                        {
+                            foreach (var label in SelectedLabels)
+                            {
+                                label.Rect = new Rect(label.Rect.X - moveAmount, label.Rect.Y, label.Rect.Width, label.Rect.Height);
+                            }
+                        }
+                        else if (SelectedLabel != null)
+                        {
+                            SelectedLabel.Rect = new Rect(SelectedLabel.Rect.X - moveAmount, SelectedLabel.Rect.Y, SelectedLabel.Rect.Width, SelectedLabel.Rect.Height);
+                        }
+                        break;
+
+                    case Key.Right:
+                        if (SelectedLabels.Count > 0)
+                        {
+                            foreach (var label in SelectedLabels)
+                            {
+                                label.Rect = new Rect(label.Rect.X + moveAmount, label.Rect.Y, label.Rect.Width, label.Rect.Height);
+                            }
+                        }
+                        else if (SelectedLabel != null)
+                        {
+                            SelectedLabel.Rect = new Rect(SelectedLabel.Rect.X + moveAmount, SelectedLabel.Rect.Y, SelectedLabel.Rect.Width, SelectedLabel.Rect.Height);
+                        }
+                        break;
+
+                    case Key.Delete:
+                        SaveUndoState();
+                        if (SelectedLabels.Count > 0)
+                        {
+                            // Create a copy of the collection to avoid modification during iteration
+                            var labelsToDelete = SelectedLabels.ToList();
+                            foreach (var label in labelsToDelete)
+                            {
+                                Labels.Remove(label);
+                                if (LabelListBox != null)
+                                {
+                                    LabelListBox.Items.Remove(label.Name);
+                                }
+                            }
+                            SelectedLabels.Clear();
+                        }
+                        else if (SelectedLabel != null)
+                        {
+                            Labels.Remove(SelectedLabel);
+                            if (LabelListBox != null)
+                            {
+                                LabelListBox.Items.Remove(SelectedLabel.Name);
+                            }
+                        }
+                        SelectedLabel = null;
+
+                        if (Application.Current.MainWindow is MainWindow mainWindow)
+                        {
+                            mainWindow.OnLabelsChanged();
+                        }
+                        break;
+                }
+
+                if (needsUndo && Application.Current.MainWindow is MainWindow mainWin)
+                {
+                    mainWin.OnLabelsChanged();
+                }
+
+                InvalidateVisual();
+                e.Handled = true;
             }
         }
     }

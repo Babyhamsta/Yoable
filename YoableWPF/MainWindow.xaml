@@ -38,8 +38,11 @@
                 <MenuItem Header="Clear All" Click="ClearAll_Click"/>
             </MenuItem>
             <MenuItem Header="AI">
+                <MenuItem Header="Manage Models" Click="ManageModels_Click"/>
+                <Separator/>
                 <MenuItem Header="Auto Label Images" Click="AutoLabelImages_Click"/>
                 <MenuItem Header="Auto Suggest Labels" Click="AutoSuggestLabels_Click"/>
+                <Separator/>
                 <MenuItem Header="AI Settings" Click="AISettings_Click"/>
             </MenuItem>
             <MenuItem Header="Sort">
@@ -60,7 +63,10 @@
             <ListBox x:Name="ImageListBox" 
                     Grid.Row="0"
                     SelectionMode="Single" 
-                    SelectionChanged="ImageListBox_SelectionChanged">
+                    SelectionChanged="ImageListBox_SelectionChanged"
+                    VirtualizingStackPanel.IsVirtualizing="True"
+                    VirtualizingStackPanel.VirtualizationMode="Recycling"
+                    ScrollViewer.IsDeferredScrollingEnabled="True">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="HorizontalContentAlignment" Value="Stretch"/>

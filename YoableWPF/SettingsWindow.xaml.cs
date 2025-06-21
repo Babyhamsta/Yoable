@@ -2,6 +2,8 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
+using YoableWPF.Managers;
+
 namespace YoableWPF
 {
     /// <summary>
@@ -9,10 +11,55 @@ namespace YoableWPF
     /// </summary>
     public partial class SettingsWindow : Window
     {
+        private YoloAI yoloAI;
+
         public SettingsWindow()
         {
             InitializeComponent();
             LoadSettings();
+        }
+
+        public SettingsWindow(YoloAI ai) : this()
+        {
+            yoloAI = ai;
+            UpdateEnsembleControls();
+        }
+
+        private void UpdateEnsembleControls()
+        {
+            if (yoloAI != null)
+            {
+                int modelCount = yoloAI.GetLoadedModelsCount();
+
+                // Update model count text
+                if (modelCount == 0)
+                {
+                    ModelCountText.Text = "No models loaded";
+                    ModelCountText.Foreground = new SolidColorBrush(Colors.Gray);
+                }
+                else if (modelCount == 1)
+                {
+                    ModelCountText.Text = "1 model loaded (single model mode)";
+                    ModelCountText.Foreground = new SolidColorBrush(Colors.Orange);
+                }
+                else
+                {
+                    ModelCountText.Text = $"{modelCount} models loaded (ensemble mode active)";
+                    ModelCountText.Foreground = new SolidColorBrush(Colors.Green);
+                }
+
+                // Update max value for consensus slider
+                if (modelCount > 0)
+                {
+                    MinConsensusSlider.Maximum = Math.Max(2, modelCount);
+
+                    // Adjust current value if it exceeds new maximum
+                    if (MinConsensusSlider.Value > MinConsensusSlider.Maximum)
+                    {
+                        MinConsensusSlider.Value = MinConsensusSlider.Maximum;
+                    }
+                }
+            }
         }
 
         private void LoadSettings()
@@ -21,6 +68,12 @@ namespace YoableWPF
             ProcessingDeviceComboBox.SelectedIndex = Properties.Settings.Default.UseGPU ? 1 : 0;
             ConfidenceSlider.Value = Properties.Settings.Default.AIConfidence * 100;
             FormHexAccent.Text = Properties.Settings.Default.FormAccent;
+
+            // Load Ensemble Settings
+            MinConsensusSlider.Value = Properties.Settings.Default.MinimumConsensus;
+            ConsensusIoUSlider.Value = Properties.Settings.Default.ConsensusIoUThreshold;
+            EnsembleIoUSlider.Value = Properties.Settings.Default.EnsembleIoUThreshold;
+            UseWeightedAverageCheckBox.IsChecked = Properties.Settings.Default.UseWeightedAverage;
 
             // Load General Settings
             DarkModeCheckBox.IsChecked = Properties.Settings.Default.DarkTheme;
@@ -36,8 +89,13 @@ namespace YoableWPF
             CrosshairSizeSlider.Value = Properties.Settings.Default.CrosshairSize;
 
             // Uploader Settings
-            CloudUploadCheckbox.IsChecked = Properties.Settings.Default.AskForUpload;
-            MaxConcurrentUploadsSlider.Value = Properties.Settings.Default.MaxConcurrentUploads;
+            //CloudUploadCheckbox.IsChecked = Properties.Settings.Default.AskForUpload;
+            //MaxConcurrentUploadsSlider.Value = Properties.Settings.Default.MaxConcurrentUploads;
+
+            // Performance Settings
+            UIBatchSizeSlider.Value = Properties.Settings.Default.UIBatchSize;
+            ProcessingBatchSizeSlider.Value = Properties.Settings.Default.ProcessingBatchSize;
+            EnableParallelCheckBox.IsChecked = Properties.Settings.Default.EnableParallelProcessing;
         }
 
         private void SelectComboBoxItemByTag(ComboBox comboBox, string colorHex)
@@ -60,11 +118,10 @@ namespace YoableWPF
             {
                 errorColor = new SolidColorBrush(Color.FromRgb(255, 158, 158));
             }
-            else 
+            else
             {
                 errorColor = new SolidColorBrush(Color.FromRgb(140, 8, 8));
             }
-
 
             string hex = FormHexAccent.Text;
             try
@@ -96,6 +153,12 @@ namespace YoableWPF
             Properties.Settings.Default.UseGPU = ProcessingDeviceComboBox.SelectedIndex == 1;
             Properties.Settings.Default.AIConfidence = (float)(ConfidenceSlider.Value / 100);
 
+            // Save Ensemble Settings
+            Properties.Settings.Default.MinimumConsensus = (int)MinConsensusSlider.Value;
+            Properties.Settings.Default.ConsensusIoUThreshold = (float)ConsensusIoUSlider.Value;
+            Properties.Settings.Default.EnsembleIoUThreshold = (float)EnsembleIoUSlider.Value;
+            Properties.Settings.Default.UseWeightedAverage = UseWeightedAverageCheckBox.IsChecked ?? true;
+
             // Save General Settings
             Properties.Settings.Default.DarkTheme = DarkModeCheckBox.IsChecked ?? false;
             Properties.Settings.Default.CheckUpdatesOnLaunch = UpdateCheckBox.IsChecked ?? false;
@@ -112,8 +175,13 @@ namespace YoableWPF
             Properties.Settings.Default.CrosshairSize = CrosshairSizeSlider.Value;
 
             // Uploader Settings
-            Properties.Settings.Default.AskForUpload = CloudUploadCheckbox.IsChecked ?? false;
-            Properties.Settings.Default.MaxConcurrentUploads = MaxConcurrentUploadsSlider.Value;
+            //.Settings.Default.AskForUpload = CloudUploadCheckbox.IsChecked ?? false;
+            //Properties.Settings.Default.MaxConcurrentUploads = MaxConcurrentUploadsSlider.Value;
+
+            // Performance Settings
+            Properties.Settings.Default.UIBatchSize = (int)UIBatchSizeSlider.Value;
+            Properties.Settings.Default.ProcessingBatchSize = (int)ProcessingBatchSizeSlider.Value;
+            Properties.Settings.Default.EnableParallelProcessing = EnableParallelCheckBox.IsChecked ?? true;
 
             Properties.Settings.Default.Save();
             DialogResult = true;

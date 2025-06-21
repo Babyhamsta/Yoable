@@ -12,7 +12,7 @@ namespace YoableWPF.Properties {
     
     
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.12.0.0")]
+    [global::System.CodeDom.Compiler.GeneratedCodeAttribute("Microsoft.VisualStudio.Editors.SettingsDesigner.SettingsSingleFileGenerator", "17.14.0.0")]
     internal sealed partial class Settings : global::System.Configuration.ApplicationSettingsBase {
         
         private static Settings defaultInstance = ((Settings)(global::System.Configuration.ApplicationSettingsBase.Synchronized(new Settings())));
@@ -109,7 +109,7 @@ namespace YoableWPF.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool AskForUpload {
             get {
                 return ((bool)(this["AskForUpload"]));
@@ -200,6 +200,102 @@ namespace YoableWPF.Properties {
             }
             set {
                 this["NewVersion"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("500")]
+        public int UIBatchSize {
+            get {
+                return ((int)(this["UIBatchSize"]));
+            }
+            set {
+                this["UIBatchSize"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("100")]
+        public int ProcessingBatchSize {
+            get {
+                return ((int)(this["ProcessingBatchSize"]));
+            }
+            set {
+                this["ProcessingBatchSize"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool EnableParallelProcessing {
+            get {
+                return ((bool)(this["EnableParallelProcessing"]));
+            }
+            set {
+                this["EnableParallelProcessing"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool EnableEnsemble {
+            get {
+                return ((bool)(this["EnableEnsemble"]));
+            }
+            set {
+                this["EnableEnsemble"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public int MinimumConsensus {
+            get {
+                return ((int)(this["MinimumConsensus"]));
+            }
+            set {
+                this["MinimumConsensus"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.4")]
+        public float ConsensusIoUThreshold {
+            get {
+                return ((float)(this["ConsensusIoUThreshold"]));
+            }
+            set {
+                this["ConsensusIoUThreshold"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
+        public float EnsembleIoUThreshold {
+            get {
+                return ((float)(this["EnsembleIoUThreshold"]));
+            }
+            set {
+                this["EnsembleIoUThreshold"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool UseWeightedAverage {
+            get {
+                return ((bool)(this["UseWeightedAverage"]));
+            }
+            set {
+                this["UseWeightedAverage"] = value;
             }
         }
     }
