@@ -4,6 +4,8 @@
 
 For non-WPF version you can build the legacy source or use v1.2.0 from releases - [Legacy branch](https://github.com/Babyhamsta/Yoable/tree/legacy).
 
+![image](https://github.com/user-attachments/assets/a1888cf1-09e0-427d-aef2-1e3890bcf445)
+
 ## 🚀 Features
 
 - **AI-Powered Auto Labeling** - Automatically detects objects using **YOLO v5/v8 (ONNX)** models.
@@ -27,6 +29,7 @@ For non-WPF version you can build the legacy source or use v1.2.0 from releases 
 ### Importing Images
 - Click **"Import Image"** or **"Import Directory"** to load images.
 - The images will appear in the **image list**.
+- Use the scroll wheel to navigate through the imported images.
 
 ### Applying Labels
 - **Manual Labeling**: Use the drawing tools to create bounding boxes.
