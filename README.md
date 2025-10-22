@@ -8,7 +8,7 @@ For non-WPF version you can build the legacy source or use v1.2.0 from releases 
 
 ## 🚀 Features
 
-- **AI-Powered Auto Labeling** - Automatically detects objects using **YOLO v5/v8 (ONNX)** models.
+- **AI-Powered Auto Labeling** - Automatically detects objects using **YOLO v5/v8/v11 (ONNX)** models.
 - **Manual Labeling Tools** - Easily add, edit, and remove bounding boxes.
 - **Bulk Image Import** - Load multiple images at once.
 - **YOLO Label Format Support** - Import and export annotations in **YOLO format**.
@@ -16,7 +16,8 @@ For non-WPF version you can build the legacy source or use v1.2.0 from releases 
 - **Customizable UI** - Light/Dark theme and customizable label appearance.
 - **Crosshair Overlay** - Align annotations with precision.
 - **Adjustable AI Confidence** - Set detection confidence thresholds for better accuracy.
-- **Auto Updates** - Get the latest features and fixes with built-in update checks. (Can be disabled via settings, updates will show change log on next launch.)
+- **Auto Updates** - Get the latest features and fixes with built-in update checks. (Can be disabled via settings)
+- **Project Support** - Yoable can create and save projects so you can pick back up where you left off.
 
 ## 📥 Installation
 
