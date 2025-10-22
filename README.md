@@ -1,14 +1,14 @@
 # Yoable
 
-**Yoable** is an AI-powered image annotation tool designed to make dataset labeling faster and more efficient. It supports **YOLO v5/v8 (ONNX)** models for automatic object detection and labeling. Yoable provides an intuitive interface for managing images, running AI-assisted labeling, and exporting labels in a format compatible with machine learning models.
+**Yoable** is an AI-powered image annotation tool designed to make dataset labeling faster and more efficient. It supports **YOLO v5/v8/v11 (ONNX)** models for automatic object detection and labeling. Yoable provides an intuitive interface for managing images, running AI-assisted labeling, and exporting labels in a format compatible with machine learning models.
 
 For non-WPF version you can build the legacy source or use v1.2.0 from releases - [Legacy branch](https://github.com/Babyhamsta/Yoable/tree/legacy).
 
-![image](https://github.com/user-attachments/assets/a1888cf1-09e0-427d-aef2-1e3890bcf445)
+<img width="1107" height="714" alt="image" src="https://github.com/user-attachments/assets/bfea3510-7cd1-44f2-87ed-0674cf3d67ff" />
 
 ## 🚀 Features
 
-- **AI-Powered Auto Labeling** - Automatically detects objects using **YOLO v5/v8 (ONNX)** models.
+- **AI-Powered Auto Labeling** - Automatically detects objects using **YOLO v5/v8/v11 (ONNX)** models.
 - **Manual Labeling Tools** - Easily add, edit, and remove bounding boxes.
 - **Bulk Image Import** - Load multiple images at once.
 - **YOLO Label Format Support** - Import and export annotations in **YOLO format**.
@@ -16,7 +16,8 @@ For non-WPF version you can build the legacy source or use v1.2.0 from releases 
 - **Customizable UI** - Light/Dark theme and customizable label appearance.
 - **Crosshair Overlay** - Align annotations with precision.
 - **Adjustable AI Confidence** - Set detection confidence thresholds for better accuracy.
-- **Auto Updates** - Get the latest features and fixes with built-in update checks. (Can be disabled via settings, updates will show change log on next launch.)
+- **Auto Updates** - Get the latest features and fixes with built-in update checks. (Can be disabled via settings)
+- **Project Support** - Yoable can create and save projects so you can pick back up where you left off.
 
 ## 📥 Installation
 
