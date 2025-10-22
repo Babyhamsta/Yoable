@@ -145,7 +145,7 @@
                                  Style="{StaticResource SubtitleText}"/>
                     </StackPanel>
                 </StackPanel>
-                <TextBlock Text="Version 3.0.0"
+                <TextBlock Text="Version 3.0.1"
                          FontSize="11"
                          Foreground="Gray"
                          Margin="0,4,0,0"/>
