@@ -105,7 +105,10 @@ namespace YoableWPF.Managers
                 };
 
                 // Save the new project (synchronous for creation)
-                SaveProjectSync();
+                // Simple synchronous save for new project (no async blocking)
+                string json = JsonSerializer.Serialize(CurrentProject, jsonOptions);
+                File.WriteAllText(CurrentProject.ProjectPath, json);
+                lastSaveTime = DateTime.Now;
 
                 // Add to recent projects
                 AddToRecentProjects(CurrentProject.ProjectPath);
