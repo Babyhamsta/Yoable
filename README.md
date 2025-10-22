@@ -4,7 +4,7 @@
 
 For non-WPF version you can build the legacy source or use v1.2.0 from releases - [Legacy branch](https://github.com/Babyhamsta/Yoable/tree/legacy).
 
-![image](https://github.com/user-attachments/assets/a1888cf1-09e0-427d-aef2-1e3890bcf445)
+<img width="1107" height="714" alt="image" src="https://github.com/user-attachments/assets/bfea3510-7cd1-44f2-87ed-0674cf3d67ff" />
 
 ## 🚀 Features
 
