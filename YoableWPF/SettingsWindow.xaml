@@ -6,162 +6,278 @@
     ui:WindowHelper.UseModernWindowStyle="True"
     Title="Settings"
     Height="650"
-    Width="500"
+    Width="700"
     WindowStartupLocation="CenterOwner"
-    ResizeMode="NoResize">
+    ResizeMode="CanResize"
+    MinHeight="600"
+    MinWidth="650">
 
-    <Grid Margin="20">
+    <Window.Resources>
+        <!-- Accent color for buttons (uses system accent) -->
+        <SolidColorBrush x:Key="AccentButtonBrush" Color="{DynamicResource SystemAccentColor}"/>
+
+        <!-- Modern Button Style -->
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource AccentButtonBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Secondary Button Style -->
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Setting Card Style -->
+        <Style x:Key="SettingCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <!-- Section Header Style -->
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+        </Style>
+
+        <!-- Setting Label Style -->
+        <Style x:Key="SettingLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <!-- Help Text Style -->
+        <Style x:Key="HelpText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="Gray"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,6,0,0"/>
+        </Style>
+
+        <!-- Horizontal Tab Style -->
+        <Style x:Key="HorizontalTab" TargetType="RadioButton">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0,0,0,2"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <TextBlock x:Name="Icon" 
+                                           FontFamily="Segoe MDL2 Assets"
+                                           FontSize="14"
+                                           VerticalAlignment="Center"
+                                           Margin="0,0,6,0"
+                                           Text="{TemplateBinding Tag}"/>
+                                <ContentPresenter VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter Property="BorderBrush" Value="{DynamicResource AccentButtonBrush}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource AccentButtonBrush}"/>
+                                <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource AccentButtonBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
+        <!-- Header Section -->
+        <Border Grid.Row="0" 
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Padding="24,20">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock FontFamily="Segoe MDL2 Assets" 
+                               Text="&#xE713;" 
+                               FontSize="24"
+                               Foreground="{DynamicResource AccentButtonBrush}"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"/>
+                    <TextBlock Text="Settings" 
+                               FontSize="20" 
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Text="Configure Yoable to match your workflow and preferences"
+                           Foreground="Gray"
+                           TextWrapping="Wrap"
+                           FontSize="13"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Tab Bar -->
+        <Border Grid.Row="1" 
+                BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <StackPanel Orientation="Horizontal" Margin="24,0">
+                <RadioButton x:Name="GeneralTab" 
+                             Content="General" 
+                             Tag="&#xE713;"
+                             Style="{StaticResource HorizontalTab}"
+                             IsChecked="True"
+                             Checked="Tab_Changed"/>
+                <RadioButton x:Name="AITab" 
+                             Content="AI &amp; Detection" 
+                             Tag="&#xE7F4;"
+                             Style="{StaticResource HorizontalTab}"
+                             Checked="Tab_Changed"/>
+                <RadioButton x:Name="PerformanceTab" 
+                             Content="Performance" 
+                             Tag="&#xE7F8;"
+                             Style="{StaticResource HorizontalTab}"
+                             Checked="Tab_Changed"/>
+            </StackPanel>
+        </Border>
+
         <!-- Content Area -->
-        <ScrollViewer VerticalScrollBarVisibility="Auto">
-            <StackPanel x:Name="SettingsPanel" Margin="0,0,0,15">
-                <!-- AI Settings Section -->
-                <GroupBox Header="AI Settings" x:Name="AISettingsGroup" Visibility="Collapsed" Margin="0,0,0,15">
-                    <StackPanel Margin="10">
-                        <StackPanel Margin="0,0,0,10">
-                            <TextBlock Text="Processing Device"/>
-                            <ComboBox x:Name="ProcessingDeviceComboBox" Margin="0,5,0,0">
-                                <ComboBoxItem Content="CPU"/>
-                                <ComboBoxItem Content="GPU"/>
-                            </ComboBox>
-                        </StackPanel>
-
+        <ScrollViewer Grid.Row="2" 
+                      VerticalScrollBarVisibility="Auto"
+                      Padding="24,20">
+            <StackPanel>
+                <!-- General Settings Page -->
+                <StackPanel x:Name="GeneralSettingsPanel" Visibility="Visible">
+                    <!-- Appearance Card -->
+                    <Border Style="{StaticResource SettingCard}">
                         <StackPanel>
-                            <TextBlock Text="AI Confidence Threshold"/>
-                            <Grid Margin="0,5,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="50"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider x:Name="ConfidenceSlider" 
-                                        Minimum="0" 
-                                        Maximum="100" 
-                                        Value="50"
-                                        TickFrequency="10"
-                                        TickPlacement="BottomRight"/>
-                                <TextBlock Grid.Column="1" 
-                                           Text="{Binding Value, ElementName=ConfidenceSlider, StringFormat={}{0:0}%}"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Right"/>
-                            </Grid>
-                        </StackPanel>
+                            <TextBlock Text="Appearance" Style="{StaticResource SectionHeader}"/>
 
-                        <!-- Ensemble Settings (Always visible when AI Settings are shown) -->
-                        <Separator Margin="0,15,0,15"/>
-                        <TextBlock Text="Ensemble Detection Settings" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                            <CheckBox x:Name="DarkModeCheckBox" 
+                                      Content="Dark Mode"
+                                      Margin="0,0,0,12"
+                                      Click="DarkMode_Click"/>
 
-                        <TextBlock x:Name="ModelCountText" 
-                                   Text="No models loaded" 
-                                   Foreground="Gray"
-                                   FontStyle="Italic"
-                                   Margin="0,0,0,10"/>
-
-                        <TextBlock Text="Ensemble mode automatically activates when 2+ models are loaded."
-                                 Foreground="Gray"
-                                 TextWrapping="Wrap"
-                                 Margin="0,0,0,10"
-                                 FontStyle="Italic"/>
-
-                        <StackPanel Margin="0,0,0,10">
-                            <TextBlock Text="Minimum Consensus Required"/>
-                            <Grid Margin="0,5,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="80"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider x:Name="MinConsensusSlider"
-                                        Minimum="1"
-                                        Maximum="5"
-                                        Value="2"
-                                        TickFrequency="1"
-                                        TickPlacement="BottomRight"
-                                        ToolTip="Number of models that must agree on a detection. Set to 1 to keep all detections."/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding Value, ElementName=MinConsensusSlider, StringFormat={}{0:0} models}"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Right"/>
-                            </Grid>
-                        </StackPanel>
-
-                        <StackPanel Margin="0,0,0,10">
-                            <TextBlock Text="Consensus IoU Threshold"/>
-                            <Grid Margin="0,5,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="50"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider x:Name="ConsensusIoUSlider"
-                                        Minimum="0.1"
-                                        Maximum="0.9"
-                                        Value="0.4"
-                                        TickFrequency="0.1"
-                                        TickPlacement="BottomRight"
-                                        ToolTip="How much overlap is needed to consider detections from different models as the same object"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding Value, ElementName=ConsensusIoUSlider, StringFormat={}{0:F1}}"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Right"/>
-                            </Grid>
-                        </StackPanel>
-
-                        <StackPanel Margin="0,0,0,10">
-                            <TextBlock Text="Final Ensemble IoU Threshold"/>
-                            <Grid Margin="0,5,0,0">
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="50"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider x:Name="EnsembleIoUSlider"
-                                        Minimum="0.3"
-                                        Maximum="0.8"
-                                        Value="0.5"
-                                        TickFrequency="0.05"
-                                        TickPlacement="BottomRight"
-                                        ToolTip="Final NMS threshold for removing duplicate ensemble detections"/>
-                                <TextBlock Grid.Column="1"
-                                           Text="{Binding Value, ElementName=EnsembleIoUSlider, StringFormat={}{0:F2}}"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Right"/>
-                            </Grid>
-                        </StackPanel>
-
-                        <CheckBox x:Name="UseWeightedAverageCheckBox"
-                                Content="Use Weighted Average for Box Merging"
-                                IsChecked="True"
-                                Margin="0,0,0,10"
-                                ToolTip="Weight box positions by detection confidence when merging"/>
-                    </StackPanel>
-                </GroupBox>
-
-                <!-- General Settings Section -->
-                <GroupBox Header="General Settings" x:Name="GeneralSettingsGroup" Visibility="Collapsed" Margin="0,0,0,15">
-                    <StackPanel Margin="10">
-                        <CheckBox x:Name="DarkModeCheckBox" 
-                                Content="Dark Mode"
-                                Margin="0,0,0,10"
-                                Click="DarkMode_Click"/>
-
-                        <CheckBox x:Name="UpdateCheckBox"
-                                Content="Check for updates on launch"
-                                Margin="0,0,0,10"/>
-
-                        <StackPanel Margin="0,0,0,10">
-                            <TextBlock Text="Form Accent Color (Hex)"/>
+                            <TextBlock Text="Accent Color (Hex)" Style="{StaticResource SettingLabel}"/>
                             <TextBox x:Name="FormHexAccent" 
-                                    Margin="0,5,0,0"
-                                    ToolTip="Enter hex color value (e.g. #FF0000 for red)"
-                                    TextChanged="FormHexInput_TextChanged"/>
+                                     FontSize="13"
+                                     Padding="8"
+                                     ToolTip="Enter hex color value (e.g. #FF0000 for red)"
+                                     TextChanged="FormHexInput_TextChanged"/>
+                            <TextBlock Text="Changes the accent color used throughout the application"
+                                       Style="{StaticResource HelpText}"/>
                         </StackPanel>
+                    </Border>
 
-                        <Separator Margin="0,0,0,15"/>
+                    <!-- General Options Card -->
+                    <Border Style="{StaticResource SettingCard}">
+                        <StackPanel>
+                            <TextBlock Text="General" Style="{StaticResource SectionHeader}"/>
+                            
+                            <CheckBox x:Name="UpdateCheckBox"
+                                      Content="Check for updates on launch"
+                                      ToolTip="Automatically check for new versions when starting Yoable"/>
+                        </StackPanel>
+                    </Border>
 
-                        <StackPanel Margin="0,0,0,10">
-                            <TextBlock Text="Label Color"/>
-                            <ComboBox x:Name="LabelColorPicker" Margin="0,5,0,0">
+                    <!-- Project Settings Card -->
+                    <Border Style="{StaticResource SettingCard}">
+                        <StackPanel>
+                            <TextBlock Text="Project" Style="{StaticResource SectionHeader}"/>
+                            
+                            <CheckBox x:Name="AutoSaveCheckBox"
+                                      Content="Enable Auto-Save"
+                                      IsChecked="True"/>
+                            <TextBlock Text="Automatically save your project every 2 minutes when changes are detected"
+                                       Style="{StaticResource HelpText}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Label Settings Card -->
+                    <Border Style="{StaticResource SettingCard}">
+                        <StackPanel>
+                            <TextBlock Text="Labels" Style="{StaticResource SectionHeader}"/>
+
+                            <TextBlock Text="Label Color" Style="{StaticResource SettingLabel}"/>
+                            <ComboBox x:Name="LabelColorPicker" 
+                                      Margin="0,0,0,12"
+                                      FontSize="13"
+                                      Padding="8">
                                 <ComboBoxItem Content="Red" Tag="#FFFF0000"/>
                                 <ComboBoxItem Content="Green" Tag="#FF00FF00"/>
                                 <ComboBoxItem Content="Blue" Tag="#FF0000FF"/>
@@ -171,11 +287,9 @@
                                 <ComboBoxItem Content="Purple" Tag="#FF800080"/>
                                 <ComboBoxItem Content="Orange" Tag="#FFFF8C00"/>
                             </ComboBox>
-                        </StackPanel>
 
-                        <StackPanel>
-                            <TextBlock Text="Label Thickness"/>
-                            <Grid Margin="0,5,0,0">
+                            <TextBlock Text="Label Thickness" Style="{StaticResource SettingLabel}"/>
+                            <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="50"/>
@@ -190,19 +304,26 @@
                                            Text="{Binding Value, ElementName=LabelThicknessSlider, StringFormat={}{0:0}px}"
                                            VerticalAlignment="Center"
                                            HorizontalAlignment="Right"
-                                           Margin="0,0,10,0"/>
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
                             </Grid>
                         </StackPanel>
+                    </Border>
 
-                        <Separator Margin="0,0,0,15"/>
+                    <!-- Crosshair Settings Card -->
+                    <Border Style="{StaticResource SettingCard}">
+                        <StackPanel>
+                            <TextBlock Text="Crosshair" Style="{StaticResource SectionHeader}"/>
 
-                        <CheckBox x:Name="CrosshairEnabledCheckbox"
-                                Content="Enable Crosshair"
-                                Margin="0,0,0,10"/>
+                            <CheckBox x:Name="CrosshairEnabledCheckbox"
+                                      Content="Enable Crosshair"
+                                      Margin="0,0,0,12"/>
 
-                        <StackPanel Margin="0,0,0,10">
-                            <TextBlock Text="Crosshair Color"/>
-                            <ComboBox x:Name="CrosshairColorPicker" Margin="0,5,0,0">
+                            <TextBlock Text="Crosshair Color" Style="{StaticResource SettingLabel}"/>
+                            <ComboBox x:Name="CrosshairColorPicker" 
+                                      Margin="0,0,0,12"
+                                      FontSize="13"
+                                      Padding="8">
                                 <ComboBoxItem Content="Red" Tag="#FFFF0000"/>
                                 <ComboBoxItem Content="Green" Tag="#FF00FF00"/>
                                 <ComboBoxItem Content="Blue" Tag="#FF0000FF"/>
@@ -212,11 +333,9 @@
                                 <ComboBoxItem Content="Purple" Tag="#FF800080"/>
                                 <ComboBoxItem Content="Orange" Tag="#FFFF8C00"/>
                             </ComboBox>
-                        </StackPanel>
 
-                        <StackPanel>
-                            <TextBlock Text="Crosshair Size"/>
-                            <Grid Margin="0,5,0,0">
+                            <TextBlock Text="Crosshair Size" Style="{StaticResource SettingLabel}"/>
+                            <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="50"/>
@@ -231,18 +350,165 @@
                                            Text="{Binding Value, ElementName=CrosshairSizeSlider, StringFormat={}{0:0}px}"
                                            VerticalAlignment="Center"
                                            HorizontalAlignment="Right"
-                                           Margin="0,0,10,0"/>
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
                             </Grid>
                         </StackPanel>
-                    </StackPanel>
-                </GroupBox>
+                    </Border>
+                </StackPanel>
 
-                <!-- Performance Settings Section -->
-                <GroupBox Header="Performance Settings" x:Name="PerformanceSettingsGroup" Visibility="Visible" Margin="0,0,0,15">
-                    <StackPanel Margin="10">
-                        <StackPanel Margin="0,0,0,10">
-                            <TextBlock Text="UI Batch Size"/>
-                            <Grid Margin="0,5,0,0">
+                <!-- AI Settings Page -->
+                <StackPanel x:Name="AISettingsPanel" Visibility="Collapsed">
+                    <!-- Detection Settings Card -->
+                    <Border Style="{StaticResource SettingCard}">
+                        <StackPanel>
+                            <TextBlock Text="Detection" Style="{StaticResource SectionHeader}"/>
+
+                            <TextBlock Text="Processing Device" Style="{StaticResource SettingLabel}"/>
+                            <ComboBox x:Name="ProcessingDeviceComboBox" 
+                                      Margin="0,0,0,12"
+                                      FontSize="13"
+                                      Padding="8">
+                                <ComboBoxItem Content="CPU"/>
+                                <ComboBoxItem Content="GPU (CUDA)"/>
+                            </ComboBox>
+
+                            <TextBlock Text="Confidence Threshold" Style="{StaticResource SettingLabel}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="50"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="ConfidenceSlider"
+                                        Minimum="0"
+                                        Maximum="100"
+                                        Value="50"
+                                        TickFrequency="5"
+                                        TickPlacement="BottomRight"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Value, ElementName=ConfidenceSlider, StringFormat={}{0:0}%}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+                            <TextBlock Text="Minimum confidence required to display AI detections"
+                                       Style="{StaticResource HelpText}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Ensemble Settings Card -->
+                    <Border Style="{StaticResource SettingCard}">
+                        <StackPanel>
+                            <TextBlock Text="Ensemble Mode" Style="{StaticResource SectionHeader}"/>
+
+                            <TextBlock x:Name="ModelCountText" 
+                                       Text="No models loaded" 
+                                       Foreground="Gray"
+                                       FontStyle="Italic"
+                                       Margin="0,0,0,8"/>
+
+                            <TextBlock Text="Minimum Consensus Required" Style="{StaticResource SettingLabel}"/>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="80"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="MinConsensusSlider"
+                                        Minimum="1"
+                                        Maximum="5"
+                                        Value="2"
+                                        TickFrequency="1"
+                                        TickPlacement="BottomRight"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Value, ElementName=MinConsensusSlider, StringFormat={}{0:0} models}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+
+                            <TextBlock Text="Consensus IoU Threshold" Style="{StaticResource SettingLabel}"/>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="40"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="ConsensusIoUSlider"
+                                        Minimum="0.1"
+                                        Maximum="0.9"
+                                        Value="0.4"
+                                        TickFrequency="0.1"
+                                        TickPlacement="BottomRight"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Value, ElementName=ConsensusIoUSlider, StringFormat={}{0:F1}}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+
+                            <TextBlock Text="Final Ensemble IoU Threshold" Style="{StaticResource SettingLabel}"/>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="40"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="EnsembleIoUSlider"
+                                        Minimum="0.3"
+                                        Maximum="0.8"
+                                        Value="0.5"
+                                        TickFrequency="0.05"
+                                        TickPlacement="BottomRight"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Value, ElementName=EnsembleIoUSlider, StringFormat={}{0:F2}}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+
+                            <CheckBox x:Name="UseWeightedAverageCheckBox"
+                                      Content="Use Weighted Average for Box Merging"
+                                      IsChecked="True"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Info Card -->
+                    <Border Background="#4400BCD4"
+                            CornerRadius="6"
+                            Padding="16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       Text="&#xE946;"
+                                       FontSize="16"
+                                       Foreground="#00BCD4"
+                                       VerticalAlignment="Top"
+                                       Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="Ensemble mode activates when 2 or more YOLO models are loaded. Models vote on detections for improved accuracy."
+                                       Foreground="#00BCD4"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="Top"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- Performance Settings Page -->
+                <StackPanel x:Name="PerformanceSettingsPanel" Visibility="Collapsed">
+                    <!-- Loading & Processing Card -->
+                    <Border Style="{StaticResource SettingCard}">
+                        <StackPanel>
+                            <TextBlock Text="Loading &amp; Processing" Style="{StaticResource SectionHeader}"/>
+
+                            <TextBlock Text="UI Batch Size" Style="{StaticResource SettingLabel}"/>
+                            <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="60"/>
@@ -252,64 +518,119 @@
                                         Maximum="2000" 
                                         Value="500"
                                         TickFrequency="100"
-                                        TickPlacement="None"
-                                        ToolTip="Number of items to add to UI at once. Lower values = more responsive during loading, higher values = faster loading"/>
+                                        TickPlacement="None"/>
                                 <TextBlock Grid.Column="1" 
                                            Text="{Binding Value, ElementName=UIBatchSizeSlider, StringFormat={}{0:N0}}"
                                            VerticalAlignment="Center"
                                            HorizontalAlignment="Right"
-                                           Margin="0,0,10,0"
-                                           FontSize="11"/>
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
                             </Grid>
-                        </StackPanel>
+                            <TextBlock Text="Number of images to load at once when populating the UI"
+                                       Style="{StaticResource HelpText}"
+                                       Margin="0,0,0,12"/>
 
-                        <StackPanel Margin="0,0,0,10">
-                            <TextBlock Text="File Processing Batch Size"/>
-                            <Grid Margin="0,5,0,0">
+                            <TextBlock Text="File Processing Batch Size" Style="{StaticResource SettingLabel}"/>
+                            <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="60"/>
                                 </Grid.ColumnDefinitions>
                                 <Slider x:Name="ProcessingBatchSizeSlider" 
                                         Minimum="10" 
-                                        Maximum="500" 
-                                        Value="100"
+                                        Maximum="5000" 
+                                        Value="500"
                                         TickFrequency="10"
-                                        TickPlacement="None"
-                                        ToolTip="Number of files to process in parallel. Higher values = faster but more memory usage"/>
+                                        TickPlacement="None"/>
                                 <TextBlock Grid.Column="1" 
                                            Text="{Binding Value, ElementName=ProcessingBatchSizeSlider, StringFormat={}{0:N0}}"
                                            VerticalAlignment="Center"
                                            HorizontalAlignment="Right"
-                                           Margin="0,0,10,0"
-                                           FontSize="11"/>
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
                             </Grid>
-                        </StackPanel>
+                            <TextBlock Text="Number of files to process in each batch during operations"
+                                       Style="{StaticResource HelpText}"
+                                       Margin="0,0,0,12"/>
 
-                        <CheckBox x:Name="EnableParallelCheckBox" 
-                                  Content="Enable parallel processing" 
-                                  IsChecked="True"
-                                  ToolTip="Process multiple files simultaneously for faster loading"
-                                  Margin="0,0,0,10"/>
-                    </StackPanel>
-                </GroupBox>
+                            <TextBlock Text="Label Loading Batch Size" Style="{StaticResource SettingLabel}"/>
+                            <Grid Margin="0,0,0,12">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="60"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="LabelLoadBatchSizeSlider" 
+                                        Minimum="100" 
+                                        Maximum="5000" 
+                                        Value="500"
+                                        TickFrequency="100"
+                                        TickPlacement="None"/>
+                                <TextBlock Grid.Column="1" 
+                                           Text="{Binding Value, ElementName=LabelLoadBatchSizeSlider, StringFormat={}{0:N0}}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+                            <TextBlock Text="Number of label files to process in parallel batches (higher = faster for large datasets)"
+                                       Style="{StaticResource HelpText}"
+                                       Margin="0,0,0,12"/>
+
+                            <CheckBox x:Name="EnableParallelCheckBox" 
+                                      Content="Enable parallel processing" 
+                                      IsChecked="True"/>
+                            <TextBlock Text="Use multiple CPU cores for faster processing (recommended)"
+                                       Style="{StaticResource HelpText}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Performance Tips Card -->
+                    <Border Background="#44FFB74D"
+                            CornerRadius="6"
+                            Padding="16">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0"
+                                       FontFamily="Segoe MDL2 Assets"
+                                       Text="&#xE7BA;"
+                                       FontSize="16"
+                                       Foreground="#FFB74D"
+                                       VerticalAlignment="Top"
+                                       Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="Lower batch sizes use less memory but may be slower. Increase if you have plenty of RAM."
+                                       Foreground="#CC7A00"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="Top"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
             </StackPanel>
         </ScrollViewer>
 
-        <!-- Button Panel -->
-        <StackPanel Grid.Row="1" 
-                    Orientation="Horizontal" 
-                    HorizontalAlignment="Right" 
-                    Margin="0,20,0,0">
-            <Button x:Name="SaveButton" 
-                    Content="Save" 
-                    Click="SaveButton_Click"
-                    MinWidth="80"
-                    Margin="0,0,10,0"/>
-            <Button x:Name="CancelButton" 
-                    Content="Cancel" 
-                    Click="CancelButton_Click"
-                    MinWidth="80"/>
-        </StackPanel>
+        <!-- Footer with Buttons -->
+        <Border Grid.Row="3"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Padding="24,16">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="SaveButton" 
+                        Content="Save" 
+                        Click="SaveButton_Click"
+                        Style="{StaticResource ModernButton}"
+                        MinWidth="100"
+                        Margin="0,0,8,0"/>
+                <Button x:Name="CancelButton" 
+                        Content="Cancel" 
+                        Click="CancelButton_Click"
+                        Style="{StaticResource SecondaryButton}"
+                        MinWidth="80"/>
+            </StackPanel>
+        </Border>
     </Grid>
 </Window>

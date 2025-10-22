@@ -1,6 +1,8 @@
 ﻿using Microsoft.Win32;
 using ModernWpf;
+using System.Collections.Concurrent;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Windows;
@@ -14,16 +16,15 @@ namespace YoableWPF
 {
     public partial class MainWindow : Window
     {
-        // Managers
-        private ImageManager imageManager;
-        private LabelManager labelManager;
+        // Managers (now public so ProjectManager can access them)
+        public ImageManager imageManager;
+        public LabelManager labelManager;
+        public ProjectManager projectManager;
         private UIStateManager uiStateManager;
 
         // External Managers/Handlers (unchanged)
         private YoloAI yoloAI;
-        private OverlayManager overlayManager;
-        // Commented out for now as not being used
-        // private CloudUploader cloudUploader;
+        public OverlayManager overlayManager;
         private YoutubeDownloader youtubeDownloader;
 
         public MainWindow()
@@ -33,6 +34,15 @@ namespace YoableWPF
             // Find DrawingCanvas from XAML (pass Listbox)
             drawingCanvas = (DrawingCanvas)FindName("drawingCanvas");
             drawingCanvas.LabelListBox = LabelListBox;
+
+            // Subscribe to the LabelsChanged event to detect any label modifications
+            drawingCanvas.LabelsChanged += (sender, e) =>
+            {
+                if (projectManager != null && projectManager.IsProjectOpen)
+                {
+                    MarkProjectDirty();
+                }
+            };
 
             // Load saved settings
             bool isDarkTheme = Properties.Settings.Default.DarkTheme;
@@ -46,24 +56,547 @@ namespace YoableWPF
             labelManager = new LabelManager();
             uiStateManager = new UIStateManager(this);
 
+            // Apply batch size settings from user preferences
+            imageManager.BatchSize = Properties.Settings.Default.ProcessingBatchSize;
+            labelManager.LabelLoadBatchSize = Properties.Settings.Default.LabelLoadBatchSize;
+
             yoloAI = new YoloAI();
             overlayManager = new OverlayManager(this);
-            // Commented out for now as not being used
-            // cloudUploader = new CloudUploader(this, overlayManager);
             youtubeDownloader = new YoutubeDownloader(this, overlayManager);
 
+            // Note: projectManager will be set by StartupWindow or initialized here if continuing without project
             // Check for updates from Github
             if (Properties.Settings.Default.CheckUpdatesOnLaunch)
             {
-                var autoUpdater = new UpdateManager(this, overlayManager, "2.4.0"); // Current version
+                var autoUpdater = new UpdateManager(this, overlayManager, "3.0.0"); // Current version
                 autoUpdater.CheckForUpdatesAsync();
             }
         }
+        #region Helper Methods
 
-        private void RefreshLabelList()
+        /// <summary>
+        /// Prompts user to save changes if there are unsaved changes.
+        /// Returns true if it's safe to proceed (changes saved or discarded).
+        /// Returns false if user cancelled.
+        /// </summary>
+        private bool PromptToSaveChanges(string actionDescription = "continue")
         {
-            uiStateManager.RefreshLabelList();
+            if (projectManager?.IsProjectOpen != true || !projectManager.HasUnsavedChanges)
+                return true; // No unsaved changes, safe to proceed
+
+            var result = MessageBox.Show(
+                $"Save changes to the current project before {actionDescription}?",
+                "Unsaved Changes",
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Question);
+
+            if (result == MessageBoxResult.Cancel)
+                return false; // User cancelled
+
+            if (result == MessageBoxResult.Yes)
+            {
+                SaveProject_Click(null, null);
+            }
+
+            return true; // User chose No or Yes (and save completed)
         }
+
+        /// <summary>
+        /// Creates a progress reporter for overlay updates
+        /// </summary>
+        private IProgress<(int current, int total, string message)> CreateProgressReporter()
+        {
+            return new Progress<(int current, int total, string message)>(report =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    int percentage = report.total > 0
+                        ? (report.current * 100) / report.total
+                        : 0;
+                    overlayManager.UpdateProgress(percentage);
+                    overlayManager.UpdateMessage(report.message);
+                });
+            });
+        }
+
+        #endregion
+
+
+
+        #region Project Methods
+
+        private void NewProject_Click(object sender, RoutedEventArgs e)
+        {
+            if (!PromptToSaveChanges("creating a new project"))
+                return;
+
+            var newProjectDialog = new NewProjectDialog();
+            newProjectDialog.Owner = this;
+
+            if (newProjectDialog.ShowDialog() == true)
+            {
+                string projectName = newProjectDialog.ProjectName;
+                string projectLocation = newProjectDialog.ProjectLocation;
+
+                // Close current project if any
+                if (projectManager != null)
+                {
+                    projectManager.CloseProject(false);
+                }
+                else
+                {
+                    projectManager = new ProjectManager(this);
+                }
+
+                if (projectManager.CreateNewProject(projectName, projectLocation))
+                {
+                    ProjectNameText.Text = projectName;
+                    UpdateProjectUI();
+                    projectManager.StartAutoSave();
+                }
+            }
+        }
+
+        private async void OpenProject_Click(object sender, RoutedEventArgs e)
+        {
+            if (!PromptToSaveChanges("opening another project"))
+                return;
+
+            var openFileDialog = new OpenFileDialog
+            {
+                Filter = "Yoable Project Files (*.yoable)|*.yoable|All Files (*.*)|*.*",
+                Title = "Open Project"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                // Close current project if any
+                if (projectManager != null)
+                {
+                    projectManager.CloseProject(false);
+                }
+                else
+                {
+                    projectManager = new ProjectManager(this);
+                }
+
+                // Use async loading with progress
+                await LoadProjectWithProgressAsync(openFileDialog.FileName);
+            }
+        }
+
+        /// <summary>
+        /// Loads a project asynchronously with progress overlay
+        /// </summary>
+        private async Task LoadProjectWithProgressAsync(string projectPath)
+        {
+            try
+            {
+                // Create cancellation token for the loading process
+                var loadCancellationToken = new CancellationTokenSource();
+
+                // Show loading overlay
+                overlayManager.ShowOverlayWithProgress("Loading project...", loadCancellationToken);
+
+                // Disable window during loading
+                this.IsEnabled = false;
+
+                // Create progress reporter
+                var progress = CreateProgressReporter();
+
+                // Load the project with progress feedback
+                bool loaded = await projectManager.LoadProjectAsync(projectPath, progress);
+
+                if (!loaded)
+                {
+                    overlayManager.HideOverlay();
+                    this.IsEnabled = true;
+                    return;
+                }
+
+                // Update message for import phase
+                overlayManager.UpdateMessage("Importing project data...");
+
+                // Import project data into main window with progress
+                await projectManager.ImportProjectDataAsync(progress, loadCancellationToken.Token);
+
+                // Update all image statuses based on loaded labels
+                overlayManager.UpdateMessage("Updating image statuses...");
+                await UpdateAllImageStatusesAsync();
+
+                // Update UI to reflect loaded data
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    RefreshUIAfterProjectLoadAsync();
+                    ProjectNameText.Text = projectManager.CurrentProject.ProjectName;
+                    UpdateProjectUI();
+                });
+
+                // Start auto-save
+                projectManager.StartAutoSave();
+
+                // Hide overlay and enable window
+                overlayManager.HideOverlay();
+                this.IsEnabled = true;
+            }
+            catch (OperationCanceledException)
+            {
+                overlayManager.HideOverlay();
+                this.IsEnabled = true;
+                MessageBox.Show("Project loading was canceled.", "Canceled", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                overlayManager.HideOverlay();
+                this.IsEnabled = true;
+                MessageBox.Show($"Failed to load project:\n\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async void SaveProject_Click(object sender, RoutedEventArgs e)
+        {
+            if (projectManager == null || !projectManager.IsProjectOpen)
+            {
+                // No project open, prompt to create one
+                MessageBox.Show(
+                    "No project is currently open. Create a new project or open an existing one.",
+                    "No Project",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            // Prevent concurrent saves
+            if (projectManager.IsSaving)
+            {
+                return; // Already saving, ignore this request
+            }
+
+            // Use async save with progress
+            bool success = await projectManager.SaveProjectAsync();
+
+            if (success)
+            {
+                // Update UI to reflect saved state
+                UpdateProjectUI();
+            }
+        }
+
+        private async void SaveProjectAs_Click(object sender, RoutedEventArgs e)
+        {
+            if (projectManager == null || !projectManager.IsProjectOpen)
+            {
+                MessageBox.Show(
+                    "No project is currently open.",
+                    "No Project",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var saveFileDialog = new SaveFileDialog
+            {
+                Filter = "Yoable Project Files (*.yoable)|*.yoable",
+                Title = "Save Project As",
+                FileName = projectManager.CurrentProject.ProjectName
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                // Show overlay for save operation
+                overlayManager.ShowOverlay("Saving project as...");
+
+                try
+                {
+                    // Export current state to project
+                    projectManager.ExportProjectData();
+
+                    // Save to new location
+                    if (projectManager.SaveProjectAs(saveFileDialog.FileName))
+                    {
+                        ProjectNameText.Text = projectManager.CurrentProject.ProjectName;
+                        UpdateProjectUI();
+                    }
+                }
+                finally
+                {
+                    overlayManager.HideOverlay();
+                }
+            }
+        }
+
+        private void CloseProject_Click(object sender, RoutedEventArgs e)
+        {
+            if (projectManager == null || !projectManager.IsProjectOpen)
+            {
+                MessageBox.Show(
+                    "No project is currently open.",
+                    "No Project",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            if (projectManager.CloseProject())
+            {
+                // Clear UI completely
+                ProjectNameText.Text = "No Project";
+                LastSaveText.Text = "Not saved";
+                LastSaveTimeText.Text = "";
+
+                // Clear all data
+                ImageListBox.Items.Clear();
+                LabelListBox.Items.Clear();
+                drawingCanvas.Labels.Clear();
+                drawingCanvas.Image = null;
+                drawingCanvas.InvalidateVisual();
+
+                // Update project UI
+                UpdateProjectUI();
+
+                // Update status counts
+                uiStateManager.UpdateStatusCounts();
+            }
+        }
+
+        /// <summary>
+        /// Updates the project UI indicators (save status, auto-save, etc.)
+        /// </summary>
+        public void UpdateProjectUI()
+        {
+            if (projectManager == null || !projectManager.IsProjectOpen)
+            {
+                // No project mode
+                SaveStatusBorder.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x44, 0x9E, 0x9E, 0x9E));
+                LastSaveText.Text = "No project";
+                LastSaveText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0xFF, 0x9E, 0x9E, 0x9E));
+                LastSaveTimeText.Text = "";
+                AutoSaveText.Text = "Auto-save disabled";
+                AutoSaveIndicator.Fill = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0xFF, 0x9E, 0x9E, 0x9E));
+                return;
+            }
+
+            // Update save status
+            if (projectManager.HasUnsavedChanges)
+            {
+                SaveStatusBorder.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x44, 0xFF, 0xB7, 0x4D));
+                LastSaveText.Text = "Unsaved changes";
+                LastSaveText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0xFF, 0xFF, 0xB7, 0x4D));
+            }
+            else
+            {
+                SaveStatusBorder.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0x44, 0x81, 0xC7, 0x84));
+                LastSaveText.Text = "All changes saved";
+                LastSaveText.Foreground = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0xFF, 0x81, 0xC7, 0x84));
+            }
+
+            // Update last save time
+            if (projectManager.LastSaveTime != DateTime.MinValue)
+            {
+                TimeSpan timeSince = DateTime.Now - projectManager.LastSaveTime;
+                if (timeSince.TotalSeconds < 5)
+                    LastSaveTimeText.Text = "Saved just now";
+                else if (timeSince.TotalMinutes < 1)
+                    LastSaveTimeText.Text = $"Saved {(int)timeSince.TotalSeconds} seconds ago";
+                else if (timeSince.TotalMinutes < 60)
+                    LastSaveTimeText.Text = $"Saved {(int)timeSince.TotalMinutes} minutes ago";
+                else if (timeSince.TotalHours < 24)
+                    LastSaveTimeText.Text = $"Saved {(int)timeSince.TotalHours} hours ago";
+                else
+                    LastSaveTimeText.Text = $"Saved on {projectManager.LastSaveTime:MMM dd}";
+            }
+            else
+            {
+                LastSaveTimeText.Text = "Not saved yet";
+            }
+
+            // Update auto-save indicator
+            if (Properties.Settings.Default.EnableAutoSave)
+            {
+                AutoSaveText.Text = "Auto-save enabled";
+                AutoSaveIndicator.Fill = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0xFF, 0x4C, 0xAF, 0x50));
+            }
+            else
+            {
+                AutoSaveText.Text = "Auto-save disabled";
+                AutoSaveIndicator.Fill = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromArgb(0xFF, 0x9E, 0x9E, 0x9E));
+            }
+        }
+
+        /// <summary>
+        /// Refreshes the UI after loading a project
+        /// </summary>
+        /// <summary>
+        /// Refreshes the UI after loading a project - now with batching to prevent UI freeze
+        /// </summary>
+        /// <summary>
+        /// OPTIMIZED: Refreshes the UI after project load with improved performance for large datasets
+        /// Creates all items in memory first, then adds them all at once to minimize UI updates
+        /// </summary>
+        public async Task RefreshUIAfterProjectLoadAsync()
+        {
+            // Clear the list first
+            ImageListBox.Items.Clear();
+
+            // Get all images
+            var allImages = imageManager.ImagePathMap.Keys.ToArray();
+
+            if (allImages.Length == 0)
+            {
+                // Update status counts for empty project
+                uiStateManager.UpdateStatusCounts();
+                uiStateManager.RefreshAllImagesList();
+                return;
+            }
+
+            // OPTIMIZATION: Create all items in memory first (off UI thread)
+            // Memory allocation is cheap, UI updates are expensive
+            var allItems = new List<ImageListItem>(allImages.Length);
+
+            await Task.Run(() =>
+            {
+                foreach (var fileName in allImages)
+                {
+                    var status = imageManager.GetImageStatus(fileName);
+                    allItems.Add(new ImageListItem(fileName, status));
+                }
+            });
+
+            // OPTIMIZATION: Add all items to the listbox in batches
+            // This is much faster than adding one at a time with delays
+            int uiBatchSize = Properties.Settings.Default.UIBatchSize;
+            if (uiBatchSize <= 0) uiBatchSize = 100; // Safe default
+
+            for (int i = 0; i < allItems.Count; i += uiBatchSize)
+            {
+                var batch = allItems.Skip(i).Take(uiBatchSize);
+                foreach (var item in batch)
+                {
+                    ImageListBox.Items.Add(item);
+                }
+
+                // Only yield to UI thread occasionally, not every item
+                if (i % (uiBatchSize * 5) == 0 && i > 0)
+                {
+                    await Task.Delay(1);
+                }
+            }
+
+
+            // Build the cache for O(1) lookups
+            uiStateManager.BuildCache(ImageListBox.Items);
+            // Update status counts (do this ONCE, not multiple times)
+            uiStateManager.UpdateStatusCounts();
+
+            // Refresh the all images list for filtering
+            uiStateManager.RefreshAllImagesList();
+
+            // Apply saved sort mode
+            if (projectManager?.CurrentProject != null)
+            {
+                // Set the sort combobox to match saved mode
+                if (SortComboBox != null)
+                {
+                    if (projectManager.CurrentProject.CurrentSortMode == "ByStatus")
+                    {
+                        SortComboBox.SelectedIndex = 1;
+                        uiStateManager.SortImagesByStatus();
+                    }
+                    else
+                    {
+                        SortComboBox.SelectedIndex = 0;
+                        uiStateManager.SortImagesByName();
+                    }
+                }
+                else
+                {
+                    // Fallback if combobox not available
+                    if (projectManager.CurrentProject.CurrentSortMode == "ByStatus")
+                        uiStateManager.SortImagesByStatus();
+                    else
+                        uiStateManager.SortImagesByName();
+                }
+
+                // Apply saved filter mode (currently always "All", but prepared for future)
+                if (projectManager.CurrentProject.CurrentFilterMode != "All")
+                {
+                    // Add filter logic here when implemented
+                }
+            }
+
+            // Select the saved image index if any
+            if (ImageListBox.Items.Count > 0)
+            {
+                int targetIndex = projectManager?.CurrentProject?.LastSelectedImageIndex ?? 0;
+                if (targetIndex >= ImageListBox.Items.Count)
+                    targetIndex = 0;
+
+                // Defer scrolling to allow UI to render first
+                await Task.Delay(50);
+                ImageListBox.SelectedIndex = targetIndex;
+
+                if (ImageListBox.SelectedItem != null)
+                    ImageListBox.ScrollIntoView(ImageListBox.SelectedItem);
+            }
+        }
+
+        /// <summary>
+        /// Marks the project as having unsaved changes
+        /// </summary>
+        private void MarkProjectDirty()
+        {
+            if (projectManager != null && projectManager.IsProjectOpen)
+            {
+                projectManager.MarkDirty();
+                UpdateProjectUI();
+            }
+        }
+
+        private async void Window_Closing(object sender, CancelEventArgs e)
+        {
+            // Check for unsaved changes
+            if (projectManager != null && projectManager.IsProjectOpen && projectManager.HasUnsavedChanges)
+            {
+                var result = MessageBox.Show(
+                    $"Do you want to save changes to '{projectManager.CurrentProject.ProjectName}'?",
+                    "Unsaved Changes",
+                    MessageBoxButton.YesNoCancel,
+                    MessageBoxImage.Question);
+
+                if (result == MessageBoxResult.Cancel)
+                {
+                    e.Cancel = true;
+                    return;
+                }
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    // Cancel the close temporarily
+                    e.Cancel = true;
+
+                    // Save synchronously (blocking) since we're closing
+                    projectManager.ExportProjectData();
+                    bool saved = projectManager.SaveProjectSync();
+
+                    if (saved)
+                    {
+                        // Now actually close
+                        projectManager?.Dispose();
+                        yoloAI?.Dispose();
+                        Application.Current.Shutdown();
+                    }
+                    return;
+                }
+            }
+
+            // Cleanup
+            projectManager?.Dispose();
+            yoloAI?.Dispose();
+        }
+
+        #endregion
+
+        #region Existing Methods
 
         public void OnLabelsChanged()
         {
@@ -73,47 +606,22 @@ namespace YoableWPF
             int currentIndex = ImageListBox.SelectedIndex;
             if (currentIndex < 0 || currentIndex >= ImageListBox.Items.Count) return;
 
-            // Update the status based on whether there are any labels
-            var hasLabels = drawingCanvas.Labels.Any();
-            var isImportedOrAI = hasLabels && drawingCanvas.Labels.Any(l => l.Name.StartsWith("AI") || l.Name.StartsWith("Imported"));
-
-            ImageStatus newStatus;
-            if (!hasLabels)
-            {
-                newStatus = ImageStatus.NoLabel;
-            }
-            else
-            {
-                // If the image is currently loaded in Canvas, mark it as Verified since the user is actively working with it
-                if (drawingCanvas.Image != null &&
-                    drawingCanvas.Image.ToString().Contains(imageManager.CurrentImagePath))
-                {
-                    newStatus = ImageStatus.Verified;
-                }
-                else if (isImportedOrAI)
-                {
-                    newStatus = ImageStatus.VerificationNeeded;
-                }
-                else
-                {
-                    newStatus = ImageStatus.Verified;
-                }
-            }
+            // Determine status using helper
+            ImageStatus newStatus = DetermineImageStatus(imageManager.CurrentImagePath);
 
             // Use the imageManager method to update status
             imageManager.UpdateImageStatusValue(imageManager.CurrentImagePath, newStatus);
 
-            // Update the existing ListBox item instead of replacing it
-            foreach (var item in ImageListBox.Items)
+            // Use O(1) cache lookup instead of O(n) iteration
+            if (uiStateManager.TryGetFromCache(imageManager.CurrentImagePath, out var imageItem))
             {
-                if (item is ImageListItem imageItem && imageItem.FileName == imageManager.CurrentImagePath)
-                {
-                    imageItem.Status = newStatus;
-                    break;
-                }
+                imageItem.Status = newStatus;
             }
 
             uiStateManager.UpdateStatusCounts();
+
+            // Mark project as dirty
+            MarkProjectDirty();
         }
 
         public void ImageListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -125,6 +633,7 @@ namespace YoableWPF
                 if (!string.IsNullOrEmpty(imageManager.CurrentImagePath))
                 {
                     labelManager.SaveLabels(imageManager.CurrentImagePath, drawingCanvas.Labels);
+                    MarkProjectDirty();
                 }
 
                 imageManager.CurrentImagePath = selected.FileName;
@@ -137,7 +646,7 @@ namespace YoableWPF
                 // Load labels for this image if they exist
                 if (labelManager.LabelStorage.ContainsKey(selected.FileName))
                 {
-                    drawingCanvas.Labels = new List<LabelData>(labelManager.LabelStorage[selected.FileName]);
+                    drawingCanvas.Labels = new System.Collections.Generic.List<LabelData>(labelManager.LabelStorage[selected.FileName]);
 
                     // Update status when viewing an image with AI or imported labels
                     if (labelManager.LabelStorage[selected.FileName].Any(l => l.Name.StartsWith("AI") || l.Name.StartsWith("Imported")))
@@ -160,7 +669,10 @@ namespace YoableWPF
 
                 // Update UI
                 uiStateManager.UpdateStatusCounts();
-                RefreshLabelList();
+                uiStateManager.RefreshLabelList();
+
+                // CRITICAL FIX: Force canvas redraw after loading labels
+                drawingCanvas.InvalidateVisual();
             }
         }
 
@@ -195,19 +707,45 @@ namespace YoableWPF
                 FileName = "Select Folder"
             };
 
+            // Set initial directory to last used location
+            if (!string.IsNullOrEmpty(Properties.Settings.Default.LastImageDirectory) &&
+                Directory.Exists(Properties.Settings.Default.LastImageDirectory))
+            {
+                openFileDialog.InitialDirectory = Properties.Settings.Default.LastImageDirectory;
+            }
+
             if (openFileDialog.ShowDialog() == true)
             {
                 string folderPath = Path.GetDirectoryName(openFileDialog.FileName);
+
+                // Save this directory for next time
+                Properties.Settings.Default.LastImageDirectory = folderPath;
+                Properties.Settings.Default.Save();
+
                 LoadImages(folderPath);
             }
         }
 
-        private void ImportImage_Click(object sender, RoutedEventArgs e)
+        private async void ImportImage_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFileDialog = new() { Filter = "Image Files|*.jpg;*.png" };
             if (openFileDialog.ShowDialog() == true)
             {
-                AddImage(openFileDialog.FileName);
+                // Use the same batch loading infrastructure for consistency
+                if (imageManager.AddImage(openFileDialog.FileName))
+                {
+                    string fileName = Path.GetFileName(openFileDialog.FileName);
+                    await UpdateImageListInBatchesAsync(new[] { fileName }, CancellationToken.None);
+
+                    if (ImageListBox.Items.Count == 1)
+                    {
+                        ImageListBox.SelectedIndex = 0;
+                    }
+
+                    uiStateManager.UpdateStatusCounts();
+                    uiStateManager.RefreshAllImagesList();
+                    MarkProjectDirty();
+                }
             }
         }
 
@@ -221,11 +759,22 @@ namespace YoableWPF
                 FileName = "Select Folder"
             };
 
+            // Set initial directory to last used location
+            if (!string.IsNullOrEmpty(Properties.Settings.Default.LastLabelDirectory) &&
+                Directory.Exists(Properties.Settings.Default.LastLabelDirectory))
+            {
+                openFileDialog.InitialDirectory = Properties.Settings.Default.LastLabelDirectory;
+            }
+
             if (openFileDialog.ShowDialog() == true)
             {
                 string folderPath = Path.GetDirectoryName(openFileDialog.FileName);
                 if (!string.IsNullOrEmpty(folderPath))
                 {
+                    // Save this directory for next time
+                    Properties.Settings.Default.LastLabelDirectory = folderPath;
+                    Properties.Settings.Default.Save();
+
                     await LoadYOLOLabelsFromDirectory(folderPath);
                 }
             }
@@ -251,23 +800,77 @@ namespace YoableWPF
                 FileName = "Select Folder"
             };
 
+            // Set initial directory to last used location
+            if (!string.IsNullOrEmpty(Properties.Settings.Default.LastExportDirectory) &&
+                Directory.Exists(Properties.Settings.Default.LastExportDirectory))
+            {
+                openFileDialog.InitialDirectory = Properties.Settings.Default.LastExportDirectory;
+            }
+
             if (openFileDialog.ShowDialog() == true)
             {
                 string folderPath = Path.GetDirectoryName(openFileDialog.FileName);
                 if (!string.IsNullOrEmpty(folderPath))
                 {
+                    // Save this directory for next time
+                    Properties.Settings.Default.LastExportDirectory = folderPath;
+                    Properties.Settings.Default.Save();
+
                     await ExportLabelsToYoloAsync(folderPath);
                 }
             }
         }
 
-        private void UpdateAllImageStatuses()
+        private async Task UpdateAllImageStatusesAsync()
         {
-            foreach (var fileName in imageManager.ImagePathMap.Keys.ToList())
+            var cancellationToken = new CancellationTokenSource();
+            overlayManager.ShowOverlayWithProgress("Updating image statuses...", cancellationToken);
+
+            try
             {
-                UpdateImageStatus(fileName);
+                var statusUpdates = new ConcurrentDictionary<string, ImageStatus>();
+                var allFiles = imageManager.ImagePathMap.Keys.ToArray();
+                int totalFiles = allFiles.Length;
+
+                await Task.Run(() =>
+                {
+                    // Parallel processing for maximum speed
+                    Parallel.ForEach(allFiles,
+                        new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                        fileName =>
+                        {
+                            if (cancellationToken.Token.IsCancellationRequested)
+                                return;
+
+                            ImageStatus newStatus = DetermineImageStatus(fileName);
+
+                            // Update caches
+                            imageManager.UpdateImageStatusValue(fileName, newStatus);
+                            statusUpdates[fileName] = newStatus;
+                        });
+                }, cancellationToken.Token);
+
+                // Update UI in one batch
+                await Dispatcher.InvokeAsync(() =>
+                {
+                    overlayManager.UpdateMessage($"Updating display... ({statusUpdates.Count} items)");
+
+                    // Batch update all items
+                    foreach (var kvp in statusUpdates)
+                    {
+                        if (uiStateManager.TryGetFromCache(kvp.Key, out var imageItem))
+                        {
+                            imageItem.Status = kvp.Value;
+                        }
+                    }
+
+                    uiStateManager.UpdateStatusCounts();
+                });
             }
-            uiStateManager.UpdateStatusCounts();
+            finally
+            {
+                overlayManager.HideOverlay();
+            }
         }
 
         private void ClearAll_Click(object sender, RoutedEventArgs e)
@@ -280,6 +883,9 @@ namespace YoableWPF
             drawingCanvas.Image = null; // Clear the image in DrawingCanvas
             drawingCanvas.InvalidateVisual(); // Force a redraw
             uiStateManager.UpdateStatusCounts();
+            uiStateManager.RefreshAllImagesList(); // Clear the filter cache
+
+            MarkProjectDirty();
         }
 
         private void ManageModels_Click(object sender, RoutedEventArgs e)
@@ -341,13 +947,10 @@ namespace YoableWPF
 
                     using Bitmap image = new Bitmap(imagePath.Path);
                     string fileName = Path.GetFileName(imagePath.Path);
-                    List<Rectangle> detectedBoxes = yoloAI.RunInference(image);
+                    System.Collections.Generic.List<Rectangle> detectedBoxes = yoloAI.RunInference(image);
 
-                    lock (labelManager.LabelStorage)
-                    {
-                        labelManager.AddAILabels(fileName, detectedBoxes);
-                        totalDetections += detectedBoxes.Count;
-                    }
+                    labelManager.AddAILabels(fileName, detectedBoxes);
+                    totalDetections += detectedBoxes.Count;
 
                     // Only update UI if this is the current image
                     Dispatcher.Invoke(() =>
@@ -356,11 +959,7 @@ namespace YoableWPF
                             drawingCanvas.Image.ToString().Contains(fileName))
                         {
                             drawingCanvas.Labels.AddRange(labelManager.LabelStorage[fileName]);
-                            drawingCanvas.LabelListBox?.Items.Clear();
-                            foreach (var label in labelManager.LabelStorage[fileName])
-                            {
-                                drawingCanvas.LabelListBox?.Items.Add(label.Name);
-                            }
+                            uiStateManager.RefreshLabelList();
                             drawingCanvas.InvalidateVisual();
                         }
                     });
@@ -374,24 +973,17 @@ namespace YoableWPF
                 }
             }, tokenSource.Token);
 
+            overlayManager.HideOverlay();
+            await UpdateAllImageStatusesAsync();
+
             Dispatcher.Invoke(() =>
             {
-                overlayManager.HideOverlay();
-                UpdateAllImageStatuses();
+                uiStateManager.RefreshAllImagesList(); // Refresh for filtering
 
                 // Restore selection if it was lost
-                if (currentSelection != null && ImageListBox.SelectedItem == null)
+                if (ImageListBox.SelectedItem == null)
                 {
-                    for (int i = 0; i < ImageListBox.Items.Count; i++)
-                    {
-                        if (ImageListBox.Items[i] is ImageListItem item &&
-                            item.FileName == currentSelection.FileName)
-                        {
-                            ImageListBox.SelectedIndex = i;
-                            ImageListBox.ScrollIntoView(ImageListBox.SelectedItem);
-                            break;
-                        }
-                    }
+                    RestoreImageSelection(currentSelection);
                 }
 
                 OnLabelsChanged();
@@ -399,21 +991,14 @@ namespace YoableWPF
                 string modeInfo = modelCount == 1 ? "" : $" using {modelCount} models";
                 MessageBox.Show($"Auto-labeling complete{modeInfo}.\nTotal detections: {totalDetections}",
                     "AI Labels", MessageBoxButton.OK, MessageBoxImage.Information);
+
+                MarkProjectDirty();
             });
         }
 
         private void AutoSuggestLabels_Click(object sender, RoutedEventArgs e)
         {
             MessageBox.Show("Auto Suggest Labels - Not Implemented Yet");
-        }
-
-        private void AISettings_Click(object sender, RoutedEventArgs e)
-        {
-            var settingsWindow = new SettingsWindow(yoloAI); // Pass yoloAI instance
-            settingsWindow.AISettingsGroup.Visibility = Visibility.Visible;
-            settingsWindow.PerformanceSettingsGroup.Visibility = Visibility.Collapsed;
-            settingsWindow.Owner = this;
-            settingsWindow.ShowDialog();
         }
 
         private void DarkTheme_Click(object sender, RoutedEventArgs e)
@@ -432,9 +1017,6 @@ namespace YoableWPF
         {
             if (!Directory.Exists(directoryPath)) return;
 
-            // Set batch size from settings
-            imageManager.BatchSize = Properties.Settings.Default.ProcessingBatchSize;
-
             await LoadImagesAsync(directoryPath);
         }
 
@@ -446,11 +1028,7 @@ namespace YoableWPF
             try
             {
                 // Progress reporter
-                var progress = new Progress<(int current, int total, string message)>(report =>
-                {
-                    overlayManager.UpdateMessage(report.message);
-                    overlayManager.UpdateProgress((report.current * 100) / report.total);
-                });
+                var progress = CreateProgressReporter();
 
                 // Load images asynchronously
                 var files = await imageManager.LoadImagesFromDirectoryAsync(
@@ -467,7 +1045,12 @@ namespace YoableWPF
                     ImageListBox.SelectedIndex = 0;
                 }
 
+                // Build the cache for O(1) lookups when updating statuses
+                uiStateManager.BuildCache(ImageListBox.Items);
                 uiStateManager.UpdateStatusCounts();
+                uiStateManager.RefreshAllImagesList(); // Refresh the complete list for filtering
+
+                MarkProjectDirty();
             }
             catch (OperationCanceledException)
             {
@@ -514,33 +1097,23 @@ namespace YoableWPF
             }
         }
 
-        private void AddImage(string filePath)
-        {
-            if (!imageManager.AddImage(filePath)) return;
-
-            string fileName = Path.GetFileName(filePath);
-
-            if (!ImageListBox.Items.Contains(new ImageListItem(fileName, ImageStatus.NoLabel)))
-            {
-                ImageListBox.Items.Add(new ImageListItem(fileName, ImageStatus.NoLabel));
-            }
-
-            if (ImageListBox.Items.Count == 1)
-            {
-                ImageListBox.SelectedIndex = 0;
-            }
-        }
-
         private async Task LoadYOLOLabelsFromDirectory(string directoryPath)
         {
             if (!Directory.Exists(directoryPath)) return;
+
+            // Check if images are loaded first (REQUIRED for cached dimensions)
+            if (imageManager.ImagePathMap.Count == 0)
+            {
+                MessageBox.Show("Please load images before importing labels.\n\nImages must be loaded first so label dimensions can be calculated correctly.",
+                    "Load Images First", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
             // Store current selection
             var currentSelection = ImageListBox.SelectedItem as ImageListItem;
 
             string[] labelFiles = Directory.GetFiles(directoryPath, "*.txt");
             int totalFiles = labelFiles.Length;
-            int processedFiles = 0;
 
             if (totalFiles == 0)
             {
@@ -551,61 +1124,53 @@ namespace YoableWPF
             CancellationTokenSource tokenSource = new CancellationTokenSource();
             overlayManager.ShowOverlayWithProgress("Importing YOLO labels...", tokenSource);
 
-            int labelsLoaded = 0;
-
-            await Task.Run(() =>
+            try
             {
-                foreach (string labelFile in labelFiles)
+                // ✅ Progress reporter for real-time feedback
+                var progress = CreateProgressReporter();
+
+                // ✅ 🚀 NEW: Use high-performance batch loading with parallel processing
+                int labelsLoaded = await labelManager.LoadYoloLabelsBatchAsync(
+                    directoryPath,
+                    imageManager,
+                    progress,
+                    tokenSource.Token,
+                    Properties.Settings.Default.EnableParallelProcessing
+                );
+
+                overlayManager.HideOverlay();
+
+                // Update all image statuses after importing labels
+                Debug.WriteLine("Updating All Image Statuses");
+                await UpdateAllImageStatusesAsync();
+                uiStateManager.RefreshAllImagesList(); // Refresh for filtering
+
+                if (!string.IsNullOrEmpty(imageManager.CurrentImagePath) && labelManager.LabelStorage.ContainsKey(imageManager.CurrentImagePath))
                 {
-                    if (tokenSource.Token.IsCancellationRequested) break;
+                    drawingCanvas.Labels = labelManager.LabelStorage[imageManager.CurrentImagePath];
+                    uiStateManager.RefreshLabelList();
 
-                    string imageName = Path.GetFileNameWithoutExtension(labelFile);
-                    string matchingImagePath = imageManager.ImagePathMap.Values
-                        .FirstOrDefault(img => Path.GetFileNameWithoutExtension(img.Path) == imageName)?.Path;
-
-                    if (!string.IsNullOrEmpty(matchingImagePath))
+                    // Restore selection if it was lost
+                    if (ImageListBox.SelectedItem == null)
                     {
-                        labelsLoaded += labelManager.LoadYoloLabels(labelFile, matchingImagePath, imageManager);
+                        RestoreImageSelection(currentSelection);
                     }
 
-                    processedFiles++;
-                    Dispatcher.Invoke(() =>
-                    {
-                        overlayManager.UpdateProgress((processedFiles * 100) / totalFiles);
-                        overlayManager.UpdateMessage($"Importing labels {processedFiles}/{totalFiles}...");
-                    });
+                    OnLabelsChanged();
+                    drawingCanvas.InvalidateVisual();
                 }
-            }, tokenSource.Token);
 
-            overlayManager.HideOverlay();
-
-            MessageBox.Show($"YOLO labels imported: {labelsLoaded}", "YOLO Label Import", MessageBoxButton.OK, MessageBoxImage.Information);
-
-            // Update all image statuses after importing labels
-            UpdateAllImageStatuses();
-
-            if (!string.IsNullOrEmpty(imageManager.CurrentImagePath) && labelManager.LabelStorage.ContainsKey(imageManager.CurrentImagePath))
+                MarkProjectDirty();
+            }
+            catch (OperationCanceledException)
             {
-                drawingCanvas.Labels = labelManager.LabelStorage[imageManager.CurrentImagePath];
-                RefreshLabelList();
-
-                // Restore selection if it was lost
-                if (currentSelection != null && ImageListBox.SelectedItem == null)
-                {
-                    for (int i = 0; i < ImageListBox.Items.Count; i++)
-                    {
-                        if (ImageListBox.Items[i] is ImageListItem item &&
-                            item.FileName == currentSelection.FileName)
-                        {
-                            ImageListBox.SelectedIndex = i;
-                            ImageListBox.ScrollIntoView(ImageListBox.SelectedItem);
-                            break;
-                        }
-                    }
-                }
-
-                OnLabelsChanged();
-                drawingCanvas.InvalidateVisual();
+                overlayManager.HideOverlay();
+                MessageBox.Show("Label import was cancelled by user.", "Import Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                overlayManager.HideOverlay();
+                MessageBox.Show($"Error importing labels: {ex.Message}", "Import Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -613,111 +1178,96 @@ namespace YoableWPF
         {
             if (string.IsNullOrEmpty(exportDirectory)) return;
 
-            CancellationTokenSource tokenSource = new CancellationTokenSource();
+            var tokenSource = new CancellationTokenSource();
             overlayManager.ShowOverlayWithProgress("Exporting labels...", tokenSource);
 
-            List<string> labelFilesToUpload = new List<string>();
-            List<string> imageFilesToUpload = imageManager.GetAllImagePaths();
-
-            int exportedFiles = 0;
-            int totalFiles = labelManager.LabelStorage.Count;
-            int processedFiles = 0;
-
-            bool canceled = await Task.Run(() =>
+            try
             {
-                foreach (var kvp in labelManager.LabelStorage)
-                {
-                    if (tokenSource.Token.IsCancellationRequested) return true;
+                var progress = CreateProgressReporter();
 
-                    string fileName = kvp.Key; // This is just the filename
-                    if (!imageManager.ImagePathMap.TryGetValue(fileName, out ImageManager.ImageInfo imageInfo))
-                    {
-                        continue; // Skip if full path is not found
-                    }
+                await labelManager.ExportLabelsBatchAsync(
+                    exportDirectory,
+                    imageManager,
+                    progress,
+                    tokenSource.Token);
 
-                    string imagePath = imageInfo.Path; // Get full image path
-                    if (!File.Exists(imagePath)) continue;
-
-                    List<LabelData> labels = kvp.Value;
-                    if (labels.Count == 0) continue;
-
-                    string labelFilePath = Path.Combine(exportDirectory, Path.GetFileNameWithoutExtension(imagePath) + ".txt");
-
-                    try
-                    {
-                        labelManager.ExportLabelsToYolo(labelFilePath, imagePath, labels);
-                        labelFilesToUpload.Add(labelFilePath);
-                        exportedFiles++;
-                    }
-                    catch (Exception ex)
-                    {
-                        Dispatcher.Invoke(() =>
-                        {
-                            MessageBox.Show($"Failed to export labels for {fileName}.\n\nError: {ex.Message}", "Export Error", MessageBoxButton.OK, MessageBoxImage.Error);
-                        });
-                    }
-
-                    processedFiles++;
-                    Dispatcher.Invoke(() =>
-                    {
-                        overlayManager.UpdateProgress((processedFiles * 100) / totalFiles);
-                        overlayManager.UpdateMessage($"Exporting {processedFiles}/{totalFiles} files...");
-                    });
-                }
-                return false;
-            });
-
-            if (canceled)
+                overlayManager.HideOverlay();
+                MessageBox.Show("Labels exported successfully!", "Export Complete",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (OperationCanceledException)
             {
                 overlayManager.HideOverlay();
-                MessageBox.Show("Export canceled by user.", "Export Canceled", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                MessageBox.Show("Export canceled.", "Canceled",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
             }
-
-            // Commented out cloud upload functionality for now
-            /*
-            if (Properties.Settings.Default.AskForUpload)
+            catch (Exception ex)
             {
-                overlayManager.UpdateMessage("Export complete. Uploading dataset...");
-                await cloudUploader.AskForUploadAsync(labelFilesToUpload, imageFilesToUpload);
+                overlayManager.HideOverlay();
+                MessageBox.Show($"Export failed: {ex.Message}", "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
             }
-            */
+        }
 
-            overlayManager.HideOverlay();
-            MessageBox.Show($"Labels exported successfully!", "Process Complete", MessageBoxButton.OK, MessageBoxImage.Information);
+        private void RestoreImageSelection(ImageListItem previousSelection)
+        {
+            if (previousSelection == null) return;
+
+            if (uiStateManager.TryGetFromCache(previousSelection.FileName, out var cachedItem))
+            {
+                int index = ImageListBox.Items.IndexOf(cachedItem);
+                if (index >= 0)
+                {
+                    ImageListBox.SelectedIndex = index;
+                    ImageListBox.ScrollIntoView(cachedItem);
+                }
+            }
+        }
+
+        private ImageStatus DetermineImageStatus(string fileName)
+        {
+            if (!labelManager.LabelStorage.TryGetValue(fileName, out var labels) || labels.Count == 0)
+                return ImageStatus.NoLabel;
+
+            // Fast check for imported/AI labels
+            for (int i = 0; i < labels.Count; i++)
+            {
+                var name = labels[i].Name;
+                if (name.Length > 0 && (name[0] == 'I' || name[0] == 'A'))
+                {
+                    if (name.StartsWith("Imported") || name.StartsWith("AI"))
+                        return ImageStatus.VerificationNeeded;
+                }
+            }
+
+            return ImageStatus.Verified;
         }
 
         private void UpdateImageStatus(string fileName)
         {
             if (!imageManager.ImagePathMap.ContainsKey(fileName)) return;
 
-            var hasLabels = labelManager.LabelStorage.ContainsKey(fileName) && labelManager.LabelStorage[fileName].Any();
-            var isImportedOrAI = hasLabels && labelManager.LabelStorage[fileName].Any(l => l.Name.StartsWith("Imported") || l.Name.StartsWith("AI"));
+            ImageStatus newStatus = DetermineImageStatus(fileName);
 
-            ImageStatus newStatus;
-            if (!hasLabels)
-                newStatus = ImageStatus.NoLabel;
-            else if (isImportedOrAI)
-                newStatus = ImageStatus.VerificationNeeded;
-            else
-                newStatus = ImageStatus.Verified;
-
-            // Use the imageManager method to update status (we'll add this method)
             imageManager.UpdateImageStatusValue(fileName, newStatus);
 
-            // Update the existing ListBox item instead of replacing it
-            foreach (var item in ImageListBox.Items)
+            // Use O(1) dictionary lookup instead of O(n) iteration
+            if (uiStateManager.TryGetFromCache(fileName, out var imageItem))
             {
-                if (item is ImageListItem imageItem && imageItem.FileName == fileName)
-                {
-                    imageItem.Status = newStatus;
-                    break;
-                }
+                imageItem.Status = newStatus;
             }
         }
 
-        private void Window_KeyDown(object sender, KeyEventArgs e)
+        private async void Window_KeyDown(object sender, KeyEventArgs e)
         {
+            // Handle Ctrl+S for save
+            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && e.Key == Key.S)
+            {
+                SaveProject_Click(sender, e);
+                e.Handled = true;
+                return;
+            }
+
             OnPreviewKeyDown(e);
         }
 
@@ -844,6 +1394,7 @@ namespace YoableWPF
                 if (e.Handled)
                 {
                     drawingCanvas.InvalidateVisual();
+                    MarkProjectDirty();
                 }
             }
         }
@@ -858,14 +1409,67 @@ namespace YoableWPF
             uiStateManager.SortImagesByStatus();
         }
 
+        private void SortComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            // Can fire during initialization before uiStateManager is ready
+            if (uiStateManager == null) return;
+
+            switch (SortComboBox.SelectedIndex)
+            {
+                case 0:
+                    uiStateManager.SortImagesByName();
+                    break;
+                case 1:
+                    uiStateManager.SortImagesByStatus();
+                    break;
+            }
+        }
+
+        private void FilterAll_Click(object sender, RoutedEventArgs e)
+        {
+            uiStateManager.UpdateFilterButtonStyles(
+                FilterAllButton, FilterReviewButton, FilterNoLabelButton, FilterVerifiedButton,
+                activeButton: FilterAllButton);
+            uiStateManager.FilterImagesByStatus(null);
+        }
+
+        private void FilterReview_Click(object sender, RoutedEventArgs e)
+        {
+            uiStateManager.UpdateFilterButtonStyles(
+                FilterAllButton, FilterReviewButton, FilterNoLabelButton, FilterVerifiedButton,
+                activeButton: FilterReviewButton);
+            uiStateManager.FilterImagesByStatus(ImageStatus.VerificationNeeded);
+        }
+
+        private void FilterNoLabel_Click(object sender, RoutedEventArgs e)
+        {
+            uiStateManager.UpdateFilterButtonStyles(
+                FilterAllButton, FilterReviewButton, FilterNoLabelButton, FilterVerifiedButton,
+                activeButton: FilterNoLabelButton);
+            uiStateManager.FilterImagesByStatus(ImageStatus.NoLabel);
+        }
+
+        private void FilterVerified_Click(object sender, RoutedEventArgs e)
+        {
+            uiStateManager.UpdateFilterButtonStyles(
+                FilterAllButton, FilterReviewButton, FilterNoLabelButton, FilterVerifiedButton,
+                activeButton: FilterVerifiedButton);
+            uiStateManager.FilterImagesByStatus(ImageStatus.Verified);
+        }
+
         private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            var settingsWindow = new SettingsWindow();
-            // Show all settings groups when accessing from main menu
-            settingsWindow.GeneralSettingsGroup.Visibility = Visibility.Visible;
-            settingsWindow.PerformanceSettingsGroup.Visibility = Visibility.Visible;
+            var settingsWindow = new SettingsWindow(yoloAI);
             settingsWindow.Owner = this;
-            settingsWindow.ShowDialog();
+            if (settingsWindow.ShowDialog() == true)
+            {
+                // Settings were saved, reapply batch sizes
+                imageManager.BatchSize = Properties.Settings.Default.ProcessingBatchSize;
+                labelManager.LabelLoadBatchSize = Properties.Settings.Default.LabelLoadBatchSize;
+
+                // Update the UI to reflect any changes
+                UpdateProjectUI();
+            }
         }
 
         protected override void OnClosing(CancelEventArgs e)
@@ -873,5 +1477,7 @@ namespace YoableWPF
             base.OnClosing(e);
             yoloAI?.Dispose();
         }
+
+        #endregion
     }
 }

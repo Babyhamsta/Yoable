@@ -1,4 +1,6 @@
 ﻿using ModernWpf;
+using System;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
@@ -6,9 +8,6 @@ using YoableWPF.Managers;
 
 namespace YoableWPF
 {
-    /// <summary>
-    /// Interaction logic for SettingsWindow.xaml
-    /// </summary>
     public partial class SettingsWindow : Window
     {
         private YoloAI yoloAI;
@@ -23,6 +22,35 @@ namespace YoableWPF
         {
             yoloAI = ai;
             UpdateEnsembleControls();
+        }
+
+        private void Tab_Changed(object sender, RoutedEventArgs e)
+        {
+            // Don't process if controls aren't loaded yet
+            if (GeneralSettingsPanel == null || AISettingsPanel == null || PerformanceSettingsPanel == null)
+                return;
+
+            if (sender is RadioButton radioButton)
+            {
+                // Hide all panels
+                GeneralSettingsPanel.Visibility = Visibility.Collapsed;
+                AISettingsPanel.Visibility = Visibility.Collapsed;
+                PerformanceSettingsPanel.Visibility = Visibility.Collapsed;
+
+                // Show selected panel
+                if (radioButton == GeneralTab)
+                {
+                    GeneralSettingsPanel.Visibility = Visibility.Visible;
+                }
+                else if (radioButton == AITab)
+                {
+                    AISettingsPanel.Visibility = Visibility.Visible;
+                }
+                else if (radioButton == PerformanceTab)
+                {
+                    PerformanceSettingsPanel.Visibility = Visibility.Visible;
+                }
+            }
         }
 
         private void UpdateEnsembleControls()
@@ -78,6 +106,7 @@ namespace YoableWPF
             // Load General Settings
             DarkModeCheckBox.IsChecked = Properties.Settings.Default.DarkTheme;
             UpdateCheckBox.IsChecked = Properties.Settings.Default.CheckUpdatesOnLaunch;
+            AutoSaveCheckBox.IsChecked = Properties.Settings.Default.EnableAutoSave;
 
             // Label Settings
             SelectComboBoxItemByTag(LabelColorPicker, Properties.Settings.Default.LabelColor);
@@ -88,13 +117,10 @@ namespace YoableWPF
             CrosshairEnabledCheckbox.IsChecked = Properties.Settings.Default.EnableCrosshair;
             CrosshairSizeSlider.Value = Properties.Settings.Default.CrosshairSize;
 
-            // Uploader Settings
-            //CloudUploadCheckbox.IsChecked = Properties.Settings.Default.AskForUpload;
-            //MaxConcurrentUploadsSlider.Value = Properties.Settings.Default.MaxConcurrentUploads;
-
             // Performance Settings
             UIBatchSizeSlider.Value = Properties.Settings.Default.UIBatchSize;
             ProcessingBatchSizeSlider.Value = Properties.Settings.Default.ProcessingBatchSize;
+            LabelLoadBatchSizeSlider.Value = Properties.Settings.Default.LabelLoadBatchSize;
             EnableParallelCheckBox.IsChecked = Properties.Settings.Default.EnableParallelProcessing;
         }
 
@@ -162,6 +188,7 @@ namespace YoableWPF
             // Save General Settings
             Properties.Settings.Default.DarkTheme = DarkModeCheckBox.IsChecked ?? false;
             Properties.Settings.Default.CheckUpdatesOnLaunch = UpdateCheckBox.IsChecked ?? false;
+            Properties.Settings.Default.EnableAutoSave = AutoSaveCheckBox.IsChecked ?? true;
             Properties.Settings.Default.FormAccent = FormHexAccent.Text;
             ThemeManager.Current.AccentColor = (Color)ColorConverter.ConvertFromString(FormHexAccent.Text);
 
@@ -174,13 +201,10 @@ namespace YoableWPF
             Properties.Settings.Default.CrosshairColor = ((ComboBoxItem)CrosshairColorPicker.SelectedItem).Tag.ToString();
             Properties.Settings.Default.CrosshairSize = CrosshairSizeSlider.Value;
 
-            // Uploader Settings
-            //.Settings.Default.AskForUpload = CloudUploadCheckbox.IsChecked ?? false;
-            //Properties.Settings.Default.MaxConcurrentUploads = MaxConcurrentUploadsSlider.Value;
-
             // Performance Settings
             Properties.Settings.Default.UIBatchSize = (int)UIBatchSizeSlider.Value;
             Properties.Settings.Default.ProcessingBatchSize = (int)ProcessingBatchSizeSlider.Value;
+            Properties.Settings.Default.LabelLoadBatchSize = (int)LabelLoadBatchSizeSlider.Value;
             Properties.Settings.Default.EnableParallelProcessing = EnableParallelCheckBox.IsChecked ?? true;
 
             Properties.Settings.Default.Save();

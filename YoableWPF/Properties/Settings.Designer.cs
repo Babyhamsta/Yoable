@@ -298,5 +298,101 @@ namespace YoableWPF.Properties {
                 this["UseWeightedAverage"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string RecentProjects {
+            get {
+                return ((string)(this["RecentProjects"]));
+            }
+            set {
+                this["RecentProjects"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool EnableAutoSave {
+            get {
+                return ((bool)(this["EnableAutoSave"]));
+            }
+            set {
+                this["EnableAutoSave"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1000")]
+        public int LabelLoadBatchSize {
+            get {
+                return ((int)(this["LabelLoadBatchSize"]));
+            }
+            set {
+                this["LabelLoadBatchSize"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("2")]
+        public int AutoSaveInterval {
+            get {
+                return ((int)(this["AutoSaveInterval"]));
+            }
+            set {
+                this["AutoSaveInterval"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LastImageDirectory {
+            get {
+                return ((string)(this["LastImageDirectory"]));
+            }
+            set {
+                this["LastImageDirectory"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LastLabelDirectory {
+            get {
+                return ((string)(this["LastLabelDirectory"]));
+            }
+            set {
+                this["LastLabelDirectory"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LastExportDirectory {
+            get {
+                return ((string)(this["LastExportDirectory"]));
+            }
+            set {
+                this["LastExportDirectory"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LastModelDirectory {
+            get {
+                return ((string)(this["LastModelDirectory"]));
+            }
+            set {
+                this["LastModelDirectory"] = value;
+            }
+        }
     }
 }

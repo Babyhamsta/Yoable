@@ -1,6 +1,7 @@
 ﻿using Microsoft.Win32;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using YoableWPF.Managers;
@@ -75,10 +76,17 @@ namespace YoableWPF
             modelItems.Clear();
             foreach (var model in yoloAI.GetLoadedModels())
             {
+                string modelType = model.ModelInfo.Format switch
+                {
+                    YoloFormat.YoloV5 => "YOLOv5",
+                    YoloFormat.YoloV8 => "YOLOv8",
+                    _ => "Unknown"
+                };
+
                 modelItems.Add(new ModelListItem
                 {
                     DisplayName = model.Name,
-                    ModelType = model.IsYoloV5 ? "YOLOv5" : "YOLOv8",
+                    ModelType = modelType,
                     Model = model
                 });
             }
@@ -115,6 +123,13 @@ namespace YoableWPF
                 Multiselect = true
             };
 
+            // Set initial directory to last used location
+            if (!string.IsNullOrEmpty(Properties.Settings.Default.LastModelDirectory) &&
+                Directory.Exists(Properties.Settings.Default.LastModelDirectory))
+            {
+                openFileDialog.InitialDirectory = Properties.Settings.Default.LastModelDirectory;
+            }
+
             if (openFileDialog.ShowDialog() == true)
             {
                 foreach (var file in openFileDialog.FileNames)
@@ -130,7 +145,14 @@ namespace YoableWPF
         {
             if (ModelListBox.SelectedItem is ModelListItem selectedItem)
             {
-                string modelIdentifier = $"{selectedItem.Model.Name} ({(selectedItem.Model.IsYoloV5 ? "YOLOv5" : "YOLOv8")})";
+                string formatName = selectedItem.Model.ModelInfo.Format switch
+                {
+                    YoloFormat.YoloV5 => "YOLOv5",
+                    YoloFormat.YoloV8 => "YOLOv8",
+                    _ => "Unknown"
+                };
+
+                string modelIdentifier = $"{selectedItem.Model.Name} ({formatName})";
                 yoloAI.RemoveModel(modelIdentifier);
                 RefreshModelList();
                 UpdateInfoText();

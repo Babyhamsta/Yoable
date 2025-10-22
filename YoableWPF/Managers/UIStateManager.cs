@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 
@@ -8,10 +10,42 @@ namespace YoableWPF.Managers
     public class UIStateManager
     {
         private readonly MainWindow mainWindow;
+        private List<ImageListItem> allImages = new List<ImageListItem>();
+        private Dictionary<string, ImageListItem> imageListItemCache = new Dictionary<string, ImageListItem>();
 
         public UIStateManager(MainWindow mainWindow)
         {
             this.mainWindow = mainWindow;
+        }
+
+        // Cache management methods
+        public Dictionary<string, ImageListItem> ImageListItemCache => imageListItemCache;
+
+        public void AddToCache(string fileName, ImageListItem item)
+        {
+            imageListItemCache[fileName] = item;
+        }
+
+        public bool TryGetFromCache(string fileName, out ImageListItem item)
+        {
+            return imageListItemCache.TryGetValue(fileName, out item);
+        }
+
+        public void ClearCache()
+        {
+            imageListItemCache.Clear();
+        }
+
+        public void BuildCache(ItemCollection items)
+        {
+            imageListItemCache.Clear();
+            foreach (var item in items)
+            {
+                if (item is ImageListItem imageItem)
+                {
+                    imageListItemCache[imageItem.FileName] = imageItem;
+                }
+            }
         }
 
         // Direct port of UpdateStatusCounts
@@ -21,21 +55,24 @@ namespace YoableWPF.Managers
                 .Count(x => x.Status == ImageStatus.VerificationNeeded);
             var unverified = mainWindow.ImageListBox.Items.Cast<ImageListItem>()
                 .Count(x => x.Status == ImageStatus.NoLabel);
+            var verified = mainWindow.ImageListBox.Items.Cast<ImageListItem>()
+                .Count(x => x.Status == ImageStatus.Verified);
 
             // Update the text blocks with counts
-            mainWindow.NeedsReviewCount.Text = needsReview > 0
-                ? $"{needsReview} need{(needsReview == 1 ? "s" : "")} review"
-                : "0 need review";
+            mainWindow.NeedsReviewCount.Text = needsReview.ToString();
             mainWindow.NeedsReviewCount.Foreground = needsReview > 0
-                ? (SolidColorBrush)(new BrushConverter().ConvertFrom("#CC7A00"))
+                ? (SolidColorBrush)(new BrushConverter().ConvertFrom("#FFB74D"))
                 : mainWindow.NeedsReviewCount.Foreground;
 
-            mainWindow.UnverifiedCount.Text = unverified > 0
-                ? $"{unverified} unverified"
-                : "0 unverified";
+            mainWindow.UnverifiedCount.Text = unverified.ToString();
             mainWindow.UnverifiedCount.Foreground = unverified > 0
-                ? (SolidColorBrush)(new BrushConverter().ConvertFrom("#CC3300"))
+                ? (SolidColorBrush)(new BrushConverter().ConvertFrom("#E57373"))
                 : mainWindow.UnverifiedCount.Foreground;
+
+            mainWindow.VerifiedCount.Text = verified.ToString();
+            mainWindow.VerifiedCount.Foreground = verified > 0
+                ? (SolidColorBrush)(new BrushConverter().ConvertFrom("#81C784"))
+                : mainWindow.VerifiedCount.Foreground;
         }
 
         // Direct port of RefreshLabelList
@@ -121,6 +158,124 @@ namespace YoableWPF.Managers
                 }
             }
             mainWindow.ImageListBox.SelectionChanged += mainWindow.ImageListBox_SelectionChanged;
+        }
+
+        public void FilterImagesByStatus(ImageStatus? status)
+        {
+            // Store all images if not already stored
+            if (allImages == null || allImages.Count == 0)
+            {
+                allImages = new List<ImageListItem>();
+                foreach (ImageListItem item in mainWindow.ImageListBox.Items)
+                {
+                    allImages.Add(item);
+                }
+            }
+
+            var selectedItem = mainWindow.ImageListBox.SelectedItem as ImageListItem;
+
+            mainWindow.ImageListBox.SelectionChanged -= mainWindow.ImageListBox_SelectionChanged;
+            mainWindow.ImageListBox.Items.Clear();
+
+            if (status == null)
+            {
+                // Show all images
+                foreach (var item in allImages)
+                {
+                    mainWindow.ImageListBox.Items.Add(item);
+                }
+            }
+            else
+            {
+                // Filter by status
+                foreach (var item in allImages.Where(i => i.Status == status.Value))
+                {
+                    mainWindow.ImageListBox.Items.Add(item);
+                }
+            }
+
+            // Restore selection if possible
+            if (selectedItem != null)
+            {
+                for (int i = 0; i < mainWindow.ImageListBox.Items.Count; i++)
+                {
+                    if (mainWindow.ImageListBox.Items[i] is ImageListItem item &&
+                        item.FileName == selectedItem.FileName)
+                    {
+                        mainWindow.ImageListBox.SelectedIndex = i;
+                        mainWindow.ImageListBox.ScrollIntoView(mainWindow.ImageListBox.SelectedItem);
+                        break;
+                    }
+                }
+            }
+            else if (mainWindow.ImageListBox.Items.Count > 0)
+            {
+                mainWindow.ImageListBox.SelectedIndex = 0;
+            }
+
+            mainWindow.ImageListBox.SelectionChanged += mainWindow.ImageListBox_SelectionChanged;
+            UpdateStatusCounts();
+        }
+
+        public void RefreshAllImagesList()
+        {
+            // Refresh the complete list of images (call this when images are added/removed)
+            allImages = new List<ImageListItem>();
+            foreach (ImageListItem item in mainWindow.ImageListBox.Items)
+            {
+                allImages.Add(item);
+            }
+        }
+
+        public void UpdateFilterButtonStyles(
+            Button allButton,
+            Button reviewButton,
+            Button noLabelButton,
+            Button verifiedButton,
+            Button activeButton = null)
+        {
+            // Define colors once
+            var transparent = System.Windows.Media.Brushes.Transparent;
+            var white = System.Windows.Media.Brushes.White;
+            var baseHigh = (System.Windows.Media.Brush)System.Windows.Application.Current.MainWindow
+                .FindResource("SystemControlForegroundBaseHighBrush");
+            var baseLow = (System.Windows.Media.Brush)System.Windows.Application.Current.MainWindow
+                .FindResource("SystemControlBackgroundBaseLowBrush");
+            var baseLowFore = (System.Windows.Media.Brush)System.Windows.Application.Current.MainWindow
+                .FindResource("SystemControlForegroundBaseLowBrush");
+
+            var orangeInactive = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromArgb(0x44, 0xFF, 0xB7, 0x4D));
+            var orangeActive = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromArgb(0xFF, 0xFF, 0xB7, 0x4D));
+            var orangeFore = orangeActive;
+
+            var redInactive = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromArgb(0x44, 0xE5, 0x73, 0x73));
+            var redActive = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromArgb(0xFF, 0xE5, 0x73, 0x73));
+            var redFore = redActive;
+
+            var greenInactive = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromArgb(0x44, 0x81, 0xC7, 0x84));
+            var greenActive = new System.Windows.Media.SolidColorBrush(
+                System.Windows.Media.Color.FromArgb(0xFF, 0x81, 0xC7, 0x84));
+            var greenFore = greenActive;
+
+            // Set all button styles based on active button
+            allButton.Background = activeButton == allButton ? baseLow : transparent;
+            allButton.Foreground = baseHigh;
+            allButton.BorderThickness = activeButton == allButton ? new Thickness(1) : new Thickness(0);
+            allButton.BorderBrush = activeButton == allButton ? baseLowFore : null;
+
+            reviewButton.Background = activeButton == reviewButton ? orangeActive : orangeInactive;
+            reviewButton.Foreground = activeButton == reviewButton ? white : orangeFore;
+
+            noLabelButton.Background = activeButton == noLabelButton ? redActive : redInactive;
+            noLabelButton.Foreground = activeButton == noLabelButton ? white : redFore;
+
+            verifiedButton.Background = activeButton == verifiedButton ? greenActive : greenInactive;
+            verifiedButton.Foreground = activeButton == verifiedButton ? white : greenFore;
         }
     }
 }

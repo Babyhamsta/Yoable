@@ -27,8 +27,8 @@ namespace YoableWPF.Managers
             set => currentImagePath = value;
         }
 
-        public Dictionary<string, ImageInfo> ImagePathMap => imagePathMap.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
-        public Dictionary<string, ImageStatus> ImageStatuses => imageStatuses.ToDictionary(kvp => kvp.Key, kvp => kvp.Value);
+        public ConcurrentDictionary<string, ImageInfo> ImagePathMap => imagePathMap;
+        public ConcurrentDictionary<string, ImageStatus> ImageStatuses => imageStatuses;
 
         // Original synchronous method for backward compatibility
         public string[] LoadImagesFromDirectory(string directoryPath)

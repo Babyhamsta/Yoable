@@ -44,6 +44,7 @@ namespace YoableWPF.Managers
                         Properties.Settings.Default.NewVersion,
                         Properties.Settings.Default.ChangelogContent
                     );
+                    changelogWindow.Owner = mainWindow;
                     changelogWindow.ShowDialog();
                 });
             }
@@ -56,15 +57,22 @@ namespace YoableWPF.Managers
                 var release = await GetLatestReleaseAsync();
                 if (release == null || !IsNewVersionAvailable(release.tag_name)) return;
 
-                var result = await dispatcher.InvokeAsync(() => MessageBox.Show(
-                    mainWindow,
-                    $"A new version ({release.tag_name}) is available. Would you like to update?",
-                    "Update Available",
-                    MessageBoxButton.YesNo,
-                    MessageBoxImage.Question));
-
-                if (result == MessageBoxResult.Yes)
+                // Show changelog window with update prompt
+                var updateDecision = await dispatcher.InvokeAsync(() =>
                 {
+                    var changelogWindow = new ChangelogWindow(
+                        release.tag_name,
+                        release.body,
+                        showUpdateButtons: true
+                    );
+                    changelogWindow.Owner = mainWindow;
+                    return changelogWindow.ShowDialog();
+                });
+
+                // If user chose to update
+                if (updateDecision == true)
+                {
+                    // Save changelog info to show again after restart
                     Properties.Settings.Default.ShowChangelog = true;
                     Properties.Settings.Default.ChangelogContent = release.body;
                     Properties.Settings.Default.NewVersion = release.tag_name;

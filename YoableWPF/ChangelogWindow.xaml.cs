@@ -1,35 +1,61 @@
 ﻿using System;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
 
 namespace YoableWPF
 {
     public partial class ChangelogWindow : Window
     {
-        private StackPanel changelogPanel;
+        private bool isUpdatePrompt = false;
 
+        // Constructor for post-update changelog viewing
         public ChangelogWindow(string version, string changelog)
         {
             InitializeComponent();
-            Style = (Style)FindResource("ModernWindowStyle");
-            Title = $"What's New in {version}";
+            VersionTitle.Text = $"What's New in {version}";
+            ParseChangelog(changelog);
+            SetupForViewing();
+        }
 
-            // Need to wait for the template to be applied
-            Loaded += (s, e) =>
+        // Constructor for pre-update decision
+        public ChangelogWindow(string version, string changelog, bool showUpdateButtons)
+        {
+            InitializeComponent();
+            isUpdatePrompt = showUpdateButtons;
+            VersionTitle.Text = $"Update Available: {version}";
+            ParseChangelog(changelog);
+
+            if (showUpdateButtons)
             {
-                changelogPanel = (StackPanel)Template.FindName("ChangelogStackPanel", this);
-                ParseChangelog(changelog);
-            };
+                SetupForUpdatePrompt();
+            }
+            else
+            {
+                SetupForViewing();
+            }
+        }
+
+        private void SetupForUpdatePrompt()
+        {
+            // Show update buttons, hide close button
+            UpdateButton.Visibility = Visibility.Visible;
+            NotNowButton.Visibility = Visibility.Visible;
+            CloseButton.Visibility = Visibility.Collapsed;
+        }
+
+        private void SetupForViewing()
+        {
+            // Show close button, hide update buttons
+            UpdateButton.Visibility = Visibility.Collapsed;
+            NotNowButton.Visibility = Visibility.Collapsed;
+            CloseButton.Visibility = Visibility.Visible;
         }
 
         private void ParseChangelog(string changelog)
         {
-            if (changelogPanel == null) return;
+            if (ChangelogStackPanel == null) return;
 
-            changelogPanel.Children.Clear();
+            ChangelogStackPanel.Children.Clear();
             var sections = changelog.Split(new[] { "##" }, StringSplitOptions.RemoveEmptyEntries);
 
             foreach (var section in sections)
@@ -43,106 +69,74 @@ namespace YoableWPF
                 var header = new TextBlock
                 {
                     Text = lines[0].Trim(),
-                    FontSize = 20,
-                    FontWeight = FontWeights.SemiBold,
-                    Foreground = new SolidColorBrush(Color.FromRgb(86, 156, 214)),
-                    Margin = new Thickness(0, 10, 0, 15)
+                    Style = (Style)FindResource("SectionHeader")
                 };
-                changelogPanel.Children.Add(header);
+                ChangelogStackPanel.Children.Add(header);
 
-                // Create bullet points list with more indent
-                var bulletList = new RichTextBox
-                {
-                    Background = Brushes.Transparent,
-                    BorderThickness = new Thickness(0),
-                    IsReadOnly = true,
-                    Focusable = false,
-                    Margin = new Thickness(25, 0, 0, 10),  // Increased left margin for indentation
-                    Padding = new Thickness(0)
-                };
-
-                // Configure FlowDocument
-                var flowDoc = new FlowDocument()
-                {
-                    PagePadding = new Thickness(0),
-                    LineHeight = 1
-                };
-                bulletList.Document = flowDoc;
-
+                // Process bullet points
                 for (int i = 1; i < lines.Length; i++)
                 {
                     var line = lines[i].Trim();
                     if (string.IsNullOrWhiteSpace(line)) continue;
+
                     if (line.StartsWith("-"))
                     {
-                        // Create bullet list item
-                        var listItem = new List
+                        var bulletPanel = new StackPanel
                         {
-                            MarkerStyle = TextMarkerStyle.Disc,
-                            Margin = new Thickness(0, 0, 0, 8),  // Added spacing between bullet points
-                            Padding = new Thickness(0)
+                            Orientation = Orientation.Horizontal,
+                            Margin = new Thickness(20, 0, 0, 8)
                         };
 
-                        var listParagraph = new Paragraph
+                        var bullet = new TextBlock
                         {
-                            Margin = new Thickness(0),
-                            Padding = new Thickness(0),
-                            LineHeight = 1,
-                            TextIndent = 5
+                            Text = "•  ",
+                            FontSize = 13,
+                            VerticalAlignment = VerticalAlignment.Top,
+                            Margin = new Thickness(0, 0, 5, 0)
                         };
-                        listParagraph.Foreground = Brushes.White;
-                        listParagraph.Inlines.Add(new Run(line.TrimStart('-', ' ')));
 
-                        listItem.ListItems.Add(new ListItem(listParagraph));
-                        flowDoc.Blocks.Add(listItem);
+                        var content = new TextBlock
+                        {
+                            Text = line.TrimStart('-', ' '),
+                            FontSize = 13,
+                            TextWrapping = TextWrapping.Wrap,
+                            VerticalAlignment = VerticalAlignment.Top
+                        };
+
+                        bulletPanel.Children.Add(bullet);
+                        bulletPanel.Children.Add(content);
+                        ChangelogStackPanel.Children.Add(bulletPanel);
                     }
                 }
-
-                changelogPanel.Children.Add(bulletList);
             }
         }
 
-        private void DragArea_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        private void UpdateButton_Click(object sender, RoutedEventArgs e)
         {
-            DragMove();
+            // User chose to update
+            DialogResult = true;
+            Close();
+        }
+
+        private void NotNowButton_Click(object sender, RoutedEventArgs e)
+        {
+            // User chose not to update
+            DialogResult = false;
+            Close();
         }
 
         private void CloseButton_Click(object sender, RoutedEventArgs e)
         {
-            // Clear out changelog stuff
-            Properties.Settings.Default.ShowChangelog = false;
-            Properties.Settings.Default.ChangelogContent = "";
-            Properties.Settings.Default.NewVersion = "";
-            Properties.Settings.Default.Save();
+            // Clear out changelog stuff only if this was post-update viewing
+            if (!isUpdatePrompt)
+            {
+                Properties.Settings.Default.ShowChangelog = false;
+                Properties.Settings.Default.ChangelogContent = "";
+                Properties.Settings.Default.NewVersion = "";
+                Properties.Settings.Default.Save();
+            }
 
             Close();
-        }
-
-        protected override void OnSourceInitialized(EventArgs e)
-        {
-            base.OnSourceInitialized(e);
-            var handle = new System.Windows.Interop.WindowInteropHelper(this).Handle;
-            var source = System.Windows.Interop.HwndSource.FromHwnd(handle);
-            source?.AddHook(WndProc);
-        }
-
-        private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-        {
-            if (msg == 0x84) // WM_NCHITTEST
-            {
-                var point = new Point();
-                int lp = lParam.ToInt32();
-                point.X = (short)(lp & 0xFFFF);
-                point.Y = (short)(lp >> 16);
-                point = PointFromScreen(point);
-
-                if (point.Y < 32)
-                {
-                    handled = true;
-                    return new IntPtr(2);  // HTCAPTION
-                }
-            }
-            return IntPtr.Zero;
         }
     }
 }

@@ -1,0 +1,289 @@
+﻿<Window x:Class="YoableWPF.NewProjectDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.modernwpf.com/2019"
+        ui:WindowHelper.UseModernWindowStyle="True"
+        Title="New Project"
+        Width="600" 
+        Height="450"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        MinWidth="550"
+        MinHeight="550">
+
+    <Window.Resources>
+        <!-- Modern Button Style -->
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Background" Value="#FF0078D4"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Secondary Button Style -->
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <SolidColorBrush Color="#33FFFFFF"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background">
+                                    <Setter.Value>
+                                        <SolidColorBrush Color="#44FFFFFF"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Icon Button Style (for browse button) -->
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <SolidColorBrush Color="#33FFFFFF"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background">
+                                    <Setter.Value>
+                                        <SolidColorBrush Color="#44FFFFFF"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Label Style -->
+        <Style x:Key="FormLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                Padding="24,20">
+            <Border.Background>
+                <SolidColorBrush Color="#19FFFFFF"/>
+            </Border.Background>
+            <Border.BorderBrush>
+                <SolidColorBrush Color="#0FFFFFFF"/>
+            </Border.BorderBrush>
+            <Border.BorderThickness>0,0,0,1</Border.BorderThickness>
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock FontFamily="Segoe MDL2 Assets" 
+                               Text="&#xE710;" 
+                               FontSize="24"
+                               Foreground="#FF9C27B0"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"/>
+                    <TextBlock Text="Create New Project" 
+                               FontSize="22" 
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Text="Set up a new Yoable project to organize your images and labels"
+                           Foreground="Gray"
+                           FontSize="13"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Form Content -->
+        <ScrollViewer Grid.Row="1" 
+                      VerticalScrollBarVisibility="Auto"
+                      Padding="24,20">
+            <StackPanel>
+                <!-- Project Name -->
+                <TextBlock Text="Project Name" Style="{StaticResource FormLabel}"/>
+                <TextBox x:Name="ProjectNameTextBox"
+                         FontSize="14"
+                         Padding="10,8"
+                         Margin="0,0,0,20"
+                         TextChanged="ProjectNameTextBox_TextChanged"/>
+
+                <!-- Project Location -->
+                <TextBlock Text="Project Location" Style="{StaticResource FormLabel}"/>
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox x:Name="ProjectLocationTextBox"
+                             Grid.Column="0"
+                             FontSize="14"
+                             Padding="10,8"
+                             IsReadOnly="True"
+                             Margin="0,0,8,0"/>
+
+                    <Button Grid.Column="1"
+                            x:Name="BrowseButton"
+                            Click="BrowseButton_Click"
+                            Style="{StaticResource IconButton}"
+                            ToolTip="Browse for folder">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets"
+                                     Text="&#xE8DA;"
+                                     FontSize="16"
+                                     VerticalAlignment="Center"
+                                     Margin="0,0,6,0"/>
+                            <TextBlock Text="Browse"
+                                     VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <!-- Info Card -->
+                <Border Background="#4400BCD4"
+                        CornerRadius="6"
+                        Padding="16"
+                        Margin="0,8,0,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets"
+                                   Text="&#xE946;"
+                                   FontSize="16"
+                                   Foreground="#00BCD4"
+                                   VerticalAlignment="Top"
+                                   Margin="0,0,10,0"/>
+                        <StackPanel>
+                            <TextBlock Text="Project Folder Structure"
+                                     Foreground="#00BCD4"
+                                     FontWeight="SemiBold"
+                                     FontSize="13"
+                                     Margin="0,0,0,4"/>
+                            <TextBlock Foreground="#00BCD4"
+                                     FontSize="12"
+                                     TextWrapping="Wrap"
+                                     Opacity="0.9">
+                                <Run Text="A new folder will be created with:"/>
+                                <LineBreak/>
+                                <Run Text="• Project file (.yoable)"/>
+                                <LineBreak/>
+                                <Run Text="• Labels folder (for your annotations)"/>
+                                <LineBreak/>
+                                <Run Text="• Automatic backup system"/>
+                            </TextBlock>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Full Path Preview -->
+                <TextBlock x:Name="FullPathPreview"
+                           Text="Full path: Not set"
+                           FontSize="11"
+                           Foreground="Gray"
+                           Margin="0,16,0,0"
+                           TextWrapping="Wrap"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer with Buttons -->
+        <Border Grid.Row="2"
+                Padding="24,16">
+            <Border.Background>
+                <SolidColorBrush Color="#19FFFFFF"/>
+            </Border.Background>
+            <Border.BorderBrush>
+                <SolidColorBrush Color="#0FFFFFFF"/>
+            </Border.BorderBrush>
+            <Border.BorderThickness>0,1,0,0</Border.BorderThickness>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="CreateButton"
+                        Content="Create Project"
+                        Click="CreateButton_Click"
+                        Style="{StaticResource ModernButton}"
+                        MinWidth="120"
+                        Margin="0,0,8,0"
+                        IsEnabled="False"/>
+                <Button x:Name="CancelButton"
+                        Content="Cancel"
+                        Click="CancelButton_Click"
+                        Style="{StaticResource SecondaryButton}"
+                        MinWidth="100"
+                        IsCancel="True"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

@@ -28,6 +28,9 @@ namespace YoableWPF
 
     public class DrawingCanvas : Canvas
     {
+        // Event fired whenever labels are modified
+        public event EventHandler LabelsChanged;
+
         public ImageSource Image { get; set; }
         private Size originalImageDimensions;
         public List<LabelData> Labels { get; set; } = new();
@@ -86,6 +89,14 @@ namespace YoableWPF
             PreviewKeyDown += DrawingCanvas_PreviewKeyDown;
         }
 
+        /// <summary>
+        /// Notifies listeners that labels have been modified
+        /// </summary>
+        protected virtual void OnLabelsChanged()
+        {
+            LabelsChanged?.Invoke(this, EventArgs.Empty);
+        }
+
         // Save current state for undo
         private void SaveUndoState()
         {
@@ -127,10 +138,7 @@ namespace YoableWPF
                 SelectedLabels.Clear();
                 InvalidateVisual();
 
-                if (Application.Current.MainWindow is MainWindow mainWindow)
-                {
-                    mainWindow.OnLabelsChanged();
-                }
+                OnLabelsChanged();
             }
         }
 
@@ -154,10 +162,7 @@ namespace YoableWPF
                 SelectedLabels.Clear();
                 InvalidateVisual();
 
-                if (Application.Current.MainWindow is MainWindow mainWindow)
-                {
-                    mainWindow.OnLabelsChanged();
-                }
+                OnLabelsChanged();
             }
         }
 
@@ -226,9 +231,12 @@ namespace YoableWPF
             RefreshLabelListBox();
             InvalidateVisual();
 
+            // Notify that labels changed
+            OnLabelsChanged();
+
+            // Update title
             if (Application.Current.MainWindow is MainWindow mainWindow)
             {
-                mainWindow.OnLabelsChanged();
                 mainWindow.Title = $"YoableWPF - Pasted {clipboard.Count} label(s)";
             }
         }
@@ -541,10 +549,7 @@ namespace YoableWPF
                         LabelListBox.Items.Add(newLabel.Name);
                     }
 
-                    if (Application.Current.MainWindow is MainWindow mainWindow)
-                    {
-                        mainWindow.OnLabelsChanged();
-                    }
+                    OnLabelsChanged();
                 }
                 CurrentRect = new Rect(0, 0, 0, 0);
             }
@@ -552,10 +557,7 @@ namespace YoableWPF
             // Only call OnLabelsChanged if we actually moved or resized something
             if ((IsDragging || IsResizing) && hasMovedOrResized)
             {
-                if (Application.Current.MainWindow is MainWindow mainWin)
-                {
-                    mainWin.OnLabelsChanged();
-                }
+                OnLabelsChanged();
             }
 
             IsDragging = false;
@@ -960,16 +962,13 @@ namespace YoableWPF
                         }
                         SelectedLabel = null;
 
-                        if (Application.Current.MainWindow is MainWindow mainWindow)
-                        {
-                            mainWindow.OnLabelsChanged();
-                        }
+                        OnLabelsChanged();
                         break;
                 }
 
-                if (needsUndo && Application.Current.MainWindow is MainWindow mainWin)
+                if (needsUndo)
                 {
-                    mainWin.OnLabelsChanged();
+                    OnLabelsChanged();
                 }
 
                 InvalidateVisual();
