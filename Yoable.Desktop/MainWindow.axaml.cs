@@ -1046,8 +1046,117 @@ public partial class MainWindow : Window
 
     private async void AutoSuggestLabels_Click(object? sender, RoutedEventArgs e)
     {
-        await _dialogService.ShowMessageAsync("Not Implemented",
-            "Auto Suggest Labels feature is coming soon.\n\nThis will provide AI-powered label suggestions for the current image.");
+        // Check if an image is selected
+        if (_imageListBox == null || _imageListBox.SelectedItem == null)
+        {
+            await _dialogService.ShowWarningAsync("No Image Selected",
+                "Please select an image to run AI detection on.");
+            return;
+        }
+
+        // Check if any models are loaded
+        int modelCount = _yoloAI.GetLoadedModelsCount();
+        if (modelCount == 0)
+        {
+            var result = await _dialogService.ShowYesNoCancelAsync(
+                "No Models",
+                "No models loaded. Would you like to load models now?");
+
+            if (result == DialogResult.Yes)
+            {
+                var modelManagerDialog = new ModelManagerDialog(_yoloAI);
+                await modelManagerDialog.ShowDialog(this);
+
+                // Check again after dialog
+                if (_yoloAI.GetLoadedModelsCount() == 0)
+                    return;
+            }
+            else
+            {
+                return;
+            }
+        }
+
+        // Get the current image
+        var selectedItem = _imageListBox.SelectedItem as ImageListItem;
+        if (selectedItem == null) return;
+
+        var imagePath = _imageManager.ImagePathMap.Values.FirstOrDefault(img => Path.GetFileName(img.Path) == selectedItem.FileName);
+        if (imagePath == null || !File.Exists(imagePath.Path))
+        {
+            await _dialogService.ShowWarningAsync("Image Not Found",
+                "Could not find the selected image file.");
+            return;
+        }
+
+        string processingMode = modelCount == 1 ? "single model" : $"ensemble ({modelCount} models)";
+
+        // Show progress dialog
+        var progressDialog = new Window
+        {
+            Title = $"Running AI Detection ({processingMode})",
+            Width = 450,
+            Height = 180,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            CanResize = false
+        };
+
+        var panel = new StackPanel { Margin = new Avalonia.Thickness(20) };
+        var progressText = new TextBlock
+        {
+            Text = "Running AI detection on current image...",
+            TextWrapping = Avalonia.Media.TextWrapping.Wrap,
+            Margin = new Avalonia.Thickness(0, 0, 0, 10)
+        };
+        var progressBar = new ProgressBar
+        {
+            Height = 30,
+            Minimum = 0,
+            Maximum = 100,
+            Value = 0,
+            IsIndeterminate = true
+        };
+
+        panel.Children.Add(progressText);
+        panel.Children.Add(progressBar);
+        progressDialog.Content = panel;
+
+        progressDialog.Show(this);
+
+        int detectionCount = 0;
+        try
+        {
+            await Task.Run(() =>
+            {
+                using var image = System.Drawing.Image.FromFile(imagePath.Path);
+                using var bitmap = new System.Drawing.Bitmap(image);
+                var detectedBoxes = _yoloAI.RunInference(bitmap);
+
+                // Convert System.Drawing.Rectangle to LabelRect
+                var labelRects = detectedBoxes.Select(r => new Yoable.Models.LabelRect(r.X, r.Y, r.Width, r.Height)).ToList();
+                _labelManager.AddAILabels(selectedItem.FileName, labelRects);
+                detectionCount = labelRects.Count;
+            });
+
+            progressDialog.Close();
+
+            // Update UI
+            await UpdateAllImageStatusesAsync();
+            RefreshLabelList();
+            _drawingCanvas?.InvalidateVisual();
+
+            string modeInfo = modelCount == 1 ? "" : $" using {modelCount} models";
+            await _dialogService.ShowMessageAsync("AI Detection Complete",
+                $"Found {detectionCount} object(s){modeInfo} in the current image.");
+
+            MarkProjectDirty();
+        }
+        catch (Exception ex)
+        {
+            progressDialog.Close();
+            await _dialogService.ShowWarningAsync("Detection Error",
+                $"An error occurred during detection:\n{ex.Message}");
+        }
     }
 
     #endregion
