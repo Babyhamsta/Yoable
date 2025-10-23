@@ -1,0 +1,509 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Yoable.Desktop.SettingsWindow"
+        Title="Settings"
+        Height="650"
+        Width="700"
+        WindowStartupLocation="CenterOwner"
+        CanResize="True"
+        MinHeight="600"
+        MinWidth="650">
+
+    <Window.Styles>
+        <!-- Modern Button Style -->
+        <Style Selector="Button.ModernButton">
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.ModernButton:pointerover">
+            <Setter Property="Opacity" Value="0.9"/>
+        </Style>
+        <Style Selector="Button.ModernButton:pressed">
+            <Setter Property="Opacity" Value="0.8"/>
+        </Style>
+        <Style Selector="Button.ModernButton:disabled">
+            <Setter Property="Opacity" Value="0.5"/>
+        </Style>
+
+        <!-- Secondary Button Style -->
+        <Style Selector="Button.SecondaryButton">
+            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.SecondaryButton:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+        </Style>
+
+        <!-- Setting Card Style -->
+        <Style Selector="Border.SettingCard">
+            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <!-- Section Header Style -->
+        <Style Selector="TextBlock.SectionHeader">
+            <Setter Property="FontSize" Value="14"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+        </Style>
+
+        <!-- Setting Label Style -->
+        <Style Selector="TextBlock.SettingLabel">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <!-- Help Text Style -->
+        <Style Selector="TextBlock.HelpText">
+            <Setter Property="Foreground" Value="Gray"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,6,0,0"/>
+        </Style>
+
+        <!-- Horizontal Tab Style (using ToggleButton as Avalonia doesn't have RadioButton in same way) -->
+        <Style Selector="ToggleButton.HorizontalTab">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0,0,0,2"/>
+            <Setter Property="BorderBrush" Value="Transparent"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+            <Setter Property="Padding" Value="16,10"/>
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="Medium"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="ToggleButton.HorizontalTab:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+        </Style>
+        <Style Selector="ToggleButton.HorizontalTab:checked">
+            <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemAccentColor}"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+        <!-- Header Section -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Padding="24,20">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="⚙️"
+                               FontSize="24"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"/>
+                    <TextBlock Text="Settings"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Text="Configure Yoable to match your workflow and preferences"
+                           Foreground="Gray"
+                           TextWrapping="Wrap"
+                           FontSize="13"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Tab Bar -->
+        <Border Grid.Row="1"
+                BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+            <StackPanel Orientation="Horizontal" Margin="24,0">
+                <ToggleButton x:Name="GeneralTab"
+                              Content="General"
+                              Classes="HorizontalTab"
+                              IsChecked="True"/>
+                <ToggleButton x:Name="AITab"
+                              Content="AI &amp; Detection"
+                              Classes="HorizontalTab"/>
+                <ToggleButton x:Name="PerformanceTab"
+                              Content="Performance"
+                              Classes="HorizontalTab"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Content Area -->
+        <ScrollViewer Grid.Row="2"
+                      VerticalScrollBarVisibility="Auto"
+                      Padding="24,20">
+            <StackPanel>
+                <!-- General Settings Page -->
+                <StackPanel x:Name="GeneralSettingsPanel" IsVisible="True">
+                    <!-- Appearance Card -->
+                    <Border Classes="SettingCard">
+                        <StackPanel>
+                            <TextBlock Text="Appearance" Classes="SectionHeader"/>
+
+                            <CheckBox x:Name="DarkModeCheckBox"
+                                      Content="Dark Mode"
+                                      Margin="0,0,0,12"/>
+
+                            <TextBlock Text="Accent Color (Hex)" Classes="SettingLabel"/>
+                            <TextBox x:Name="FormHexAccent"
+                                     FontSize="13"
+                                     Padding="8"
+                                     ToolTip.Tip="Enter hex color value (e.g. #FF0000 for red)"
+                                     Watermark="#FF0000"/>
+                            <TextBlock Text="Changes the accent color used throughout the application"
+                                       Classes="HelpText"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- General Options Card -->
+                    <Border Classes="SettingCard">
+                        <StackPanel>
+                            <TextBlock Text="General" Classes="SectionHeader"/>
+
+                            <CheckBox x:Name="UpdateCheckBox"
+                                      Content="Check for updates on launch"
+                                      ToolTip.Tip="Automatically check for new versions when starting Yoable"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Project Settings Card -->
+                    <Border Classes="SettingCard">
+                        <StackPanel>
+                            <TextBlock Text="Project" Classes="SectionHeader"/>
+
+                            <CheckBox x:Name="AutoSaveCheckBox"
+                                      Content="Enable Auto-Save"
+                                      IsChecked="True"/>
+                            <TextBlock Text="Automatically save your project every 2 minutes when changes are detected"
+                                       Classes="HelpText"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Label Settings Card -->
+                    <Border Classes="SettingCard">
+                        <StackPanel>
+                            <TextBlock Text="Labels" Classes="SectionHeader"/>
+
+                            <TextBlock Text="Label Color" Classes="SettingLabel"/>
+                            <ComboBox x:Name="LabelColorPicker"
+                                      Margin="0,0,0,12"
+                                      FontSize="13"
+                                      Padding="8">
+                                <ComboBoxItem Content="Red" Tag="#FFFF0000"/>
+                                <ComboBoxItem Content="Green" Tag="#FF00FF00"/>
+                                <ComboBoxItem Content="Blue" Tag="#FF0000FF"/>
+                                <ComboBoxItem Content="Yellow" Tag="#FFFFFF00"/>
+                                <ComboBoxItem Content="White" Tag="#FFFFFFFF"/>
+                                <ComboBoxItem Content="Black" Tag="#FF000000"/>
+                                <ComboBoxItem Content="Purple" Tag="#FF800080"/>
+                                <ComboBoxItem Content="Orange" Tag="#FFFF8C00"/>
+                            </ComboBox>
+
+                            <TextBlock Text="Label Thickness" Classes="SettingLabel"/>
+                            <Grid ColumnDefinitions="*,50">
+                                <Slider x:Name="LabelThicknessSlider"
+                                        Grid.Column="0"
+                                        Minimum="1"
+                                        Maximum="10"
+                                        Value="2"
+                                        TickFrequency="1"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding #LabelThicknessSlider.Value, StringFormat={}{0:0}px}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Crosshair Settings Card -->
+                    <Border Classes="SettingCard">
+                        <StackPanel>
+                            <TextBlock Text="Crosshair" Classes="SectionHeader"/>
+
+                            <CheckBox x:Name="CrosshairEnabledCheckbox"
+                                      Content="Enable Crosshair"
+                                      Margin="0,0,0,12"/>
+
+                            <TextBlock Text="Crosshair Color" Classes="SettingLabel"/>
+                            <ComboBox x:Name="CrosshairColorPicker"
+                                      Margin="0,0,0,12"
+                                      FontSize="13"
+                                      Padding="8">
+                                <ComboBoxItem Content="Red" Tag="#FFFF0000"/>
+                                <ComboBoxItem Content="Green" Tag="#FF00FF00"/>
+                                <ComboBoxItem Content="Blue" Tag="#FF0000FF"/>
+                                <ComboBoxItem Content="Yellow" Tag="#FFFFFF00"/>
+                                <ComboBoxItem Content="White" Tag="#FFFFFFFF"/>
+                                <ComboBoxItem Content="Black" Tag="#FF000000"/>
+                                <ComboBoxItem Content="Purple" Tag="#FF800080"/>
+                                <ComboBoxItem Content="Orange" Tag="#FFFF8C00"/>
+                            </ComboBox>
+
+                            <TextBlock Text="Crosshair Size" Classes="SettingLabel"/>
+                            <Grid ColumnDefinitions="*,50">
+                                <Slider x:Name="CrosshairSizeSlider"
+                                        Grid.Column="0"
+                                        Minimum="1"
+                                        Maximum="10"
+                                        Value="1"
+                                        TickFrequency="1"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding #CrosshairSizeSlider.Value, StringFormat={}{0:0}px}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- AI Settings Page -->
+                <StackPanel x:Name="AISettingsPanel" IsVisible="False">
+                    <!-- Detection Settings Card -->
+                    <Border Classes="SettingCard">
+                        <StackPanel>
+                            <TextBlock Text="Detection" Classes="SectionHeader"/>
+
+                            <TextBlock Text="Processing Device" Classes="SettingLabel"/>
+                            <ComboBox x:Name="ProcessingDeviceComboBox"
+                                      Margin="0,0,0,12"
+                                      FontSize="13"
+                                      Padding="8">
+                                <ComboBoxItem Content="CPU"/>
+                                <ComboBoxItem Content="GPU (CUDA)"/>
+                            </ComboBox>
+
+                            <TextBlock Text="Confidence Threshold" Classes="SettingLabel"/>
+                            <Grid ColumnDefinitions="*,50">
+                                <Slider x:Name="ConfidenceSlider"
+                                        Grid.Column="0"
+                                        Minimum="0"
+                                        Maximum="100"
+                                        Value="50"
+                                        TickFrequency="5"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding #ConfidenceSlider.Value, StringFormat={}{0:0}%}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+                            <TextBlock Text="Minimum confidence required to display AI detections"
+                                       Classes="HelpText"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Ensemble Settings Card -->
+                    <Border Classes="SettingCard">
+                        <StackPanel>
+                            <TextBlock Text="Ensemble Mode" Classes="SectionHeader"/>
+
+                            <TextBlock x:Name="ModelCountText"
+                                       Text="No models loaded"
+                                       Foreground="Gray"
+                                       FontStyle="Italic"
+                                       Margin="0,0,0,8"/>
+
+                            <TextBlock Text="Minimum Consensus Required" Classes="SettingLabel"/>
+                            <Grid Margin="0,0,0,12" ColumnDefinitions="*,80">
+                                <Slider x:Name="MinConsensusSlider"
+                                        Grid.Column="0"
+                                        Minimum="1"
+                                        Maximum="5"
+                                        Value="2"
+                                        TickFrequency="1"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding #MinConsensusSlider.Value, StringFormat={}{0:0} models}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+
+                            <TextBlock Text="Consensus IoU Threshold" Classes="SettingLabel"/>
+                            <Grid Margin="0,0,0,12" ColumnDefinitions="*,40">
+                                <Slider x:Name="ConsensusIoUSlider"
+                                        Grid.Column="0"
+                                        Minimum="0.1"
+                                        Maximum="0.9"
+                                        Value="0.4"
+                                        TickFrequency="0.1"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding #ConsensusIoUSlider.Value, StringFormat={}{0:F1}}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+
+                            <TextBlock Text="Final Ensemble IoU Threshold" Classes="SettingLabel"/>
+                            <Grid Margin="0,0,0,12" ColumnDefinitions="*,40">
+                                <Slider x:Name="EnsembleIoUSlider"
+                                        Grid.Column="0"
+                                        Minimum="0.3"
+                                        Maximum="0.8"
+                                        Value="0.5"
+                                        TickFrequency="0.05"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding #EnsembleIoUSlider.Value, StringFormat={}{0:F2}}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+
+                            <CheckBox x:Name="UseWeightedAverageCheckBox"
+                                      Content="Use Weighted Average for Box Merging"
+                                      IsChecked="True"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Info Card -->
+                    <Border Background="#4400BCD4"
+                            CornerRadius="6"
+                            Padding="16">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <TextBlock Grid.Column="0"
+                                       Text="ℹ️"
+                                       FontSize="16"
+                                       VerticalAlignment="Top"
+                                       Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="Ensemble mode activates when 2 or more YOLO models are loaded. Models vote on detections for improved accuracy."
+                                       Foreground="#00BCD4"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="Top"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <!-- Performance Settings Page -->
+                <StackPanel x:Name="PerformanceSettingsPanel" IsVisible="False">
+                    <!-- Loading & Processing Card -->
+                    <Border Classes="SettingCard">
+                        <StackPanel>
+                            <TextBlock Text="Loading &amp; Processing" Classes="SectionHeader"/>
+
+                            <TextBlock Text="UI Batch Size" Classes="SettingLabel"/>
+                            <Grid Margin="0,0,0,12" ColumnDefinitions="*,60">
+                                <Slider x:Name="UIBatchSizeSlider"
+                                        Grid.Column="0"
+                                        Minimum="100"
+                                        Maximum="2000"
+                                        Value="500"
+                                        TickFrequency="100"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding #UIBatchSizeSlider.Value, StringFormat={}{0:N0}}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+                            <TextBlock Text="Number of images to load at once when populating the UI"
+                                       Classes="HelpText"
+                                       Margin="0,0,0,12"/>
+
+                            <TextBlock Text="File Processing Batch Size" Classes="SettingLabel"/>
+                            <Grid Margin="0,0,0,12" ColumnDefinitions="*,60">
+                                <Slider x:Name="ProcessingBatchSizeSlider"
+                                        Grid.Column="0"
+                                        Minimum="10"
+                                        Maximum="5000"
+                                        Value="500"
+                                        TickFrequency="10"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding #ProcessingBatchSizeSlider.Value, StringFormat={}{0:N0}}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+                            <TextBlock Text="Number of files to process in each batch during operations"
+                                       Classes="HelpText"
+                                       Margin="0,0,0,12"/>
+
+                            <TextBlock Text="Label Loading Batch Size" Classes="SettingLabel"/>
+                            <Grid Margin="0,0,0,12" ColumnDefinitions="*,60">
+                                <Slider x:Name="LabelLoadBatchSizeSlider"
+                                        Grid.Column="0"
+                                        Minimum="100"
+                                        Maximum="5000"
+                                        Value="500"
+                                        TickFrequency="100"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding #LabelLoadBatchSizeSlider.Value, StringFormat={}{0:N0}}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+                            <TextBlock Text="Number of label files to process in parallel batches (higher = faster for large datasets)"
+                                       Classes="HelpText"
+                                       Margin="0,0,0,12"/>
+
+                            <CheckBox x:Name="EnableParallelCheckBox"
+                                      Content="Enable parallel processing"
+                                      IsChecked="True"/>
+                            <TextBlock Text="Use multiple CPU cores for faster processing (recommended)"
+                                       Classes="HelpText"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Performance Tips Card -->
+                    <Border Background="#44FFB74D"
+                            CornerRadius="6"
+                            Padding="16">
+                        <Grid ColumnDefinitions="Auto,*">
+                            <TextBlock Grid.Column="0"
+                                       Text="💡"
+                                       FontSize="16"
+                                       VerticalAlignment="Top"
+                                       Margin="0,0,10,0"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="Lower batch sizes use less memory but may be slower. Increase if you have plenty of RAM."
+                                       Foreground="#CC7A00"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="Top"/>
+                        </Grid>
+                    </Border>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer with Buttons -->
+        <Border Grid.Row="3"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Padding="24,16">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="SaveButton"
+                        Content="Save"
+                        Classes="ModernButton"
+                        MinWidth="100"
+                        Margin="0,0,8,0"/>
+                <Button x:Name="CancelButton"
+                        Content="Cancel"
+                        Classes="SecondaryButton"
+                        MinWidth="80"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

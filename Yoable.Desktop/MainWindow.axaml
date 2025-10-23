@@ -1,0 +1,335 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:models="clr-namespace:Yoable.Models;assembly=Yoable"
+        xmlns:controls="clr-namespace:Yoable.Desktop.Controls"
+        x:Class="Yoable.Desktop.MainWindow"
+        Title="Yoable"
+        Width="1100" Height="700"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Styles>
+        <!-- Modern Card Style -->
+        <Style Selector="Border.ModernCard">
+            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,12"/>
+        </Style>
+
+        <!-- Status Card Style -->
+        <Style Selector="Border.StatusCard">
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="12,10"/>
+        </Style>
+
+        <!-- Image List Item Style -->
+        <Style Selector="ListBoxItem.ImageListItem">
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Margin" Value="0,1"/>
+        </Style>
+        <Style Selector="ListBoxItem.ImageListItem:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+        </Style>
+        <Style Selector="ListBoxItem.ImageListItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto" ColumnDefinitions="280,*,240">
+
+        <!-- Menu Bar -->
+        <Menu Grid.Row="0" Grid.ColumnSpan="3">
+            <MenuItem Header="Project">
+                <MenuItem x:Name="NewProjectMenuItem" Header="New Project..." />
+                <MenuItem x:Name="OpenProjectMenuItem" Header="Open Project..." />
+                <Separator/>
+                <MenuItem x:Name="SaveProjectMenuItem" Header="Save Project" InputGesture="Ctrl+S" />
+                <MenuItem x:Name="SaveProjectAsMenuItem" Header="Save Project As..." />
+                <Separator/>
+                <MenuItem x:Name="CloseProjectMenuItem" Header="Close Project" />
+            </MenuItem>
+            <MenuItem Header="File">
+                <MenuItem x:Name="ImportDirectoryMenuItem" Header="Import Directory" />
+                <MenuItem x:Name="ImportImageMenuItem" Header="Import Image" />
+                <MenuItem x:Name="ImportLabelsMenuItem" Header="Import Labels" />
+                <MenuItem x:Name="YoutubeToImagesMenuItem" Header="Youtube To Images" />
+                <MenuItem x:Name="ExportLabelsMenuItem" Header="Export Labels" />
+                <MenuItem x:Name="ClearAllMenuItem" Header="Clear All" />
+            </MenuItem>
+            <MenuItem Header="AI">
+                <MenuItem x:Name="ManageModelsMenuItem" Header="Manage Models" />
+                <Separator/>
+                <MenuItem x:Name="AutoLabelImagesMenuItem" Header="Auto Label Images" />
+                <MenuItem x:Name="AutoSuggestLabelsMenuItem" Header="Auto Suggest Labels" />
+            </MenuItem>
+            <MenuItem x:Name="SettingsMenuItem" Header="Settings" />
+        </Menu>
+
+        <!-- Left Panel - Images List -->
+        <Border Grid.Row="1" Grid.Column="0"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                Padding="12">
+            <Grid RowDefinitions="Auto,Auto,*,Auto">
+
+                <!-- Panel Header -->
+                <TextBlock Grid.Row="0"
+                           Text="Images"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           Margin="0,0,0,12"/>
+
+                <!-- Sort and Filter Controls -->
+                <Border Grid.Row="1"
+                        Classes="ModernCard"
+                        Padding="12"
+                        Margin="0,0,0,8">
+                    <Grid RowDefinitions="Auto,8,Auto">
+                        <!-- Sort Controls -->
+                        <Grid Grid.Row="0" ColumnDefinitions="Auto,*">
+                            <StackPanel Grid.Column="0"
+                                        Orientation="Horizontal"
+                                        Spacing="6"
+                                        Margin="0,0,8,0">
+                                <TextBlock Text="🔀" FontSize="12" VerticalAlignment="Center"/>
+                                <TextBlock Text="Sort" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Opacity="0.8"/>
+                            </StackPanel>
+                            <ComboBox Grid.Column="1"
+                                      x:Name="SortComboBox"
+                                      SelectedIndex="0"
+                                      FontSize="11">
+                                <ComboBoxItem Content="By Name"/>
+                                <ComboBoxItem Content="By Status"/>
+                            </ComboBox>
+                        </Grid>
+
+                        <!-- Filter Controls -->
+                        <Grid Grid.Row="2" ColumnDefinitions="Auto,*">
+                            <StackPanel Grid.Column="0"
+                                        Orientation="Horizontal"
+                                        Spacing="6"
+                                        Margin="0,0,8,0">
+                                <TextBlock Text="🔍" FontSize="12" VerticalAlignment="Center"/>
+                                <TextBlock Text="Filter" FontSize="11" FontWeight="SemiBold" VerticalAlignment="Center" Opacity="0.8"/>
+                            </StackPanel>
+
+                            <Grid Grid.Column="1" ColumnDefinitions="*,*,*,*">
+                                <Button Grid.Column="0" x:Name="FilterAllButton" Content="All"
+                                        FontSize="10" FontWeight="SemiBold" Padding="4,6" Margin="0,0,1,0"/>
+                                <Button Grid.Column="1" x:Name="FilterReviewButton" Content="Review"
+                                        FontSize="10" FontWeight="SemiBold" Padding="4,6" Margin="0,0,1,0"/>
+                                <Button Grid.Column="2" x:Name="FilterNoLabelButton" Content="None"
+                                        FontSize="10" FontWeight="SemiBold" Padding="4,6" Margin="0,0,1,0"/>
+                                <Button Grid.Column="3" x:Name="FilterVerifiedButton" Content="Done"
+                                        FontSize="10" FontWeight="SemiBold" Padding="4,6"/>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- Image List -->
+                <Border Grid.Row="2" Classes="ModernCard" Padding="0" Margin="0">
+                    <ListBox x:Name="ImageListBox"
+                             SelectionMode="Single"
+                             Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate DataType="models:ImageListItem">
+                                <Grid ColumnDefinitions="*,Auto">
+                                    <TextBlock Grid.Column="0"
+                                               Text="{Binding FileName}"
+                                               VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis"
+                                               Margin="0,0,8,0"/>
+                                    <Border Grid.Column="1"
+                                            CornerRadius="10"
+                                            Padding="8,4">
+                                        <Border.Styles>
+                                            <Style Selector="Border[IsVisible=True]">
+                                                <Setter Property="Background" Value="#FFE57373"/>
+                                            </Style>
+                                        </Border.Styles>
+                                        <TextBlock FontSize="10" FontWeight="Bold" Foreground="White"
+                                                   Text="{Binding StatusText}"/>
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+
+                <!-- Status Summary -->
+                <Border Grid.Row="3"
+                        Classes="ModernCard"
+                        Padding="0"
+                        Margin="0,12,0,0">
+                    <Grid ColumnDefinitions="*,*,*">
+                        <!-- Review Status -->
+                        <Border Grid.Column="0"
+                                Classes="StatusCard"
+                                Background="#44FFB74D"
+                                CornerRadius="6,0,0,6"
+                                Margin="0,0,1,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="⚠️" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="NeedsReviewCount"
+                                           Text="0"
+                                           FontSize="18"
+                                           FontWeight="Bold"
+                                           Foreground="#FFB74D"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="REVIEW"
+                                           FontSize="9"
+                                           FontWeight="SemiBold"
+                                           Foreground="#CC7A00"
+                                           HorizontalAlignment="Center"
+                                           Opacity="0.8"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- No Label Status -->
+                        <Border Grid.Column="1"
+                                Classes="StatusCard"
+                                Background="#44E57373"
+                                Margin="0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="❌" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="UnverifiedCount"
+                                           Text="0"
+                                           FontSize="18"
+                                           FontWeight="Bold"
+                                           Foreground="#E57373"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="NO LABEL"
+                                           FontSize="9"
+                                           FontWeight="SemiBold"
+                                           Foreground="#CC3300"
+                                           HorizontalAlignment="Center"
+                                           Opacity="0.8"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Verified Status -->
+                        <Border Grid.Column="2"
+                                Classes="StatusCard"
+                                Background="#4481C784"
+                                CornerRadius="0,6,6,0"
+                                Margin="1,0,0,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock Text="✅" FontSize="20" HorizontalAlignment="Center" Margin="0,0,0,4"/>
+                                <TextBlock x:Name="VerifiedCount"
+                                           Text="0"
+                                           FontSize="18"
+                                           FontWeight="Bold"
+                                           Foreground="#81C784"
+                                           HorizontalAlignment="Center"/>
+                                <TextBlock Text="VERIFIED"
+                                           FontSize="9"
+                                           FontWeight="SemiBold"
+                                           Foreground="#2E7D32"
+                                           HorizontalAlignment="Center"
+                                           Opacity="0.8"/>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Center Content Panel -->
+        <Border Grid.Row="1" Grid.Column="1"
+                Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"
+                Padding="12">
+            <Border Classes="ModernCard" Padding="0" Margin="0">
+                <ScrollViewer HorizontalScrollBarVisibility="Auto"
+                             VerticalScrollBarVisibility="Auto">
+                    <controls:DrawingCanvas x:Name="DrawingCanvas"
+                                           Width="800" Height="600"/>
+                </ScrollViewer>
+            </Border>
+        </Border>
+
+        <!-- Right Panel - Labels -->
+        <Border Grid.Row="1" Grid.Column="2"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                Padding="12">
+            <Grid RowDefinitions="Auto,*">
+                <!-- Panel Header -->
+                <TextBlock Grid.Row="0"
+                           Text="Labels"
+                           FontSize="16"
+                           FontWeight="SemiBold"
+                           HorizontalAlignment="Right"
+                           Margin="0,0,0,12"/>
+
+                <!-- Labels List -->
+                <Border Grid.Row="1" Classes="ModernCard" Padding="0" Margin="0">
+                    <ListBox x:Name="LabelListBox"
+                             SelectionMode="Single"
+                             Background="Transparent">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding}"
+                                           VerticalAlignment="Center"
+                                           TextWrapping="Wrap"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Status Bar -->
+        <Border Grid.Row="2" Grid.ColumnSpan="3"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Padding="12,6"
+                Height="32">
+            <Grid ColumnDefinitions="*,Auto">
+                <!-- Left side: Project info -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="📁" FontSize="14" VerticalAlignment="Center"/>
+                    <TextBlock x:Name="ProjectNameText"
+                               Text="No Project"
+                               FontWeight="SemiBold"
+                               FontSize="12"
+                               VerticalAlignment="Center"/>
+
+                    <Border x:Name="SaveStatusBorder"
+                            Background="#4481C784"
+                            CornerRadius="10"
+                            Padding="8,3">
+                        <TextBlock x:Name="LastSaveText"
+                                   Text="All changes saved"
+                                   Foreground="#81C784"
+                                   FontSize="10"
+                                   FontWeight="SemiBold"/>
+                    </Border>
+
+                    <TextBlock x:Name="LastSaveTimeText"
+                               Text="Not saved yet"
+                               Foreground="Gray"
+                               FontSize="11"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+
+                <!-- Right side: Auto-save indicator -->
+                <Border Grid.Column="1"
+                        Background="#4400BCD4"
+                        CornerRadius="10"
+                        Padding="8,3">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <Ellipse x:Name="AutoSaveIndicator"
+                                 Width="6"
+                                 Height="6"
+                                 Fill="#4CAF50"/>
+                        <TextBlock x:Name="AutoSaveText"
+                                   Text="Auto-save"
+                                   Foreground="#00BCD4"
+                                   FontSize="10"
+                                   FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</Window>

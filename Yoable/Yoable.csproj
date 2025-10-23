@@ -1,0 +1,50 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net9.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+    <LangVersion>latest</LangVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Avalonia Core -->
+    <PackageReference Include="Avalonia" Version="11.2.2" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.2.2" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.2.2" />
+    <PackageReference Include="Avalonia.ReactiveUI" Version="11.2.2" />
+
+    <!-- ONNX Runtime (Cross-platform) -->
+    <PackageReference Include="Microsoft.ML.OnnxRuntime" Version="1.23.1" />
+
+    <!-- OpenCV (Cross-platform, will need platform-specific runtimes) -->
+    <PackageReference Include="OpenCvSharp4" Version="4.11.0.20250507" />
+
+    <!-- Charting for Training Visualization -->
+    <PackageReference Include="LiveChartsCore.SkiaSharpView.Avalonia" Version="2.0.0-rc4.3" />
+
+    <!-- System -->
+    <PackageReference Include="System.Drawing.Common" Version="10.0.0-rc.2.25502.107" />
+
+    <!-- YouTube Downloads -->
+    <PackageReference Include="YoutubeExplode" Version="6.5.5" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Properties\Settings.Designer.cs">
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+
+</Project>

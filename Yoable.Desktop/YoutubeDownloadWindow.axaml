@@ -1,0 +1,192 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Yoable.Desktop.YoutubeDownloadWindow"
+        Title="YouTube Video Download"
+        Height="480"
+        Width="550"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+
+    <Window.Styles>
+        <!-- Modern Button Style -->
+        <Style Selector="Button.ModernButton">
+            <Setter Property="Background" Value="{DynamicResource SystemAccentColor}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.ModernButton:pointerover">
+            <Setter Property="Opacity" Value="0.9"/>
+        </Style>
+        <Style Selector="Button.ModernButton:pressed">
+            <Setter Property="Opacity" Value="0.8"/>
+        </Style>
+
+        <!-- Secondary Button Style -->
+        <Style Selector="Button.SecondaryButton">
+            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="CornerRadius" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+        </Style>
+        <Style Selector="Button.SecondaryButton:pointerover">
+            <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+        </Style>
+
+        <!-- Setting Card Style -->
+        <Style Selector="Border.SettingCard">
+            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <!-- Label Style -->
+        <Style Selector="TextBlock.SettingLabel">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <!-- Help Text Style -->
+        <Style Selector="TextBlock.HelpText">
+            <Setter Property="Foreground" Value="Gray"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,6,0,0"/>
+        </Style>
+    </Window.Styles>
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Header Section -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Padding="24,20">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock Text="📹"
+                               FontSize="24"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"/>
+                    <TextBlock Text="YouTube Video Download"
+                               FontSize="20"
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Text="Download and extract frames from YouTube videos for labeling"
+                           Foreground="Gray"
+                           TextWrapping="Wrap"
+                           FontSize="13"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Content Area -->
+        <ScrollViewer Grid.Row="1"
+                      VerticalScrollBarVisibility="Auto"
+                      Padding="24,20">
+            <StackPanel>
+                <!-- URL Input Card -->
+                <Border Classes="SettingCard">
+                    <StackPanel>
+                        <TextBlock Text="YouTube URL" Classes="SettingLabel"/>
+                        <TextBox x:Name="YoutubeUrlTextBox"
+                                 FontSize="13"
+                                 Padding="8"
+                                 Watermark="https://youtube.com/watch?v=..."/>
+                        <TextBlock Text="Enter the full YouTube video URL (e.g., https://youtube.com/watch?v=...)"
+                                   Classes="HelpText"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- FPS Setting Card -->
+                <Border Classes="SettingCard">
+                    <StackPanel>
+                        <TextBlock Text="Frames Per Second to Capture" Classes="SettingLabel"/>
+                        <Grid Margin="0,8,0,0" ColumnDefinitions="*,50">
+                            <Slider x:Name="FPSSlider"
+                                    Grid.Column="0"
+                                    Minimum="1"
+                                    Maximum="30"
+                                    Value="1"
+                                    TickFrequency="1"/>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding #FPSSlider.Value, StringFormat={}{0:0} fps}"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"/>
+                        </Grid>
+                        <TextBlock Text="Number of images to extract per second of video. Higher values create more images."
+                                   Classes="HelpText"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Frame Size Card -->
+                <Border Classes="SettingCard">
+                    <StackPanel>
+                        <TextBlock Text="Frame Size" Classes="SettingLabel"/>
+                        <ComboBox x:Name="FrameSizeComboBox"
+                                  SelectedIndex="3"
+                                  FontSize="13"
+                                  Padding="8">
+                            <ComboBoxItem Content="256x256"/>
+                            <ComboBoxItem Content="416x416"/>
+                            <ComboBoxItem Content="512x512"/>
+                            <ComboBoxItem Content="640x640"/>
+                            <ComboBoxItem Content="1024x1024"/>
+                        </ComboBox>
+                        <TextBlock Text="Resolution for extracted frames. Use 640x640 for standard YOLO training."
+                                   Classes="HelpText"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Info Card -->
+                <Border Background="#4400BCD4"
+                        CornerRadius="6"
+                        Padding="16">
+                    <Grid ColumnDefinitions="Auto,*">
+                        <TextBlock Grid.Column="0"
+                                   Text="ℹ️"
+                                   FontSize="16"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"/>
+                        <TextBlock Grid.Column="1"
+                                   Text="Frames will be extracted, resized, and imported automatically into the image list."
+                                   Foreground="#007B8A"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center"/>
+                    </Grid>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer with Buttons -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Padding="24,16">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="DownloadButton"
+                        Content="Download"
+                        Classes="ModernButton"
+                        MinWidth="100"
+                        Margin="0,0,8,0"/>
+                <Button x:Name="CancelButton"
+                        Content="Cancel"
+                        Classes="SecondaryButton"
+                        MinWidth="80"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

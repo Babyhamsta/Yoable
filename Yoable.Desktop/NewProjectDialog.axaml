@@ -1,0 +1,41 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Yoable.Desktop.NewProjectDialog"
+        Title="New Project"
+        Width="500" Height="300"
+        WindowStartupLocation="CenterOwner"
+        CanResize="False">
+    <Grid RowDefinitions="*,Auto" Margin="20">
+        <StackPanel Grid.Row="0" Spacing="16">
+            <TextBlock Text="Create New Project" FontSize="20" FontWeight="Bold"/>
+
+            <StackPanel Spacing="8">
+                <TextBlock Text="Project Name:"/>
+                <TextBox x:Name="ProjectNameTextBox" Watermark="Enter project name"/>
+            </StackPanel>
+
+            <StackPanel Spacing="8">
+                <TextBlock Text="Project Location:"/>
+                <Grid ColumnDefinitions="*,Auto">
+                    <TextBox x:Name="ProjectLocationTextBox"
+                             Grid.Column="0"
+                             IsReadOnly="True"
+                             Watermark="Select location..."/>
+                    <Button x:Name="BrowseButton"
+                            Grid.Column="1"
+                            Content="Browse..."
+                            Margin="8,0,0,0"/>
+                </Grid>
+            </StackPanel>
+        </StackPanel>
+
+        <StackPanel Grid.Row="1"
+                    Orientation="Horizontal"
+                    HorizontalAlignment="Right"
+                    Spacing="8"
+                    Margin="0,16,0,0">
+            <Button x:Name="CreateButton" Content="Create" Classes="accent" MinWidth="100"/>
+            <Button x:Name="CancelButton" Content="Cancel" MinWidth="100"/>
+        </StackPanel>
+    </Grid>
+</Window>
