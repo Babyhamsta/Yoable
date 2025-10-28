@@ -76,7 +76,7 @@ public class YoutubeDownloader
                 });
             });
 
-            await youtube.Videos.Streams.DownloadAsync(streamInfo, videoPath, progress);
+            await youtube.Videos.Streams.DownloadAsync(streamInfo, videoPath, progress, downloadCancellationToken.Token);
             isDownloading = false;
 
             mainWindow.Dispatcher.Invoke(() => {
@@ -99,6 +99,16 @@ public class YoutubeDownloader
             });
 
             return true;
+        }
+        catch (OperationCanceledException)
+        {
+            // Clean up the video directory if cancelled
+            if (!string.IsNullOrEmpty(videoDirectory) && Directory.Exists(videoDirectory))
+            {
+                try { Directory.Delete(videoDirectory, true); }
+                catch { }
+            }
+            return false;
         }
         catch (Exception ex)
         {
@@ -126,119 +136,79 @@ public class YoutubeDownloader
 
             int frameCount = (int)capture.Get(VideoCaptureProperties.FrameCount);
             double fps = capture.Get(VideoCaptureProperties.Fps);
-            double videoDurationMs = (frameCount / fps) * 1000;
 
-            // Ensure we don't exceed the source fps
             desiredFps = Math.Min(desiredFps, fps);
 
-            // Pre-calculate all frame positions we'll need
-            var framePositions = new List<int>();
-            double sourceIntervalMs = 1000.0 / fps;
-            double targetIntervalMs = 1000.0 / desiredFps;
-            double currentTimeMs = 0;
-            int lastPosition = -2;
-
-            while (currentTimeMs < videoDurationMs)
+            // Calculate which frames we need
+            int frameInterval = (int)Math.Round(fps / desiredFps);
+            var framePositions = new HashSet<int>();
+            for (int i = 0; i < frameCount; i += frameInterval)
             {
-                int framePosition = (int)(currentTimeMs / sourceIntervalMs);
-                if (framePosition - lastPosition >= 2 && framePosition < frameCount)
-                {
-                    framePositions.Add(framePosition);
-                    lastPosition = framePosition;
-                }
-                currentTimeMs += targetIntervalMs;
+                framePositions.Add(i);
             }
 
             int totalFramesToProcess = framePositions.Count;
             int processedFrames = 0;
-            var tasks = new List<Task>();
+            int currentFrameIndex = 0;
             string framesDirectory = Path.Combine(videoDirectory, "frames");
 
-            // Reuse Mats outside the loop
+            // Pre-calculate scale and crop values (they're the same for every frame)
+            Mat firstFrame = new Mat();
+            capture.Read(firstFrame);
+            double scale = Math.Max((double)FrameSize / firstFrame.Width, (double)FrameSize / firstFrame.Height);
+            var newSize = new Size(
+                (int)(firstFrame.Width * scale),
+                (int)(firstFrame.Height * scale)
+            );
+            int cropX = (newSize.Width - FrameSize) / 2;
+            int cropY = (newSize.Height - FrameSize) / 2;
+            var roi = new Rect(cropX, cropY, FrameSize, FrameSize);
+            firstFrame.Dispose();
+
+            // Reset to beginning
+            capture.Set(VideoCaptureProperties.PosFrames, 0);
+
+            var params_ = new int[] { (int)ImwriteFlags.JpegQuality, 98 };
+
             using (var frame = new Mat())
             using (var resized = new Mat())
             {
-                foreach (int framePosition in framePositions)
+                // Read sequentially (no seeking)
+                while (capture.Read(frame))
                 {
                     if (downloadCancellationToken.Token.IsCancellationRequested)
                         break;
 
-                    // Read frame directly without setting position if possible
-                    bool needsSeek = false;
-                    if (framePosition != capture.Get(VideoCaptureProperties.PosFrames))
+                    // Only process frames we need
+                    if (framePositions.Contains(currentFrameIndex))
                     {
-                        needsSeek = true;
-                        capture.Set(VideoCaptureProperties.PosFrames, framePosition);
-                    }
+                        Cv2.Resize(frame, resized, newSize, 0, 0, InterpolationFlags.Nearest);
 
-                    if (!capture.Read(frame))
-                        break;
-
-                    // Skip frames if we had to seek (helps avoid duplicate frames)
-                    if (needsSeek)
-                    {
-                        capture.Read(frame); // Skip one frame to avoid potential duplicates
-                    }
-
-                    // Optimize resize operation
-                    double scale = Math.Max((double)FrameSize / frame.Width, (double)FrameSize / frame.Height);
-                    var newSize = new Size(
-                        (int)(frame.Width * scale),
-                        (int)(frame.Height * scale)
-                    );
-
-                    Cv2.Resize(frame, resized, newSize, 0, 0, InterpolationFlags.Linear);
-
-                    // Compute crop coordinates
-                    int x = (newSize.Width - FrameSize) / 2;
-                    int y = (newSize.Height - FrameSize) / 2;
-                    var roi = new Rect(x, y, FrameSize, FrameSize);
-
-                    // Create a new Mat for the cropped image
-                    using (Mat cropped = new Mat(resized, roi))
-                    {
-                        // Generate UUID for frame name
-                        string frameUuid = Guid.NewGuid().ToString();
-                        string framePath = Path.Combine(framesDirectory, $"frame_{frameUuid}.jpg");
-
-                        // Clone and compress in parallel
-                        Mat croppedClone = cropped.Clone();
-                        tasks.Add(Task.Run(() =>
+                        using (Mat cropped = new Mat(resized, roi))
                         {
-                            try
+                            string frameUuid = Guid.NewGuid().ToString();
+                            string framePath = Path.Combine(framesDirectory, $"frame_{frameUuid}.jpg");
+
+                            // Write synchronously
+                            Cv2.ImWrite(framePath, cropped, params_);
+                        }
+
+                        processedFrames++;
+
+                        // Update progress less frequently to reduce UI overhead
+                        if (processedFrames % 10 == 0 || processedFrames == totalFramesToProcess)
+                        {
+                            double progress = (processedFrames * 100.0) / totalFramesToProcess;
+                            progressCallback(progress);
+
+                            mainWindow.Dispatcher.Invoke(() =>
                             {
-                                var params_ = new int[] { (int)ImwriteFlags.JpegQuality, 98 };
-                                Cv2.ImWrite(framePath, croppedClone, params_);
-                            }
-                            finally
-                            {
-                                croppedClone.Dispose();
-                            }
-                        }));
+                                overlayManager.UpdateMessage($"Extracting frames... ({processedFrames} / {totalFramesToProcess})");
+                            });
+                        }
                     }
 
-                    processedFrames++;
-                    double progress = (processedFrames * 100.0) / totalFramesToProcess;
-                    progressCallback(progress);
-
-                    mainWindow.Dispatcher.Invoke(() =>
-                    {
-                        overlayManager.UpdateMessage($"Extracting frames... ({processedFrames} / {totalFramesToProcess})");
-                    });
-
-                    // Process tasks in batches to balance memory and speed
-                    if (tasks.Count >= 16)
-                    {
-                        await Task.WhenAll(tasks.Take(8));
-                        tasks.RemoveRange(0, 8);
-                    }
-                }
-
-                // Wait for remaining tasks
-                while (tasks.Any())
-                {
-                    await Task.WhenAll(tasks.Take(8));
-                    tasks.RemoveRange(0, Math.Min(8, tasks.Count));
+                    currentFrameIndex++;
                 }
             }
         }

@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 using YoableWPF.Managers;
 using YoableWPF.Models;
@@ -210,6 +211,84 @@ namespace YoableWPF
                     MessageBoxImage.Error);
 
                 mainWindow?.Close();
+            }
+        }
+
+        private void OpenProjectFolder_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag is string projectPath)
+            {
+                try
+                {
+                    // Get the directory containing the project file
+                    string folderPath = Path.GetDirectoryName(projectPath);
+
+                    if (Directory.Exists(folderPath))
+                    {
+                        // Open Windows Explorer at the folder location and select the file
+                        Process.Start("explorer.exe", $"/select,\"{projectPath}\"");
+                    }
+                    else
+                    {
+                        MessageBox.Show(
+                            $"Project folder not found:\n{folderPath}",
+                            "Folder Not Found",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(
+                        $"Failed to open project folder:\n\n{ex.Message}",
+                        "Error",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                }
+            }
+        }
+
+        private void DeleteProject_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag is string projectPath)
+            {
+                var result = MessageBox.Show(
+                    $"Are you sure you want to delete this project?\n\n{projectPath}\n\nThis action cannot be undone.",
+                    "Delete Project",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Warning);
+
+                if (result == MessageBoxResult.Yes)
+                {
+                    try
+                    {
+                        // Delete the project file
+                        if (File.Exists(projectPath))
+                        {
+                            File.Delete(projectPath);
+                        }
+
+                        // Remove from recent projects
+                        projectManager.RemoveFromRecentProjects(projectPath);
+
+                        // Refresh the list
+                        LoadRecentProjects();
+
+                        MessageBox.Show(
+                            "Project deleted successfully.",
+                            "Success",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show(
+                            $"Failed to delete project:\n\n{ex.Message}",
+                            "Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error);
+                    }
+                }
             }
         }
 

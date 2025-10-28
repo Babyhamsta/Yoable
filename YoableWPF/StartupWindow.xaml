@@ -212,13 +212,77 @@
                                                      Foreground="#00BCD4"/>
                                         </StackPanel>
 
-                                        <!-- Arrow Icon -->
-                                        <TextBlock Grid.Column="2"
-                                                 FontFamily="Segoe MDL2 Assets"
-                                                 Text="&#xE76C;"
-                                                 FontSize="16"
-                                                 Foreground="Gray"
-                                                 VerticalAlignment="Center"/>
+                                        <!-- Action Buttons -->
+                                        <StackPanel Grid.Column="2" 
+                                                  Orientation="Horizontal"
+                                                  VerticalAlignment="Center">
+                                            <!-- Folder Icon Button -->
+                                            <Button Background="Transparent"
+                                                  BorderThickness="0"
+                                                  Padding="8"
+                                                  Cursor="Hand"
+                                                  ToolTip="Open project folder"
+                                                  Tag="{Binding ProjectPath}"
+                                                  Click="OpenProjectFolder_Click">
+                                                <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                         Text="&#xE838;"
+                                                         FontSize="16"
+                                                         Foreground="#00BCD4"/>
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="Border"
+                                                              Background="{TemplateBinding Background}"
+                                                              Padding="{TemplateBinding Padding}"
+                                                              CornerRadius="4">
+                                                            <ContentPresenter/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Border" Property="Background">
+                                                                    <Setter.Value>
+                                                                        <SolidColorBrush Color="#1A00BCD4"/>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+
+                                            <!-- Delete Icon Button -->
+                                            <Button Background="Transparent"
+                                                  BorderThickness="0"
+                                                  Padding="8"
+                                                  Cursor="Hand"
+                                                  ToolTip="Delete project"
+                                                  Tag="{Binding ProjectPath}"
+                                                  Click="DeleteProject_Click"
+                                                  Margin="4,0,0,0">
+                                                <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                         Text="&#xE74D;"
+                                                         FontSize="16"
+                                                         Foreground="#F44336"/>
+                                                <Button.Template>
+                                                    <ControlTemplate TargetType="Button">
+                                                        <Border x:Name="Border"
+                                                              Background="{TemplateBinding Background}"
+                                                              Padding="{TemplateBinding Padding}"
+                                                              CornerRadius="4">
+                                                            <ContentPresenter/>
+                                                        </Border>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="Border" Property="Background">
+                                                                    <Setter.Value>
+                                                                        <SolidColorBrush Color="#1AF44336"/>
+                                                                    </Setter.Value>
+                                                                </Setter>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Button.Template>
+                                            </Button>
+                                        </StackPanel>
                                     </Grid>
                                 </Border>
                             </DataTemplate>

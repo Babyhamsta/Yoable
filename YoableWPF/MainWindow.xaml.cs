@@ -1399,6 +1399,46 @@ namespace YoableWPF
             }
         }
 
+
+        private void Window_PreviewMouseWheel(object sender, MouseWheelEventArgs e)
+        {
+            // Don't handle mouse wheel if modifier keys are pressed (for zoom or other functionality)
+            if (Keyboard.Modifiers != ModifierKeys.None)
+            {
+                return; // Let other handlers (like zoom) handle it
+            }
+
+            // Only navigate if we have images loaded
+            if (ImageListBox.Items.Count == 0)
+            {
+                return;
+            }
+
+            int currentIndex = ImageListBox.SelectedIndex;
+
+            // Scroll up = previous image (negative delta)
+            // Scroll down = next image (positive delta)
+            if (e.Delta > 0)
+            {
+                // Scroll up - go to previous image
+                if (currentIndex > 0)
+                {
+                    ImageListBox.SelectedIndex = currentIndex - 1;
+                    ImageListBox.ScrollIntoView(ImageListBox.SelectedItem);
+                    e.Handled = true;
+                }
+            }
+            else if (e.Delta < 0)
+            {
+                // Scroll down - go to next image
+                if (currentIndex < ImageListBox.Items.Count - 1)
+                {
+                    ImageListBox.SelectedIndex = currentIndex + 1;
+                    ImageListBox.ScrollIntoView(ImageListBox.SelectedItem);
+                    e.Handled = true;
+                }
+            }
+        }
         private void SortByName_Click(object sender, RoutedEventArgs e)
         {
             uiStateManager.SortImagesByName();

@@ -16,18 +16,19 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Extended.Wpf.Toolkit" Version="5.0.0" />
     <PackageReference Include="Fody" Version="6.9.3">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Microsoft.AI.DirectML" Version="1.15.4" />
     <PackageReference Include="Microsoft.ML.OnnxRuntime.DirectML" Version="1.23.0" />
-    <PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.23.1" />
+    <PackageReference Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.23.2" />
     <PackageReference Include="ModernWpfUI" Version="0.9.7-preview.2" />
     <PackageReference Include="OpenCvSharp4" Version="4.11.0.20250507" />
     <PackageReference Include="OpenCvSharp4.runtime.win" Version="4.11.0.20250507" />
     <PackageReference Include="System.Drawing.Common" Version="10.0.0-rc.2.25502.107" />
-    <PackageReference Include="YoutubeExplode" Version="6.5.5" />
+    <PackageReference Include="YoutubeExplode" Version="6.5.6" />
   </ItemGroup>
 
   <ItemGroup>

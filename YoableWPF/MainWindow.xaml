@@ -12,6 +12,7 @@
     Width="1100"
     WindowStartupLocation="CenterScreen"
     KeyDown="Window_KeyDown"
+    PreviewMouseWheel="Window_PreviewMouseWheel"
     Closing="Window_Closing">
 
     <Window.Resources>
