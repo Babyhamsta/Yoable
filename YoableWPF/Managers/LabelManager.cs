@@ -22,12 +22,76 @@ namespace YoableWPF.Managers
         // Configurable batch size for label loading
         public int LabelLoadBatchSize { get; set; } = 500; // Default: process 500 files at a time
 
+        // Track valid class IDs for orphan detection
+        private HashSet<int> validClassIds = new HashSet<int> { 0 }; // Always include default class
+        private int defaultClassId = 0;
+
+        /// <summary>
+        /// Sets the valid class IDs from the project. Call this when project classes change.
+        /// </summary>
+        public void SetValidClassIds(IEnumerable<int> classIds)
+        {
+            validClassIds = new HashSet<int>(classIds);
+            
+            // Ensure we always have at least one valid class (default)
+            if (validClassIds.Count == 0)
+            {
+                validClassIds.Add(0);
+            }
+            
+            // Set default to 0 if it exists, otherwise use the first available class
+            defaultClassId = validClassIds.Contains(0) ? 0 : validClassIds.First();
+        }
+
+        /// <summary>
+        /// Validates and fixes a label's ClassId if it references a non-existent class
+        /// </summary>
+        private bool ValidateAndFixClassId(LabelData label)
+        {
+            if (!validClassIds.Contains(label.ClassId))
+            {
+                label.ClassId = defaultClassId;
+                return true; // Indicates the label was fixed
+            }
+            return false; // No fix needed
+        }
+
+        /// <summary>
+        /// Fixes all orphaned labels across all images
+        /// </summary>
+        public int FixAllOrphanedLabels()
+        {
+            int fixedCount = 0;
+            
+            foreach (var kvp in labelStorage)
+            {
+                foreach (var label in kvp.Value)
+                {
+                    if (ValidateAndFixClassId(label))
+                    {
+                        fixedCount++;
+                    }
+                }
+            }
+            
+            return fixedCount;
+        }
+
         // Direct port of label management methods
         public List<LabelData> GetLabels(string fileName)
         {
-            return labelStorage.ContainsKey(fileName) ?
-                new List<LabelData>(labelStorage[fileName]) :
-                new List<LabelData>();
+            if (!labelStorage.ContainsKey(fileName))
+                return new List<LabelData>();
+            
+            var labels = labelStorage[fileName];
+            
+            // Validate and fix any orphaned ClassIds before returning
+            foreach (var label in labels)
+            {
+                ValidateAndFixClassId(label);
+            }
+            
+            return new List<LabelData>(labels);
         }
 
         public void SaveLabels(string fileName, List<LabelData> labels)
@@ -221,6 +285,20 @@ namespace YoableWPF.Managers
                             heightNorm = ParseFloat(tokens[4]);
                         }
 
+                        // Parse ClassId from first token
+                        int classId = 0;
+                        if (int.TryParse(tokens[0], out int parsedClassId))
+                        {
+                            classId = parsedClassId;
+                        }
+                        
+                        // Validate and fix ClassId if it doesn't exist in current project
+                        if (!validClassIds.Contains(classId))
+                        {
+                            Debug.WriteLine($"LabelManager: Fixing orphaned ClassId {classId} -> {defaultClassId} during import");
+                            classId = defaultClassId;
+                        }
+
                         float xCenter = xCenterNorm * imgWidth;
                         float yCenter = yCenterNorm * imgHeight;
                         float width = widthNorm * imgWidth;
@@ -231,7 +309,8 @@ namespace YoableWPF.Managers
 
                         var existingCount = labelStorage[matchingImageFile].Count;
                         var label = new LabelData($"Imported Label {existingCount + newLabels.Count + 1}",
-                            new Rect(x, y, width, height));
+                            new Rect(x, y, width, height),
+                            classId);
                         newLabels.Add(label);
                         labelsAdded++;
                     }
@@ -303,6 +382,19 @@ namespace YoableWPF.Managers
 
                         try
                         {
+                            // Parse ClassId from first token
+                            int classId = 0;
+                            if (int.TryParse(parts[0], out int parsedClassId))
+                            {
+                                classId = parsedClassId;
+                            }
+                            
+                            // Validate and fix ClassId if it doesn't exist in current project
+                            if (!validClassIds.Contains(classId))
+                            {
+                                classId = defaultClassId;
+                            }
+
                             // Use the flexible parsing method that supports both comma and period
                             float xCenter = ParseFloat(parts[1]) * imgWidth;
                             float yCenter = ParseFloat(parts[2]) * imgHeight;
@@ -313,7 +405,7 @@ namespace YoableWPF.Managers
                             double y = yCenter - (height / 2);
 
                             var labelCount = labelStorage[fileName].Count + 1;
-                            var label = new LabelData($"Imported Label {labelCount}", new Rect(x, y, width, height));
+                            var label = new LabelData($"Imported Label {labelCount}", new Rect(x, y, width, height), classId);
                             labelStorage[fileName].Add(label);
 
                             labelsAdded++;
@@ -321,7 +413,6 @@ namespace YoableWPF.Managers
                         catch (FormatException)
                         {
                             // Skip lines that can't be parsed
-                            Debug.WriteLine($"Warning: Could not parse line in {labelFile}: {line}");
                             continue;
                         }
                     }
@@ -329,7 +420,6 @@ namespace YoableWPF.Managers
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"Error loading YOLO labels from {labelFile}: {ex.Message}");
                 // Silent fail like original
             }
 
@@ -356,7 +446,7 @@ namespace YoableWPF.Managers
                 float height = (float)label.Rect.Height / (float)imageHeight;
 
                 // Always export with period as decimal separator for maximum compatibility
-                writer.WriteLine($"0 {x_center:F6} {y_center:F6} {width:F6} {height:F6}");
+                writer.WriteLine($"{label.ClassId} {x_center:F6} {y_center:F6} {width:F6} {height:F6}");
             }
         }
 
@@ -406,7 +496,7 @@ namespace YoableWPF.Managers
                                 float width = (float)label.Rect.Width / (float)imageWidth;
                                 float height = (float)label.Rect.Height / (float)imageHeight;
 
-                                writer.WriteLine($"0 {x_center:F6} {y_center:F6} {width:F6} {height:F6}");
+                                writer.WriteLine($"{label.ClassId} {x_center:F6} {y_center:F6} {width:F6} {height:F6}");
                             }
 
                             Interlocked.Increment(ref processedFiles);
@@ -415,29 +505,37 @@ namespace YoableWPF.Managers
                         }
                         catch (Exception ex)
                         {
-                            Debug.WriteLine($"Error exporting labels for {fileName}: {ex.Message}");
+                            // Silent fail on export error
                         }
                     });
             }, cancellationToken);
         }
 
         // For AI labels
-        public void AddAILabels(string fileName, List<Rectangle> detectedBoxes)
+        public void AddAILabels(string fileName, List<(Rectangle box, int classId)> detectedBoxes)
         {
             if (!labelStorage.ContainsKey(fileName))
                 labelStorage.TryAdd(fileName, new List<LabelData>());
 
-            foreach (var box in detectedBoxes)
+            foreach (var detection in detectedBoxes)
             {
                 // Safety check to ensure positive dimensions
-                if (box.Width <= 0 || box.Height <= 0)
+                if (detection.box.Width <= 0 || detection.box.Height <= 0)
                 {
-                    Debug.WriteLine($"Warning: Skipping invalid box with dimensions {box.Width}x{box.Height}");
                     continue;
+                }
+                
+                // Validate and fix ClassId
+                int classId = detection.classId;
+                if (!validClassIds.Contains(classId))
+                {
+                    classId = defaultClassId;
                 }
 
                 var labelCount = labelStorage[fileName].Count + 1;
-                var label = new LabelData($"AI Label {labelCount}", new Rect(box.X, box.Y, box.Width, box.Height));
+                var label = new LabelData($"AI Label {labelCount}", 
+                    new Rect(detection.box.X, detection.box.Y, detection.box.Width, detection.box.Height),
+                    classId);
 
                 labelStorage.AddOrUpdate(
                     fileName,

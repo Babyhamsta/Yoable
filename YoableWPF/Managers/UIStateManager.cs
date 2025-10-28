@@ -75,14 +75,73 @@ namespace YoableWPF.Managers
                 : mainWindow.VerifiedCount.Foreground;
         }
 
-        // Direct port of RefreshLabelList
+        // Cache for project classes to avoid repeated reflection
+        private List<LabelClass> cachedProjectClasses = null;
+        
+        // Updated RefreshLabelList with class color indicators
         public void RefreshLabelList()
         {
+            // Clear the label list
             mainWindow.LabelListBox.Items.Clear();
+            
+            // Get project classes - use cached value or fetch via reflection
+            if (cachedProjectClasses == null)
+            {
+                var mainWindowType = mainWindow.GetType();
+                var projectClassesField = mainWindowType.GetField("projectClasses", 
+                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+                cachedProjectClasses = projectClassesField?.GetValue(mainWindow) as List<LabelClass>;
+            }
+            
+            var projectClasses = cachedProjectClasses;
+            
             foreach (var label in mainWindow.drawingCanvas.Labels)
             {
-                mainWindow.LabelListBox.Items.Add(label.Name);
+                // Get class info - fallback to default class if not found
+                var labelClass = projectClasses?.FirstOrDefault(c => c.ClassId == label.ClassId);
+                
+                // If class not found, use default class (ClassId 0)
+                if (labelClass == null)
+                {
+                    labelClass = projectClasses?.FirstOrDefault(c => c.ClassId == 0);
+                }
+                
+                // Final fallback if even default doesn't exist
+                string className = labelClass?.Name ?? "default";
+                string colorHex = labelClass?.ColorHex ?? "#E57373";
+                
+                // Create styled item with class color bar
+                var stackPanel = new System.Windows.Controls.StackPanel 
+                { 
+                    Orientation = System.Windows.Controls.Orientation.Horizontal 
+                };
+                
+                // Color indicator bar
+                stackPanel.Children.Add(new System.Windows.Controls.Border
+                {
+                    Width = 4,
+                    Height = 20,
+                    Background = new SolidColorBrush(
+                        (Color)ColorConverter.ConvertFromString(colorHex)),
+                    Margin = new Thickness(0, 0, 8, 0),
+                    CornerRadius = new System.Windows.CornerRadius(2)
+                });
+                
+                // Label text
+                stackPanel.Children.Add(new System.Windows.Controls.TextBlock
+                {
+                    Text = $"[{className}] {label.Name}",
+                    VerticalAlignment = VerticalAlignment.Center
+                });
+                
+                mainWindow.LabelListBox.Items.Add(stackPanel);
             }
+        }
+        
+        // Call this method when project classes change to refresh the cache
+        public void RefreshProjectClassesCache()
+        {
+            cachedProjectClasses = null;
         }
 
         // Helper for sorting - direct port

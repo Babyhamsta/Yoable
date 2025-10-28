@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 
 namespace YoableWPF.Models
@@ -15,6 +16,27 @@ namespace YoableWPF.Models
         public DateTime CreatedDate { get; set; }
         public DateTime LastModified { get; set; }
         public string Version { get; set; } = "1.0";
+
+        // Class definitions for multi-class labeling
+        public List<LabelClass> Classes { get; set; } = new List<LabelClass>();
+
+        // Helper methods for class management
+        public LabelClass GetClassById(int id)
+        {
+            return Classes?.FirstOrDefault(c => c.ClassId == id);
+        }
+
+        public LabelClass GetDefaultClass()
+        {
+            return Classes?.FirstOrDefault() ?? new LabelClass("default", "#E57373", 0);
+        }
+
+        public int GetNextClassId()
+        {
+            return Classes?.Any() == true ? Classes.Max(c => c.ClassId) + 1 : 0;
+        }
+
+        public bool HasClasses => Classes?.Count > 0;
 
         // Image references (paths only, no copies)
         public List<ImageReference> Images { get; set; } = new List<ImageReference>();

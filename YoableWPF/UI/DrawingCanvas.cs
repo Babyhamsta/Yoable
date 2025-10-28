@@ -4,6 +4,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Linq;
 
 namespace YoableWPF
 {
@@ -11,11 +12,13 @@ namespace YoableWPF
     {
         public string Name { get; set; }
         public Rect Rect { get; set; }
+        public int ClassId { get; set; } = 0; // Default class
 
-        public LabelData(string name, Rect rect)
+        public LabelData(string name, Rect rect, int classId = 0)
         {
             Name = name;
             Rect = rect;
+            ClassId = classId;
         }
 
         // Deep copy constructor
@@ -23,8 +26,10 @@ namespace YoableWPF
         {
             Name = source.Name;
             Rect = source.Rect;
+            ClassId = source.ClassId;
         }
     }
+
 
     public class DrawingCanvas : Canvas
     {
@@ -35,6 +40,34 @@ namespace YoableWPF
         private Size originalImageDimensions;
         public List<LabelData> Labels { get; set; } = new();
         public LabelData SelectedLabel { get; set; }
+        // Class management
+        public int CurrentClassId { get; set; } = 0;
+        public event EventHandler<int> CurrentClassChanged;
+        private List<LabelClass> availableClasses = new List<LabelClass>();
+
+        public void SetAvailableClasses(List<LabelClass> classes)
+        {
+            availableClasses = classes ?? new List<LabelClass>();
+
+            // If current class doesn't exist in new list, switch to first class
+            if (availableClasses.Any() && !availableClasses.Any(c => c.ClassId == CurrentClassId))
+            {
+                CurrentClassId = availableClasses.First().ClassId;
+                OnCurrentClassChanged();
+            }
+        }
+
+        public string GetCurrentClassColor()
+        {
+            var currentClass = availableClasses.FirstOrDefault(c => c.ClassId == CurrentClassId);
+            return currentClass?.ColorHex ?? "#E57373"; // Fallback to red
+        }
+
+        protected virtual void OnCurrentClassChanged()
+        {
+            CurrentClassChanged?.Invoke(this, CurrentClassId);
+            InvalidateVisual(); // Redraw to show new color while drawing
+        }
 
         // Multi-selection support
         public HashSet<LabelData> SelectedLabels { get; set; } = new();
@@ -221,7 +254,8 @@ namespace YoableWPF
                         clipboardLabel.Rect.Y + offsetY,
                         clipboardLabel.Rect.Width,
                         clipboardLabel.Rect.Height
-                    ));
+                    ),
+                    CurrentClassId); // Use current class
 
                 Labels.Add(newLabel);
                 SelectedLabels.Add(newLabel);
@@ -308,22 +342,37 @@ namespace YoableWPF
                 dc.DrawImage(Image, new Rect(0, 0, ActualWidth, ActualHeight));
             }
 
-            // Draw existing labels
-            var labelBrush = (SolidColorBrush)(new BrushConverter().ConvertFrom(Properties.Settings.Default.LabelColor));
-            var selectedBrush = Brushes.Yellow; // Highlight color for selected labels
-            double labelSize = Properties.Settings.Default.LabelThickness;
-
-            Pen normalPen = new Pen(labelBrush, labelSize);
-            Pen selectedPen = new Pen(selectedBrush, labelSize + 1);
-
+            // Draw existing labels with their class colors
+            double thickness = Properties.Settings.Default.LabelThickness;
+            
             foreach (var label in Labels)
             {
+                // Get color for this label's class
+                var labelClass = availableClasses.FirstOrDefault(c => c.ClassId == label.ClassId);
+                string colorHex = labelClass?.ColorHex ?? "#E57373"; // Fallback
+
+                var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorHex);
+                
+                // Check if this label is selected
+                bool isSelected = SelectedLabels.Contains(label) || label == SelectedLabel;
+                
+                // FIXED: For selected labels, brighten the color instead of using yellow
+                if (isSelected)
+                {
+                    // Brighten the color by increasing RGB values
+                    color.R = (byte)Math.Min(255, color.R + 60);
+                    color.G = (byte)Math.Min(255, color.G + 60);
+                    color.B = (byte)Math.Min(255, color.B + 60);
+                }
+                
+                var brush = new SolidColorBrush(color);
+                var pen = new Pen(brush, isSelected ? thickness + 1 : thickness);
+
                 // Convert stored image coordinates to canvas coordinates for display
                 Rect scaledRect = ScaleRectToCanvas(label.Rect);
 
-                // Draw with different pen if selected
-                bool isSelected = SelectedLabels.Contains(label) || label == SelectedLabel;
-                dc.DrawRectangle(null, isSelected ? selectedPen : normalPen, scaledRect);
+                // Draw the rectangle
+                dc.DrawRectangle(null, pen, scaledRect);
 
                 if (isSelected)
                 {
@@ -331,10 +380,14 @@ namespace YoableWPF
                 }
             }
 
-            // Draw the current rectangle while drawing - use canvas coordinates directly
+            // Draw the current rectangle being drawn with current class color
             if (IsDrawing)
             {
-                dc.DrawRectangle(null, normalPen, CurrentRect);
+                string currentColorHex = GetCurrentClassColor();
+                var currentBrush = new SolidColorBrush(
+                    (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(currentColorHex));
+                var currentPen = new Pen(currentBrush, thickness);
+                dc.DrawRectangle(null, currentPen, CurrentRect);
             }
 
             if (Properties.Settings.Default.EnableCrosshair)
@@ -384,6 +437,74 @@ namespace YoableWPF
 
         private void DrawingCanvas_MouseWheel(object sender, MouseWheelEventArgs e)
         {
+            // PRIORITY 1: If shift is held and labels are selected, cycle through classes
+            if ((Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift)) && 
+                (SelectedLabel != null || SelectedLabels.Count > 0) && 
+                availableClasses.Count > 1)
+            {
+                // Get the current class of the selected label
+                int currentClassId = SelectedLabel?.ClassId ?? SelectedLabels.FirstOrDefault()?.ClassId ?? CurrentClassId;
+                int currentIndex = availableClasses.FindIndex(c => c.ClassId == currentClassId);
+                
+                if (currentIndex < 0) currentIndex = 0;
+
+                if (e.Delta > 0) // Scroll up - previous class
+                {
+                    currentIndex = currentIndex <= 0 ? availableClasses.Count - 1 : currentIndex - 1;
+                }
+                else // Scroll down - next class
+                {
+                    currentIndex = currentIndex >= availableClasses.Count - 1 ? 0 : currentIndex + 1;
+                }
+
+                SaveUndoState();
+                var newClassId = availableClasses[currentIndex].ClassId;
+                
+                // Update all selected labels
+                if (SelectedLabels.Count > 0)
+                {
+                    foreach (var label in SelectedLabels)
+                    {
+                        label.ClassId = newClassId;
+                    }
+                }
+                else if (SelectedLabel != null)
+                {
+                    SelectedLabel.ClassId = newClassId;
+                }
+                
+                // Refresh UI to show new class colors
+                if (Application.Current.MainWindow is MainWindow mainWindow)
+                {
+                    mainWindow.RefreshLabelListFromCanvas();
+                }
+                
+                OnLabelsChanged();
+                InvalidateVisual();
+                e.Handled = true;
+                return;
+            }
+
+            // PRIORITY 2: If we're currently drawing, cycle through classes
+            if (IsDrawing && availableClasses.Count > 1)
+            {
+                int currentIndex = availableClasses.FindIndex(c => c.ClassId == CurrentClassId);
+
+                if (e.Delta > 0) // Scroll up - previous class
+                {
+                    currentIndex = currentIndex <= 0 ? availableClasses.Count - 1 : currentIndex - 1;
+                }
+                else // Scroll down - next class
+                {
+                    currentIndex = currentIndex >= availableClasses.Count - 1 ? 0 : currentIndex + 1;
+                }
+
+                CurrentClassId = availableClasses[currentIndex].ClassId;
+                OnCurrentClassChanged();
+                e.Handled = true;
+                return;
+            }
+
             if (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl))
             {
                 // Existing zoom functionality
@@ -541,12 +662,13 @@ namespace YoableWPF
                         CurrentRect.Height * scaleY
                     );
 
-                    var newLabel = new LabelData($"Label {Labels.Count + 1}", imageRect);
+                    var newLabel = new LabelData($"Label {Labels.Count + 1}", imageRect, CurrentClassId);
                     Labels.Add(newLabel);
 
-                    if (LabelListBox != null)
+                    // FIXED: Use proper UI refresh that includes class colors
+                    if (Application.Current.MainWindow is MainWindow mainWindow)
                     {
-                        LabelListBox.Items.Add(newLabel.Name);
+                        mainWindow.RefreshLabelListFromCanvas();
                     }
 
                     OnLabelsChanged();
@@ -945,22 +1067,20 @@ namespace YoableWPF
                             foreach (var label in labelsToDelete)
                             {
                                 Labels.Remove(label);
-                                if (LabelListBox != null)
-                                {
-                                    LabelListBox.Items.Remove(label.Name);
-                                }
                             }
                             SelectedLabels.Clear();
                         }
                         else if (SelectedLabel != null)
                         {
                             Labels.Remove(SelectedLabel);
-                            if (LabelListBox != null)
-                            {
-                                LabelListBox.Items.Remove(SelectedLabel.Name);
-                            }
                         }
                         SelectedLabel = null;
+
+                        // FIXED: Refresh the UI properly
+                        if (Application.Current.MainWindow is MainWindow mainWindow)
+                        {
+                            mainWindow.RefreshLabelListFromCanvas();
+                        }
 
                         OnLabelsChanged();
                         break;

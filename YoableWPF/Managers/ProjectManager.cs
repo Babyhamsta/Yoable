@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -101,7 +101,11 @@ namespace YoableWPF.Managers
                     ProjectPath = Path.Combine(projectFolder, projectName + PROJECT_EXTENSION),
                     ProjectFolder = projectFolder,
                     CreatedDate = DateTime.Now,
-                    LastModified = DateTime.Now
+                    LastModified = DateTime.Now,
+                    Classes = new List<LabelClass> 
+                    { 
+                        new LabelClass("default", "#E57373", 0) 
+                    }
                 };
 
                 // Save the new project (synchronous for creation)
@@ -165,6 +169,16 @@ namespace YoableWPF.Managers
                 // Update project paths
                 CurrentProject.ProjectPath = projectPath;
                 CurrentProject.ProjectFolder = Path.GetDirectoryName(projectPath);
+
+                // MIGRATION: Ensure Classes property exists (for old projects created before multi-class support)
+                if (CurrentProject.Classes == null || CurrentProject.Classes.Count == 0)
+                {
+                    CurrentProject.Classes = new List<LabelClass>
+                    {
+                        new LabelClass("default", "#E57373", 0)
+                    };
+                    MarkDirty(); // Mark as dirty so migration gets saved
+                }
 
                 // Validate project data and handle missing files
                 var validationResult = ValidateProjectData();
@@ -545,9 +559,7 @@ namespace YoableWPF.Managers
             if (CurrentProject == null || mainWindow == null)
                 return;
 
-            Debug.WriteLine("Exporting project data from MainWindow...");
-
-            // STEP 1: Quickly capture UI state on UI thread (fast, no lag)
+            // Quickly capture UI state on UI thread
             int selectedIndex = -1;
             string sortMode = "ByName";
 
@@ -557,7 +569,7 @@ namespace YoableWPF.Managers
                 sortMode = mainWindow.SortComboBox?.SelectedIndex == 1 ? "ByStatus" : "ByName";
             });
 
-            // STEP 2: Do all heavy processing on background thread (no UI lag)
+            // Do all heavy processing on background thread
             await Task.Run(() =>
             {
                 // Clear existing data
@@ -576,8 +588,6 @@ namespace YoableWPF.Managers
                         FileName = fileName,
                         FullPath = fullPath
                     });
-
-                    Debug.WriteLine($"Exported image: {fileName}");
                 }
 
                 // Export image statuses
@@ -611,8 +621,6 @@ namespace YoableWPF.Managers
                         // Store relative path in project
                         string relativePath = Path.Combine(LABELS_FOLDER, labelFileName);
                         CurrentProject.AppCreatedLabels[fileName] = relativePath;
-
-                        Debug.WriteLine($"Exported {labels.Count} labels for {fileName}");
                     }
                 }
 
@@ -622,8 +630,6 @@ namespace YoableWPF.Managers
                     CurrentProject.LastSelectedImageIndex = selectedIndex;
                 }
                 CurrentProject.CurrentSortMode = sortMode;
-
-                Debug.WriteLine($"Export complete: {CurrentProject.Images.Count} images, {CurrentProject.AppCreatedLabels.Count} label files");
             });
         }
 
@@ -634,8 +640,6 @@ namespace YoableWPF.Managers
         {
             if (CurrentProject == null || mainWindow == null)
                 return;
-
-            Debug.WriteLine("Exporting project data from MainWindow...");
 
             // Clear existing data
             CurrentProject.Images.Clear();
@@ -653,8 +657,6 @@ namespace YoableWPF.Managers
                     FileName = fileName,
                     FullPath = fullPath
                 });
-
-                Debug.WriteLine($"Exported image: {fileName}");
             }
 
             // Export image statuses
@@ -688,8 +690,6 @@ namespace YoableWPF.Managers
                     // Store relative path in project
                     string relativePath = Path.Combine(LABELS_FOLDER, labelFileName);
                     CurrentProject.AppCreatedLabels[fileName] = relativePath;
-
-                    Debug.WriteLine($"Exported {labels.Count} labels for {fileName}");
                 }
             }
 
@@ -751,7 +751,6 @@ namespace YoableWPF.Managers
                     if (File.Exists(imageRef.FullPath))
                     {
                         await Task.Run(() => mainWindow.imageManager.AddImage(imageRef.FullPath), cancellationToken);
-                        Debug.WriteLine($"Loaded image: {imageRef.FileName}");
                     }
                     else
                     {
@@ -802,7 +801,6 @@ namespace YoableWPF.Managers
                             string tempLabelPath = Path.Combine(tempLabelsDir, Path.GetFileName(labelPath));
                             File.Copy(labelPath, tempLabelPath, true);
                             labelFilesCopied++;
-                            Debug.WriteLine($"Prepared label file: {Path.GetFileName(labelPath)}");
                         }
                         else
                         {
@@ -824,7 +822,6 @@ namespace YoableWPF.Managers
                             string tempLabelPath = Path.Combine(tempLabelsDir, Path.GetFileName(labelPath));
                             File.Copy(labelPath, tempLabelPath, true);
                             labelFilesCopied++;
-                            Debug.WriteLine($"Prepared imported label file: {Path.GetFileName(labelPath)}");
                         }
                         else
                         {
@@ -867,7 +864,6 @@ namespace YoableWPF.Managers
                         if (Directory.Exists(tempLabelsDir))
                         {
                             Directory.Delete(tempLabelsDir, true);
-                            Debug.WriteLine("Cleaned up temporary label directory");
                         }
                     }
                     catch (Exception ex)
@@ -1170,7 +1166,6 @@ namespace YoableWPF.Managers
                     {
                         imageRef.FullPath = newPath;
                         foundCount++;
-                        Debug.WriteLine($"Relocated image: {missingFileName} -> {newPath}");
                     }
                 }
             }
@@ -1212,7 +1207,6 @@ namespace YoableWPF.Managers
                     CurrentProject.ImageStatuses.Remove(fileName);
                 }
                 cleaned = true;
-                Debug.WriteLine($"Cleaned up {result.MissingImages.Count} missing images");
             }
 
             if (result.OrphanedLabels.Any())
@@ -1224,7 +1218,6 @@ namespace YoableWPF.Managers
                     CurrentProject.ImageStatuses.Remove(fileName);
                 }
                 cleaned = true;
-                Debug.WriteLine($"Cleaned up {result.OrphanedLabels.Count} orphaned labels");
             }
 
             if (cleaned)
@@ -1243,14 +1236,11 @@ namespace YoableWPF.Managers
         {
             if (mainWindow == null) return;
 
-            Debug.WriteLine("Validating image statuses against actual labels...");
-
             var statusKeys = CurrentProject.ImageStatuses.Keys.ToArray();
             int totalImages = statusKeys.Length;
 
             if (totalImages == 0)
             {
-                Debug.WriteLine("No images to validate");
                 return;
             }
 
@@ -1302,7 +1292,6 @@ namespace YoableWPF.Managers
                             CurrentProject.ImageStatuses[fileName] = correctedStatus;
                             mainWindow.imageManager.UpdateImageStatusValue(fileName, correctedStatus);
                             corrected++;
-                            Debug.WriteLine($"Corrected status for {fileName}: {savedStatus} -> {correctedStatus}");
                         }
 
                         processed++;
@@ -1316,15 +1305,6 @@ namespace YoableWPF.Managers
                 }
 
             }, cancellationToken);
-
-            if (corrected > 0)
-            {
-                Debug.WriteLine($"Corrected {corrected} image status(es)");
-            }
-            else
-            {
-                Debug.WriteLine("All image statuses were already correct");
-            }
         }
 
         private class ValidationResult

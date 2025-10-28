@@ -8,6 +8,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media;
 using YoableWPF.Managers;
 using Color = System.Windows.Media.Color;
 using ColorConverter = System.Windows.Media.ColorConverter;
@@ -21,6 +22,9 @@ namespace YoableWPF
         public LabelManager labelManager;
         public ProjectManager projectManager;
         private UIStateManager uiStateManager;
+
+        // Class management
+        private List<LabelClass> projectClasses = new List<LabelClass>();
 
         // External Managers/Handlers (unchanged)
         private YoloAI yoloAI;
@@ -38,6 +42,9 @@ namespace YoableWPF
             // Subscribe to the LabelsChanged event to detect any label modifications
             drawingCanvas.LabelsChanged += (sender, e) =>
             {
+                // Refresh the label list and status immediately
+                RefreshLabelListFromCanvas();
+                
                 if (projectManager != null && projectManager.IsProjectOpen)
                 {
                     MarkProjectDirty();
@@ -63,6 +70,12 @@ namespace YoableWPF
             yoloAI = new YoloAI();
             overlayManager = new OverlayManager(this);
             youtubeDownloader = new YoutubeDownloader(this, overlayManager);
+
+            // Subscribe to class changes from DrawingCanvas
+            drawingCanvas.CurrentClassChanged += DrawingCanvas_CurrentClassChanged;
+
+            // Initialize with default class if no project loaded
+            InitializeDefaultClass();
 
             // Note: projectManager will be set by StartupWindow or initialized here if continuing without project
             // Check for updates from Github
@@ -117,6 +130,30 @@ namespace YoableWPF
                     overlayManager.UpdateMessage(report.message);
                 });
             });
+        }
+
+        /// <summary>
+        /// Fixes labels that reference non-existent class IDs by reassigning them to the default class
+        /// </summary>
+        private void FixOrphanedLabels(List<LabelData> labels)
+        {
+            if (projectClasses == null || projectClasses.Count == 0 || labels == null || labels.Count == 0)
+                return;
+
+            // Get all valid class IDs
+            var validClassIds = new HashSet<int>(projectClasses.Select(c => c.ClassId));
+
+            // Get the default class (class with ID 0, or first class)
+            var defaultClass = projectClasses.FirstOrDefault(c => c.ClassId == 0) ?? projectClasses.First();
+
+            // Fix any labels with invalid ClassIds
+            foreach (var label in labels)
+            {
+                if (!validClassIds.Contains(label.ClassId))
+                {
+                    label.ClassId = defaultClass.ClassId;
+                }
+            }
         }
 
         #endregion
@@ -272,6 +309,12 @@ namespace YoableWPF
                 return; // Already saving, ignore this request
             }
 
+            // Save classes before saving project
+            if (projectManager?.CurrentProject != null)
+            {
+                projectManager.CurrentProject.Classes = projectClasses;
+            }
+
             // Use async save with progress
             bool success = await projectManager.SaveProjectAsync();
 
@@ -308,6 +351,12 @@ namespace YoableWPF
 
                 try
                 {
+                    // Save classes before saving project
+                    if (projectManager?.CurrentProject != null)
+                    {
+                        projectManager.CurrentProject.Classes = projectClasses;
+                    }
+
                     // Export current state to project
                     projectManager.ExportProjectData();
 
@@ -435,6 +484,22 @@ namespace YoableWPF
         /// </summary>
         public async Task RefreshUIAfterProjectLoadAsync()
         {
+            // Load classes from project
+            if (projectManager.CurrentProject.HasClasses)
+            {
+                projectClasses = new List<LabelClass>(projectManager.CurrentProject.Classes);
+            }
+            else
+            {
+                // Migrate old project - add default class
+                projectClasses = new List<LabelClass> 
+                { 
+                    new LabelClass("default", "#E57373", 0) 
+                };
+                projectManager.CurrentProject.Classes = projectClasses;
+            }
+            RefreshClassList();
+
             // Clear the list first
             ImageListBox.Items.Clear();
 
@@ -606,17 +671,36 @@ namespace YoableWPF
             int currentIndex = ImageListBox.SelectedIndex;
             if (currentIndex < 0 || currentIndex >= ImageListBox.Items.Count) return;
 
+            // Ensure we're using just the filename, not full path
+            string currentFileName = Path.GetFileName(imageManager.CurrentImagePath);
+
             // Determine status using helper
-            ImageStatus newStatus = DetermineImageStatus(imageManager.CurrentImagePath);
+            ImageStatus newStatus = DetermineImageStatus(currentFileName);
 
             // Use the imageManager method to update status
-            imageManager.UpdateImageStatusValue(imageManager.CurrentImagePath, newStatus);
+            imageManager.UpdateImageStatusValue(currentFileName, newStatus);
 
-            // Use O(1) cache lookup instead of O(n) iteration
-            if (uiStateManager.TryGetFromCache(imageManager.CurrentImagePath, out var imageItem))
+            // Force UI update on the dispatcher thread
+            Dispatcher.Invoke(() =>
             {
-                imageItem.Status = newStatus;
-            }
+                // Use O(1) cache lookup instead of O(n) iteration
+                if (uiStateManager.TryGetFromCache(currentFileName, out var imageItem))
+                {
+                    imageItem.Status = newStatus;
+                    
+                    // Force refresh of the ListBox item
+                    var container = ImageListBox.ItemContainerGenerator.ContainerFromItem(imageItem) as ListBoxItem;
+                    if (container != null)
+                    {
+                        container.UpdateLayout();
+                    }
+                    else
+                    {
+                        // If container is null (item not visible/virtualized), force refresh of the entire list
+                        ImageListBox.Items.Refresh();
+                    }
+                }
+            }, System.Windows.Threading.DispatcherPriority.Render);
 
             uiStateManager.UpdateStatusCounts();
 
@@ -648,6 +732,9 @@ namespace YoableWPF
                 {
                     drawingCanvas.Labels = new System.Collections.Generic.List<LabelData>(labelManager.LabelStorage[selected.FileName]);
 
+                    // Fix any labels that reference non-existent classes
+                    FixOrphanedLabels(drawingCanvas.Labels);
+
                     // Update status when viewing an image with AI or imported labels
                     if (labelManager.LabelStorage[selected.FileName].Any(l => l.Name.StartsWith("AI") || l.Name.StartsWith("Imported")))
                     {
@@ -678,23 +765,73 @@ namespace YoableWPF
 
         private void LabelListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            if (LabelListBox.SelectedItem is string selectedLabelName)
+            // FIXED: Handle StackPanel items from UIStateManager.RefreshLabelList
+            if (LabelListBox.SelectedItem is StackPanel stackPanel)
             {
-                var selectedLabel = drawingCanvas.Labels.FirstOrDefault(label => label.Name == selectedLabelName);
-
-                if (selectedLabel != null)
+                // Extract the label name from the TextBlock in the StackPanel
+                var textBlock = stackPanel.Children.OfType<TextBlock>().FirstOrDefault();
+                if (textBlock != null)
                 {
-                    drawingCanvas.SelectedLabel = selectedLabel;
-                    drawingCanvas.InvalidateVisual();
-                    Keyboard.Focus(this); // Ensure window captures key events
+                    // The text format is "[ClassName] LabelName"
+                    string fullText = textBlock.Text;
+                    int closeBracketIndex = fullText.IndexOf(']');
+                    if (closeBracketIndex >= 0 && closeBracketIndex < fullText.Length - 1)
+                    {
+                        string labelName = fullText.Substring(closeBracketIndex + 2); // Skip "] "
+                        var selectedLabel = drawingCanvas.Labels.FirstOrDefault(label => label.Name == labelName);
+
+                        if (selectedLabel != null)
+                        {
+                            drawingCanvas.SelectedLabel = selectedLabel;
+                            drawingCanvas.SelectedLabels.Clear();
+                            drawingCanvas.SelectedLabels.Add(selectedLabel);
+                            drawingCanvas.InvalidateVisual();
+                            Keyboard.Focus(drawingCanvas); // Ensure canvas captures key events
+                        }
+                    }
                 }
             }
             else
             {
                 // No label selected, so immediately deselect in canvas
                 drawingCanvas.SelectedLabel = null;
+                drawingCanvas.SelectedLabels.Clear();
                 drawingCanvas.InvalidateVisual();
             }
+        }
+
+        /// <summary>
+        /// Helper method to refresh the label list from canvas - called by DrawingCanvas
+        /// This also updates image status and saves labels to storage
+        /// </summary>
+        public void RefreshLabelListFromCanvas()
+        {
+            // Get current image filename - CurrentImagePath should be just the filename
+            string currentFileName = imageManager.CurrentImagePath;
+            
+            if (string.IsNullOrEmpty(currentFileName))
+                return;
+                
+            // If it's a full path, extract just the filename
+            if (currentFileName.Contains("\\") || currentFileName.Contains("/"))
+            {
+                currentFileName = Path.GetFileName(currentFileName);
+            }
+            
+            // Save current labels to storage
+            labelManager.SaveLabels(currentFileName, drawingCanvas.Labels);
+            
+            // Update the image status
+            UpdateImageStatus(currentFileName);
+            
+            // Update status counts in UI
+            uiStateManager.UpdateStatusCounts();
+            
+            // Refresh the label list UI
+            uiStateManager.RefreshLabelList();
+            
+            // Force canvas to redraw to show updated labels
+            drawingCanvas.InvalidateVisual();
         }
 
         private void ImportDirectory_Click(object sender, RoutedEventArgs e)
@@ -949,7 +1086,9 @@ namespace YoableWPF
                     string fileName = Path.GetFileName(imagePath.Path);
                     System.Collections.Generic.List<Rectangle> detectedBoxes = yoloAI.RunInference(image);
 
-                    labelManager.AddAILabels(fileName, detectedBoxes);
+                    // Convert to (Rectangle, ClassId) format - default to class 0
+                    var boxesWithClasses = detectedBoxes.Select(box => (box, 0)).ToList();
+                    labelManager.AddAILabels(fileName, boxesWithClasses);
                     totalDetections += detectedBoxes.Count;
 
                     // Only update UI if this is the current image
@@ -1126,10 +1265,10 @@ namespace YoableWPF
 
             try
             {
-                // ✅ Progress reporter for real-time feedback
+                // Progress reporter for real-time feedback
                 var progress = CreateProgressReporter();
 
-                // ✅ 🚀 NEW: Use high-performance batch loading with parallel processing
+                // Use batch loading with parallel processing
                 int labelsLoaded = await labelManager.LoadYoloLabelsBatchAsync(
                     directoryPath,
                     imageManager,
@@ -1141,7 +1280,6 @@ namespace YoableWPF
                 overlayManager.HideOverlay();
 
                 // Update all image statuses after importing labels
-                Debug.WriteLine("Updating All Image Statuses");
                 await UpdateAllImageStatusesAsync();
                 uiStateManager.RefreshAllImagesList(); // Refresh for filtering
 
@@ -1251,11 +1389,29 @@ namespace YoableWPF
 
             imageManager.UpdateImageStatusValue(fileName, newStatus);
 
-            // Use O(1) dictionary lookup instead of O(n) iteration
-            if (uiStateManager.TryGetFromCache(fileName, out var imageItem))
+            // Force UI update on the dispatcher thread with high priority
+            Dispatcher.Invoke(() =>
             {
-                imageItem.Status = newStatus;
-            }
+                // Use O(1) dictionary lookup instead of O(n) iteration
+                if (uiStateManager.TryGetFromCache(fileName, out var imageItem))
+                {
+                    // Update the status - this triggers PropertyChanged
+                    imageItem.Status = newStatus;
+                    
+                    // Force the ListBox to refresh the specific item's visual
+                    // This is needed because of VirtualizingStackPanel recycling
+                    var container = ImageListBox.ItemContainerGenerator.ContainerFromItem(imageItem) as ListBoxItem;
+                    if (container != null)
+                    {
+                        container.UpdateLayout();
+                    }
+                    else
+                    {
+                        // If container is null (item not visible/virtualized), force refresh of the entire list
+                        ImageListBox.Items.Refresh();
+                    }
+                }
+            }, System.Windows.Threading.DispatcherPriority.Render);
         }
 
         private async void Window_KeyDown(object sender, KeyEventArgs e)
@@ -1516,6 +1672,263 @@ namespace YoableWPF
         {
             base.OnClosing(e);
             yoloAI?.Dispose();
+        }
+
+        #endregion
+
+        #region Class Management
+
+        private void InitializeDefaultClass()
+        {
+            if (projectClasses.Count == 0)
+            {
+                projectClasses.Add(new LabelClass("default", "#E57373", 0));
+                RefreshClassList();
+            }
+        }
+
+        private void RefreshClassList()
+        {
+            // Update ClassListBox
+            ClassListBox.ItemsSource = null;
+            ClassListBox.ItemsSource = projectClasses;
+            
+            // Update DrawingCanvas with available classes
+            drawingCanvas.SetAvailableClasses(projectClasses);
+            
+            // Update LabelManager with valid class IDs so it can fix orphaned labels
+            labelManager.SetValidClassIds(projectClasses.Select(c => c.ClassId));
+            
+            // Refresh UIStateManager's cached project classes
+            uiStateManager.RefreshProjectClassesCache();
+            
+            // Select current class in list
+            var currentClass = projectClasses.FirstOrDefault(c => c.ClassId == drawingCanvas.CurrentClassId);
+            if (currentClass != null)
+            {
+                ClassListBox.SelectedItem = currentClass;
+            }
+            
+            // Update UI display
+            UpdateCurrentClassUI();
+        }
+
+        private void UpdateCurrentClassUI()
+        {
+            var currentClass = projectClasses.FirstOrDefault(c => c.ClassId == drawingCanvas.CurrentClassId);
+            if (currentClass != null)
+            {
+                CurrentClassNameText.Text = currentClass.Name;
+                
+                var color = (Color)ColorConverter.ConvertFromString(currentClass.ColorHex);
+                CurrentClassColorIndicator.Background = new SolidColorBrush(color);
+                
+                // Semi-transparent background
+                CurrentClassBorder.Background = new SolidColorBrush(
+                    Color.FromArgb(0x44, color.R, color.G, color.B));
+                CurrentClassBorder.BorderBrush = new SolidColorBrush(color);
+            }
+        }
+
+        private void DrawingCanvas_CurrentClassChanged(object sender, int classId)
+        {
+            // Update UI when class changes (e.g., from mouse wheel during drawing)
+            UpdateCurrentClassUI();
+            
+            // Update selection in ClassListBox
+            var selectedClass = projectClasses.FirstOrDefault(c => c.ClassId == classId);
+            if (selectedClass != null && ClassListBox.SelectedItem != selectedClass)
+            {
+                ClassListBox.SelectedItem = selectedClass;
+            }
+        }
+
+        private void ClassListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (ClassListBox.SelectedItem is LabelClass selectedClass)
+            {
+                // Update current drawing class
+                drawingCanvas.CurrentClassId = selectedClass.ClassId;
+                UpdateCurrentClassUI();
+                
+                // Enable/disable remove button (can't remove last class)
+                RemoveClassButton.IsEnabled = projectClasses.Count > 1;
+            }
+            else
+            {
+                RemoveClassButton.IsEnabled = false;
+            }
+        }
+
+        private void AddClass_Click(object sender, RoutedEventArgs e)
+        {
+            var dialog = new ClassInputDialog();
+            dialog.Owner = this;
+            
+            if (dialog.ShowDialog() == true)
+            {
+                int newClassId = projectManager?.CurrentProject?.GetNextClassId() ?? 
+                                (projectClasses.Any() ? projectClasses.Max(c => c.ClassId) + 1 : 0);
+                
+                var newClass = new LabelClass(dialog.ClassName, dialog.ClassColor, newClassId);
+                projectClasses.Add(newClass);
+                
+                RefreshClassList();
+                
+                // Select the new class
+                ClassListBox.SelectedItem = newClass;
+                drawingCanvas.CurrentClassId = newClassId;
+                
+                // Mark project as modified
+                if (projectManager?.IsProjectOpen == true)
+                {
+                    MarkProjectDirty();
+                }
+            }
+        }
+
+        private void EditClass_Click(object sender, RoutedEventArgs e)
+        {
+            // Get the class from the button's Tag property
+            if (sender is Button button && button.Tag is LabelClass classToEdit)
+            {
+                var dialog = new ClassInputDialog(classToEdit);
+                dialog.Owner = this;
+                
+                if (dialog.ShowDialog() == true)
+                {
+                    // Update the class properties
+                    classToEdit.Name = dialog.ClassName;
+                    classToEdit.ColorHex = dialog.ClassColor;
+                    
+                    // Explicitly update the canvas's available classes list FIRST
+                    drawingCanvas.SetAvailableClasses(projectClasses);
+                    
+                    // Check what color the canvas thinks the current class is
+                    var canvasColor = drawingCanvas.GetCurrentClassColor();
+                    
+                    // Force canvas to redraw with new colors immediately
+                    drawingCanvas.InvalidateVisual();
+                    
+                    drawingCanvas.UpdateLayout(); // Force immediate layout/render update
+                    
+                    // Refresh class list UI
+                    RefreshClassList();
+                    
+                    // Refresh label list to show updated class names/colors
+                    uiStateManager.RefreshLabelList();
+                    
+                    // Update current class UI if this is the active class
+                    if (drawingCanvas.CurrentClassId == classToEdit.ClassId)
+                    {
+                        UpdateCurrentClassUI();
+                    }
+                    
+                    // Mark project as modified
+                    if (projectManager?.IsProjectOpen == true)
+                    {
+                        MarkProjectDirty();
+                    }
+                }
+            }
+        }
+
+        private void RemoveClass_Click(object sender, RoutedEventArgs e)
+        {
+            if (ClassListBox.SelectedItem is not LabelClass classToRemove)
+                return;
+            
+            // Can't remove the last class
+            if (projectClasses.Count <= 1)
+            {
+                MessageBox.Show(
+                    "Cannot remove the last class. At least one class must exist.",
+                    "Cannot Remove Class",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+            
+            // Check if any labels use this class
+            int labelCount = 0;
+            foreach (var kvp in labelManager.LabelStorage)
+            {
+                labelCount += kvp.Value.Count(l => l.ClassId == classToRemove.ClassId);
+            }
+            
+            if (labelCount > 0)
+            {
+                // Show migration dialog
+                var migrationDialog = new ClassMigrationDialog(projectClasses, classToRemove, labelCount);
+                migrationDialog.Owner = this;
+                
+                if (migrationDialog.ShowDialog() != true)
+                    return; // User cancelled
+                
+                int targetClassId = migrationDialog.TargetClassId;
+                bool deleteLabels = migrationDialog.DeleteLabels;
+                
+                if (deleteLabels)
+                {
+                    // Remove all labels with this class
+                    foreach (var kvp in labelManager.LabelStorage.ToList())
+                    {
+                        kvp.Value.RemoveAll(l => l.ClassId == classToRemove.ClassId);
+                        
+                        // Remove entry if no labels remain
+                        if (kvp.Value.Count == 0)
+                        {
+                            labelManager.LabelStorage.TryRemove(kvp.Key, out _);
+                        }
+                    }
+                    
+                    // Update image statuses
+                    _ = UpdateAllImageStatusesAsync();
+                }
+                else
+                {
+                    // Migrate labels to target class
+                    foreach (var kvp in labelManager.LabelStorage)
+                    {
+                        foreach (var label in kvp.Value.Where(l => l.ClassId == classToRemove.ClassId))
+                        {
+                            label.ClassId = targetClassId;
+                        }
+                    }
+                }
+            }
+            
+            // Remove the class
+            projectClasses.Remove(classToRemove);
+            
+            // If current drawing class was removed, switch to first class
+            if (drawingCanvas.CurrentClassId == classToRemove.ClassId)
+            {
+                drawingCanvas.CurrentClassId = projectClasses.First().ClassId;
+            }
+            
+            RefreshClassList();
+            
+            // Mark project as modified
+            if (projectManager?.IsProjectOpen == true)
+            {
+                MarkProjectDirty();
+            }
+            
+            // Refresh current image to show updated labels
+            if (!string.IsNullOrEmpty(imageManager.CurrentImagePath))
+            {
+                var currentFile = Path.GetFileName(imageManager.CurrentImagePath);
+                var labels = labelManager.GetLabels(currentFile);
+                if (labels.Any())
+                {
+                    drawingCanvas.Labels = new List<LabelData>(labels);
+                    drawingCanvas.InvalidateVisual();
+                }
+            }
+            
+            // Refresh label list to update UI
+            uiStateManager.RefreshLabelList();
         }
 
         #endregion

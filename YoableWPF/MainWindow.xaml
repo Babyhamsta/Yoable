@@ -101,6 +101,32 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        
+        <!-- Icon Button Style for Edit -->
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="4"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Width" Value="24"/>
+            <Setter Property="Height" Value="24"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </Window.Resources>
 
     <Grid>
@@ -570,48 +596,182 @@
             </Border>
         </Border>
 
-        <!-- Right Panel - Labels -->
+        <!-- Right Panel - Labels & Classes -->
         <Border Grid.Row="1" Grid.Column="2" 
                 Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
                 Padding="12">
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>  <!-- Header -->
+                    <RowDefinition Height="Auto"/>  <!-- Class Section -->
+                    <RowDefinition Height="*"/>     <!-- Labels List -->
                 </Grid.RowDefinitions>
 
                 <!-- Panel Header -->
                 <Grid Grid.Row="0" Margin="0,0,0,12">
-                    <StackPanel Orientation="Horizontal" 
-                                HorizontalAlignment="Right"
-                                VerticalAlignment="Center">
-                        <TextBlock Text="Labels" 
-                                   FontSize="16" 
-                                   FontWeight="SemiBold"
-                                   VerticalAlignment="Center"/>
-                    </StackPanel>
+                    <TextBlock Text="Labels &amp; Classes" 
+                               FontSize="16" 
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
                 </Grid>
 
-                <!-- Labels List Card -->
-                <Border Grid.Row="1" Style="{StaticResource ModernCard}" Padding="0" Margin="0">
-                    <ListBox x:Name="LabelListBox" 
-                             Style="{StaticResource ModernListBox}"
-                             SelectionMode="Single" 
-                             SelectionChanged="LabelListBox_SelectionChanged">
-                        <ListBox.ItemContainerStyle>
-                            <Style TargetType="ListBoxItem" BasedOn="{StaticResource ImageListItemStyle}"/>
-                        </ListBox.ItemContainerStyle>
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding}" 
-                                           VerticalAlignment="Center"
-                                           TextWrapping="Wrap"/>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
+                <!-- CLASS MANAGEMENT SECTION -->
+                <Border Grid.Row="1" Style="{StaticResource ModernCard}">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Section Title -->
+                        <TextBlock Grid.Row="0" Text="Classes" 
+                                   FontSize="13" FontWeight="SemiBold" 
+                                   Margin="0,0,0,10"/>
+                        
+                        <!-- Class List -->
+                        <ListBox Grid.Row="1" x:Name="ClassListBox"
+                                 MaxHeight="140"
+                                 Margin="0,0,0,10"
+                                 SelectionMode="Single"
+                                 SelectionChanged="ClassListBox_SelectionChanged"
+                                 BorderThickness="0"
+                                 Background="Transparent"
+                                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem">
+                                    <Setter Property="Padding" Value="8,6"/>
+                                    <Setter Property="Margin" Value="0,1"/>
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="ListBoxItem">
+                                                <Border x:Name="Border" 
+                                                        Background="Transparent"
+                                                        CornerRadius="4"
+                                                        Padding="{TemplateBinding Padding}">
+                                                    <ContentPresenter/>
+                                                </Border>
+                                                <ControlTemplate.Triggers>
+                                                    <Trigger Property="IsMouseOver" Value="True">
+                                                        <Setter TargetName="Border" Property="Background" 
+                                                                Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+                                                    </Trigger>
+                                                    <Trigger Property="IsSelected" Value="True">
+                                                        <Setter TargetName="Border" Property="Background" 
+                                                                Value="{DynamicResource SystemControlHighlightAccentBrush}"/>
+                                                    </Trigger>
+                                                </ControlTemplate.Triggers>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto"/>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        
+                                        <!-- Color indicator -->
+                                        <Border Grid.Column="0"
+                                                Width="4" 
+                                                Height="18" 
+                                                Background="{Binding ColorBrush}"
+                                                CornerRadius="2"
+                                                Margin="0,0,10,0"
+                                                VerticalAlignment="Center"/>
+                                        
+                                        <!-- Class name and ID -->
+                                        <TextBlock Grid.Column="1" 
+                                                   VerticalAlignment="Center">
+                                            <Run Text="{Binding Name}" FontWeight="Medium"/>
+                                            <Run Text="{Binding ClassId, StringFormat=' (ID: {0})'}" 
+                                                 FontSize="10" 
+                                                 Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                        </TextBlock>
+                                        
+                                        <!-- Edit button -->
+                                        <Button Grid.Column="2"
+                                                Style="{StaticResource IconButton}"
+                                                Click="EditClass_Click"
+                                                Tag="{Binding}"
+                                                ToolTip="Edit class">
+                                            <TextBlock FontFamily="Segoe MDL2 Assets" 
+                                                       Text="&#xE70F;" 
+                                                       FontSize="12"
+                                                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        
+                        <!-- Class Management Buttons -->
+                        <Grid Grid.Row="2">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            
+                            <Button Grid.Column="0" 
+                                    Content="Add Class" 
+                                    Click="AddClass_Click" 
+                                    Padding="8,6"
+                                    Margin="0,0,4,0"
+                                    HorizontalAlignment="Stretch">
+                                <Button.ToolTip>
+                                    <ToolTip Content="Add new class"/>
+                                </Button.ToolTip>
+                            </Button>
+                            <Button Grid.Column="1" 
+                                    Content="Remove" 
+                                    x:Name="RemoveClassButton"
+                                    Click="RemoveClass_Click" 
+                                    Padding="8,6"
+                                    Margin="4,0,0,0"
+                                    HorizontalAlignment="Stretch"
+                                    IsEnabled="False">
+                                <Button.ToolTip>
+                                    <ToolTip Content="Remove selected class"/>
+                                </Button.ToolTip>
+                            </Button>
+                        </Grid>
+                    </Grid>
+                </Border>
+
+                <!-- LABELS LIST SECTION -->
+                <Border Grid.Row="2" Style="{StaticResource ModernCard}" 
+                        Padding="0" Margin="0">
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+                        
+                        <!-- Labels Header -->
+                        <TextBlock Grid.Row="0" Text="Image Labels" 
+                                   FontSize="13" FontWeight="SemiBold" 
+                                   Margin="12,12,12,8"/>
+                        
+                        <!-- Labels ListBox -->
+                        <ListBox Grid.Row="1" x:Name="LabelListBox" 
+                                 Style="{StaticResource ModernListBox}"
+                                 SelectionMode="Single" 
+                                 SelectionChanged="LabelListBox_SelectionChanged">
+                            <ListBox.ItemContainerStyle>
+                                <Style TargetType="ListBoxItem" 
+                                       BasedOn="{StaticResource ImageListItemStyle}"/>
+                            </ListBox.ItemContainerStyle>
+                        </ListBox>
+                    </Grid>
                 </Border>
             </Grid>
         </Border>
+
 
         <!-- Status Bar -->
         <Border Grid.Row="2" Grid.ColumnSpan="3" 
@@ -623,6 +783,7 @@
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
@@ -663,8 +824,38 @@
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
+                <!-- Middle: Current Class Display -->
+                <Border Grid.Column="1" 
+                        x:Name="CurrentClassBorder" 
+                        Background="#44E57373" 
+                        BorderBrush="#E57373" 
+                        BorderThickness="1"
+                        CornerRadius="10" 
+                        Padding="8,3"
+                        Margin="0,0,16,0">
+                    <StackPanel Orientation="Horizontal">
+                        <Border Width="3" 
+                                Height="12" 
+                                x:Name="CurrentClassColorIndicator" 
+                                Background="#E57373" 
+                                CornerRadius="2"
+                                Margin="0,0,6,0" 
+                                VerticalAlignment="Center"/>
+                        <TextBlock x:Name="CurrentClassNameText" 
+                                   Text="default" 
+                                   FontWeight="SemiBold" 
+                                   FontSize="10"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,4,0"/>
+                        <TextBlock Text="(active)" 
+                                   FontSize="9" 
+                                   VerticalAlignment="Center" 
+                                   Opacity="0.6"/>
+                    </StackPanel>
+                </Border>
+
                 <!-- Right side: Auto-save indicator -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
                     <Border Background="#4400BCD4"
                             CornerRadius="10"
                             Padding="8,3">
