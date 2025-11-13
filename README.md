@@ -4,7 +4,7 @@
 
 For non-WPF version you can build the legacy source or use v1.2.0 from releases - [Legacy branch](https://github.com/Babyhamsta/Yoable/tree/legacy).
 
-<img width="1107" height="714" alt="image" src="https://github.com/user-attachments/assets/bfea3510-7cd1-44f2-87ed-0674cf3d67ff" />
+<img width="1106" height="713" alt="image" src="https://github.com/user-attachments/assets/053aefe3-2188-4fb2-8050-f0bfcd61e2e7" />
 
 ## 🚀 Features
 
@@ -31,6 +31,7 @@ For non-WPF version you can build the legacy source or use v1.2.0 from releases 
 - Click **"Import Image"** or **"Import Directory"** to load images.
 - The images will appear in the **image list**.
 - Use the scroll wheel to navigate through the imported images.
+- Use Ctrl + Scroll Wheel to zoom in and out of an image.
 
 ### Applying Labels
 - **Manual Labeling**: Use the drawing tools to create bounding boxes.
@@ -41,11 +42,13 @@ For non-WPF version you can build the legacy source or use v1.2.0 from releases 
 - Click on a label to edit it.
 - Press **Delete** to remove selected labels.
 - Use arrow keys for precise label movement.
+- Use Ctrl + A to select all labels.
+- Use Ctrl + Z to undo deletes, moves, and ect.
+- Use Shift + Scroll Wheel to change classes on selected labels or while drawing a label.
 
 ### Importing & Exporting Labels
 - **Import Labels**: Load existing YOLO-format label files.
 - **Export Labels**: Save labeled data in YOLO format.
-- **Cloud Upload (Optional)**: When exporting, users are asked if they want to upload their dataset. This can be disabled in settings.
 
 ### Updating Yoable
 - Yoable automatically checks for updates.
