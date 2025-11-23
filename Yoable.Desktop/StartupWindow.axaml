@@ -1,0 +1,167 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        x:Class="Yoable.Desktop.StartupWindow"
+        xmlns:models="clr-namespace:Yoable.Models;assembly=Yoable"
+        Title="Yoable - Get Started"
+        Width="900" Height="650"
+        MinWidth="800" MinHeight="600"
+        WindowStartupLocation="CenterScreen"
+        CanResize="True">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+        <!-- Header Section -->
+        <Border Grid.Row="0" Padding="40,32" Background="#19FFFFFF">
+            <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="16">
+                    <!-- App Icon placeholder -->
+                    <Border Background="#FF9C27B0"
+                            Width="48" Height="48"
+                            CornerRadius="8"
+                            VerticalAlignment="Center">
+                        <TextBlock Text="Y"
+                                   FontSize="32"
+                                   FontWeight="Bold"
+                                   Foreground="White"
+                                   HorizontalAlignment="Center"
+                                   VerticalAlignment="Center"/>
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="Yoable"
+                                   FontSize="32"
+                                   FontWeight="Bold"/>
+                        <TextBlock Text="Object Detection Labeling Tool"
+                                   FontSize="14"
+                                   Foreground="Gray"/>
+                    </StackPanel>
+                </StackPanel>
+                <TextBlock Text="Version 3.0.1"
+                           FontSize="11"
+                           Foreground="Gray"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Main Content Area -->
+        <ScrollViewer Grid.Row="1" Padding="40,20">
+            <StackPanel Spacing="20">
+                <!-- Recent Projects Section -->
+                <StackPanel x:Name="RecentProjectsPanel" Spacing="16">
+                    <TextBlock Text="RECENT PROJECTS"
+                               FontSize="13"
+                               FontWeight="SemiBold"
+                               Foreground="Gray"/>
+
+                    <!-- Recent Projects List -->
+                    <ItemsControl x:Name="RecentProjectsList">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate DataType="models:RecentProjectInfo">
+                                <Border Background="#19FFFFFF"
+                                        CornerRadius="8"
+                                        Padding="20,16"
+                                        Margin="0,0,0,12"
+                                        Cursor="Hand">
+                                    <Border.Styles>
+                                        <Style Selector="Border:pointerover">
+                                            <Setter Property="Background" Value="#22FFFFFF"/>
+                                        </Style>
+                                    </Border.Styles>
+                                    <Grid ColumnDefinitions="Auto,*,Auto">
+                                        <!-- Project Icon -->
+                                        <Border Grid.Column="0"
+                                                Background="#4400BCD4"
+                                                CornerRadius="6"
+                                                Width="48" Height="48"
+                                                Margin="0,0,16,0">
+                                            <TextBlock Text="📁"
+                                                       FontSize="24"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"/>
+                                        </Border>
+
+                                        <!-- Project Info -->
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="4">
+                                            <TextBlock Text="{Binding ProjectName}"
+                                                       FontSize="16"
+                                                       FontWeight="SemiBold"/>
+                                            <TextBlock Text="{Binding ProjectPath}"
+                                                       FontSize="11"
+                                                       Foreground="Gray"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                            <TextBlock Text="{Binding LastOpenedText}"
+                                                       FontSize="11"
+                                                       Foreground="#00BCD4"/>
+                                        </StackPanel>
+
+                                        <!-- Arrow Icon -->
+                                        <TextBlock Grid.Column="2"
+                                                   Text="→"
+                                                   FontSize="20"
+                                                   Foreground="Gray"
+                                                   VerticalAlignment="Center"/>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Empty State -->
+                    <Border x:Name="EmptyStatePanel"
+                            BorderThickness="2"
+                            BorderBrush="#33FFFFFF"
+                            CornerRadius="8"
+                            Padding="32"
+                            IsVisible="False">
+                        <StackPanel HorizontalAlignment="Center" Spacing="16">
+                            <TextBlock Text="📂"
+                                       FontSize="48"
+                                       HorizontalAlignment="Center"
+                                       Opacity="0.5"/>
+                            <TextBlock Text="No recent projects"
+                                       FontSize="16"
+                                       Foreground="Gray"
+                                       HorizontalAlignment="Center"/>
+                            <TextBlock Text="Create a new project or open an existing one to get started"
+                                       FontSize="13"
+                                       Foreground="Gray"
+                                       HorizontalAlignment="Center"
+                                       TextWrapping="Wrap"
+                                       TextAlignment="Center"
+                                       Opacity="0.7"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Action Buttons -->
+                <Grid ColumnDefinitions="*,16,*" Margin="0,32,0,0">
+                    <Button Grid.Column="0"
+                            x:Name="NewProjectButton"
+                            Content="New Project"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Padding="32,16"
+                            FontSize="16"
+                            Classes="accent"/>
+
+                    <Button Grid.Column="2"
+                            x:Name="OpenProjectButton"
+                            Content="Open Project"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center"
+                            Padding="32,16"
+                            FontSize="16"/>
+                </Grid>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer -->
+        <Border Grid.Row="2"
+                Padding="40,16"
+                Background="#19FFFFFF"
+                BorderBrush="#0FFFFFFF"
+                BorderThickness="0,1,0,0">
+            <Button x:Name="ContinueWithoutProjectButton"
+                    Content="Continue Without Project"
+                    HorizontalAlignment="Left"
+                    Classes="transparent"/>
+        </Border>
+    </Grid>
+</Window>
