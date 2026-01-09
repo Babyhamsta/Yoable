@@ -18,18 +18,40 @@ This fork includes several important improvements and new features that enhance 
 
 #### ✨ New Features
 
-- **🗺️ Model Class Mapping** - Map model class IDs to your project's class IDs, allowing you to use pre-trained models with different class structures. You can also filter out unwanted classes by setting them to "nan (不檢測)".
-- **🌐 Multilingual Support** - Full UI translation support for **繁體中文 (Traditional Chinese)**, **简体中文 (Simplified Chinese)**, and **English (US)**. Switch languages on the fly without restarting the application.
+**🗺️ Model Class Mapping**
+- Map model class IDs to your project's class IDs, enabling seamless integration with pre-trained models that have different class structures
+- Filter out unwanted classes by setting them to "nan (不檢測)" during detection
+- Automatically detect custom class names from model metadata when available
+- Supports flexible class consolidation, allowing multiple model classes to map to a single project class
 
-#### 🐛 Bug Fixes & Stability
+**🌐 Multilingual Support**
+- Full UI translation support for **繁體中文 (Traditional Chinese)**, **简体中文 (Simplified Chinese)**, and **English (US)**
+- Dynamic language switching without requiring application restart
+- Persistent language preference saved in settings
+- Complete translation coverage for all menus, buttons, dialogs, and interface elements
 
-- **Filter Selection Crash Fix** - Fixed a critical bug that caused application crashes when switching between image filters. The fix ensures stable operation by properly managing event handlers during filter operations.
+#### 🐛 Bug Fixes & Stability Improvements
 
-#### 📝 Documentation
+**Filter Selection Crash Fix**
+- Resolved critical crash issue when switching between image filter options (All, Review, No Label, Verified)
+- Fixed event handler conflicts during filter operations by properly managing `SelectionChanged` event bindings
+- Improved selection state management to maintain proper item selection across filter changes
+- Enhanced stability during rapid filter switching operations
 
-- **Bilingual README** - Complete documentation in both English and Simplified Chinese for better accessibility.
+#### 📝 Documentation & User Experience
 
-These improvements make this fork more robust and user-friendly, especially for users working with different model architectures and multilingual environments.
+**Bilingual README**
+- Complete documentation in both English and Simplified Chinese
+- Comprehensive guides for all new features including class mapping and multilingual support
+- Detailed bug fix documentation with technical explanations
+- Improved accessibility for international users
+
+**Enhanced User Interface**
+- Better error handling and user feedback
+- Improved stability and reliability across all operations
+- Optimized performance for large image datasets
+
+These improvements make this fork more robust and user-friendly, especially for users working with different model architectures, multilingual environments, and complex annotation workflows.
 
 ### 🚀 Features
 
