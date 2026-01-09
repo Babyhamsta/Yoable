@@ -36,7 +36,10 @@ namespace YoableWPF
         {
             try
             {
-                // Remove old language resource dictionary from window if exists
+                // LanguageManager 已經將資源加載到 Application.Current.Resources 中
+                // 需要強制所有 DynamicResource 綁定重新評估
+                
+                // 移除窗口本地的語言資源字典（如果存在）
                 var languageDictToRemove = this.Resources.MergedDictionaries
                     .FirstOrDefault(d => d.Source != null && d.Source.ToString().Contains("Languages/Strings."));
                 
@@ -45,18 +48,21 @@ namespace YoableWPF
                     this.Resources.MergedDictionaries.Remove(languageDictToRemove);
                 }
 
-                // Add the current language resource dictionary
-                var assemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
-                var languageCode = LanguageManager.Instance.CurrentLanguage;
-                
-                var newLanguageDict = new ResourceDictionary();
-                var uri = new Uri($"/{assemblyName};component/Resources/Languages/Strings.{languageCode}.xaml", UriKind.Relative);
-                newLanguageDict.Source = uri;
-                this.Resources.MergedDictionaries.Add(newLanguageDict);
+                // 強制所有 DynamicResource 綁定重新查找資源
+                // 通過臨時移除並重新添加資源字典來觸發重新評估
+                var tempDict = new ResourceDictionary();
+                this.Resources.MergedDictionaries.Add(tempDict);
+                this.Resources.MergedDictionaries.Remove(tempDict);
 
-                // Force UI update
+                // 強制刷新所有使用 DynamicResource 的控件
                 this.InvalidateVisual();
                 this.UpdateLayout();
+                
+                // 手動更新窗口標題（因為 Title 綁定可能不會自動更新）
+                this.Title = LanguageManager.Instance.GetString("Settings_Title");
+                
+                // 強制更新所有文本控件
+                UpdateAllTextControls();
                 
                 // Update ensemble controls text if available
                 if (yoloAI != null)
@@ -67,6 +73,58 @@ namespace YoableWPF
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to reload language resources in SettingsWindow: {ex.Message}");
+            }
+        }
+
+        private void UpdateAllTextControls()
+        {
+            // 遞歸更新所有使用 DynamicResource 的控件
+            UpdateTextControlsRecursive(this);
+        }
+
+        private void UpdateTextControlsRecursive(DependencyObject obj)
+        {
+            if (obj == null) return;
+
+            try
+            {
+                // 強制所有可能的屬性重新評估 DynamicResource
+                if (obj is FrameworkElement fe)
+                {
+                    // 檢查常見的 DynamicResource 屬性
+                    var properties = new List<DependencyProperty>
+                    { 
+                        FrameworkElement.TagProperty,
+                        TextBlock.TextProperty
+                    };
+
+                    // 根據控件類型添加相應的屬性
+                    if (fe is ContentControl)
+                    {
+                        properties.Add(ContentControl.ContentProperty);
+                    }
+                    if (fe is HeaderedItemsControl)
+                    {
+                        properties.Add(HeaderedItemsControl.HeaderProperty);
+                    }
+
+                    foreach (var prop in properties)
+                    {
+                        if (fe.ReadLocalValue(prop) == DependencyProperty.UnsetValue)
+                        {
+                            // 可能是使用 DynamicResource，強制重新評估
+                            fe.InvalidateProperty(prop);
+                        }
+                    }
+                }
+            }
+            catch { }
+
+            // 遞歸處理子元素
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
+            {
+                var child = VisualTreeHelper.GetChild(obj, i);
+                UpdateTextControlsRecursive(child);
             }
         }
 

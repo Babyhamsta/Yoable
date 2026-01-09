@@ -15,6 +15,7 @@ namespace YoableWPF.Managers
         public static LanguageManager Instance => instance ??= new LanguageManager();
 
         private ResourceDictionary currentLanguageDictionary;
+        private ResourceDictionary currentIniOverrideDictionary; // 用於追蹤 INI 覆蓋資源字典
         private Dictionary<string, string> currentIniStrings; // 用於存儲從 INI 文件讀取的字符串
         private string currentLanguage = "en-US"; // 默認英文（硬編碼）
         private string langFolderPath;
@@ -133,12 +134,20 @@ namespace YoableWPF.Managers
         {
             try
             {
-                // 移除舊的語言資源
+                // 移除舊的語言資源（包括英文和 INI 覆蓋的資源）
                 if (currentLanguageDictionary != null)
                 {
                     Application.Current.Resources.MergedDictionaries.Remove(currentLanguageDictionary);
                     currentLanguageDictionary = null;
                 }
+                
+                // 移除之前添加的 INI 覆蓋資源字典
+                if (currentIniOverrideDictionary != null)
+                {
+                    Application.Current.Resources.MergedDictionaries.Remove(currentIniOverrideDictionary);
+                    currentIniOverrideDictionary = null;
+                }
+                
                 currentIniStrings = null;
 
                 // 英文：從 XAML 資源加載（硬編碼）
@@ -207,14 +216,27 @@ namespace YoableWPF.Managers
                 LoadEnglishFromXaml();
 
                 // 創建新的資源字典，覆蓋英文翻譯
-                var overrideDict = new ResourceDictionary();
+                currentIniOverrideDictionary = new ResourceDictionary();
                 foreach (var kvp in currentIniStrings)
                 {
-                    overrideDict[kvp.Key] = kvp.Value;
+                    currentIniOverrideDictionary[kvp.Key] = kvp.Value;
                 }
 
-                Application.Current.Resources.MergedDictionaries.Add(overrideDict);
-                System.Diagnostics.Debug.WriteLine($"Successfully loaded language {languageCode} from INI file");
+                // 將 INI 覆蓋字典添加到最後，確保它能覆蓋英文資源
+                Application.Current.Resources.MergedDictionaries.Add(currentIniOverrideDictionary);
+                
+                // 強制觸發資源更新通知（用於觸發 DynamicResource 重新評估）
+                Application.Current.Resources["LanguageUpdated"] = DateTime.Now.Ticks;
+                
+                System.Diagnostics.Debug.WriteLine($"Successfully loaded language {languageCode} from INI file with {currentIniStrings.Count} translations");
+                
+                // 驗證一些關鍵翻譯是否正確加載
+                var testKeys = new[] { "Settings_Title", "Menu_Project", "Common_OK" };
+                foreach (var testKey in testKeys)
+                {
+                    var testValue = GetString(testKey);
+                    System.Diagnostics.Debug.WriteLine($"Test translation for '{testKey}': '{testValue}' (expected non-English if loaded correctly)");
+                }
             }
             catch (Exception ex)
             {
@@ -259,8 +281,24 @@ namespace YoableWPF.Managers
                             // 支持轉義字符
                             value = value.Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t");
                             
-                            // 使用完整鍵名（Section_Key）
-                            var fullKey = string.IsNullOrEmpty(currentSection) ? key : $"{currentSection}_{key}";
+                            // 檢查鍵名是否已經包含區段前綴
+                            // 如果鍵名已經以 "區段名_" 開頭，就直接使用；否則添加區段前綴
+                            string fullKey;
+                            if (string.IsNullOrEmpty(currentSection))
+                            {
+                                fullKey = key;
+                            }
+                            else if (key.StartsWith($"{currentSection}_", StringComparison.OrdinalIgnoreCase))
+                            {
+                                // 鍵名已經包含區段前綴，直接使用
+                                fullKey = key;
+                            }
+                            else
+                            {
+                                // 添加區段前綴
+                                fullKey = $"{currentSection}_{key}";
+                            }
+                            
                             result[fullKey] = value;
                         }
                     }

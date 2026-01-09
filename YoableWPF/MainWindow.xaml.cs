@@ -102,7 +102,10 @@ namespace YoableWPF
         {
             try
             {
-                // Remove old language resource dictionary from window if exists
+                // LanguageManager 已經將資源加載到 Application.Current.Resources 中
+                // 需要強制所有 DynamicResource 綁定重新評估
+                
+                // 移除窗口本地的語言資源字典（如果存在）
                 var languageDictToRemove = this.Resources.MergedDictionaries
                     .FirstOrDefault(d => d.Source != null && d.Source.ToString().Contains("Languages/Strings."));
                 
@@ -111,25 +114,38 @@ namespace YoableWPF
                     this.Resources.MergedDictionaries.Remove(languageDictToRemove);
                 }
 
-                // Add the current language resource dictionary
-                var assemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
-                var languageCode = LanguageManager.Instance.CurrentLanguage;
-                
-                var newLanguageDict = new ResourceDictionary();
-                var uri = new Uri($"/{assemblyName};component/Resources/Languages/Strings.{languageCode}.xaml", UriKind.Relative);
-                newLanguageDict.Source = uri;
-                this.Resources.MergedDictionaries.Add(newLanguageDict);
+                // 強制所有 DynamicResource 綁定重新查找資源
+                // 通過臨時移除並重新添加資源字典來觸發重新評估
+                var tempDict = new ResourceDictionary();
+                this.Resources.MergedDictionaries.Add(tempDict);
+                this.Resources.MergedDictionaries.Remove(tempDict);
 
-                // Force UI update - this will cause DynamicResource bindings to re-evaluate
-                // Note: StaticResource bindings won't update automatically, they need to be DynamicResource
+                // 強制刷新所有使用 DynamicResource 的控件
                 this.InvalidateVisual();
                 this.UpdateLayout();
+                
+                // 手動更新窗口標題和動態文字
+                this.Title = LanguageManager.Instance.GetString("MainWindow_Title");
+                
+                // 更新項目名稱（如果項目已打開）
+                if (projectManager != null && projectManager.IsProjectOpen)
+                {
+                    ProjectNameText.Text = projectManager.CurrentProject.ProjectName;
+                }
+                else
+                {
+                    ProjectNameText.Text = LanguageManager.Instance.GetString("Status_NoProject");
+                }
+                
+                // 更新項目 UI（包括保存狀態）
+                UpdateProjectUI();
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Failed to reload language resources in MainWindow: {ex.Message}");
             }
         }
+
         #region Helper Methods
 
         /// <summary>
