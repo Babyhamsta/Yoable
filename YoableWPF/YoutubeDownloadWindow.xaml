@@ -1,0 +1,243 @@
+﻿<Window
+    x:Class="YoableWPF.YoutubeDownloadWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:ui="http://schemas.modernwpf.com/2019"
+    ui:WindowHelper.UseModernWindowStyle="True"
+    Title="YouTube Video Download"
+    Height="480"
+    Width="550"
+    WindowStartupLocation="CenterOwner"
+    ResizeMode="NoResize">
+
+    <Window.Resources>
+        <!-- Accent color for buttons (uses system accent) -->
+        <SolidColorBrush x:Key="AccentButtonBrush" Color="{DynamicResource SystemAccentColor}"/>
+
+        <!-- Modern Button Style -->
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource AccentButtonBrush}"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Secondary Button Style -->
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="16,8"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Setting Card Style -->
+        <Style x:Key="SettingCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
+            <Setter Property="CornerRadius" Value="6"/>
+            <Setter Property="Padding" Value="16"/>
+            <Setter Property="Margin" Value="0,0,0,16"/>
+        </Style>
+
+        <!-- Label Style -->
+        <Style x:Key="SettingLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+
+        <!-- Help Text Style -->
+        <Style x:Key="HelpText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="Gray"/>
+            <Setter Property="FontSize" Value="11"/>
+            <Setter Property="TextWrapping" Value="Wrap"/>
+            <Setter Property="Margin" Value="0,6,0,0"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header Section -->
+        <Border Grid.Row="0" 
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Padding="24,20">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock FontFamily="Segoe MDL2 Assets" 
+                               Text="&#xE714;" 
+                               FontSize="24"
+                               Foreground="#FFF44336"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"/>
+                    <TextBlock Text="YouTube Video Download" 
+                               FontSize="20" 
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Text="Download and extract frames from YouTube videos for labeling"
+                           Foreground="Gray"
+                           TextWrapping="Wrap"
+                           FontSize="13"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Content Area -->
+        <ScrollViewer Grid.Row="1" 
+                      VerticalScrollBarVisibility="Auto"
+                      Padding="24,20">
+            <StackPanel>
+                <!-- URL Input Card -->
+                <Border Style="{StaticResource SettingCard}">
+                    <StackPanel>
+                        <TextBlock Text="YouTube URL" Style="{StaticResource SettingLabel}"/>
+                        <TextBox x:Name="YoutubeUrlTextBox" 
+                                 FontSize="13"
+                                 Padding="8"/>
+                        <TextBlock Text="Enter the full YouTube video URL (e.g., https://youtube.com/watch?v=...)"
+                                   Style="{StaticResource HelpText}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- FPS Setting Card -->
+                <Border Style="{StaticResource SettingCard}">
+                    <StackPanel>
+                        <TextBlock Text="Frames Per Second to Capture" Style="{StaticResource SettingLabel}"/>
+                        <Grid Margin="0,8,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="50"/>
+                            </Grid.ColumnDefinitions>
+                            <Slider x:Name="FPSSlider" 
+                                    Minimum="1" 
+                                    Maximum="30"
+                                    Value="1"
+                                    TickFrequency="1"
+                                    TickPlacement="BottomRight"/>
+                            <TextBlock Grid.Column="1" 
+                                       Text="{Binding Value, ElementName=FPSSlider, StringFormat={}{0:0} fps}"
+                                       VerticalAlignment="Center"
+                                       HorizontalAlignment="Right"
+                                       FontSize="12"
+                                       FontWeight="SemiBold"/>
+                        </Grid>
+                        <TextBlock Text="Number of images to extract per second of video. Higher values create more images."
+                                   Style="{StaticResource HelpText}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Frame Size Card -->
+                <Border Style="{StaticResource SettingCard}">
+                    <StackPanel>
+                        <TextBlock Text="Frame Size" Style="{StaticResource SettingLabel}"/>
+                        <ComboBox x:Name="FrameSizeComboBox" 
+                                  SelectedIndex="3" 
+                                  FontSize="13"
+                                  Padding="8">
+                            <ComboBoxItem Content="256x256"/>
+                            <ComboBoxItem Content="416x416"/>
+                            <ComboBoxItem Content="512x512"/>
+                            <ComboBoxItem Content="640x640"/>
+                            <ComboBoxItem Content="1024x1024"/>
+                        </ComboBox>
+                        <TextBlock Text="Resolution for extracted frames. Use 640x640 for standard YOLO training."
+                                   Style="{StaticResource HelpText}"/>
+                    </StackPanel>
+                </Border>
+
+                <!-- Info Card -->
+                <Border Background="#4400BCD4"
+                        CornerRadius="6"
+                        Padding="16">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets"
+                                   Text="&#xE946;"
+                                   FontSize="16"
+                                   Foreground="#00BCD4"
+                                   VerticalAlignment="Center"
+                                   Margin="0,0,10,0"/>
+                        <TextBlock Text="Frames will be extracted, resized, and imported automatically into the image list."
+                                   Foreground="#007B8A"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer with Buttons -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                BorderThickness="0,1,0,0"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Padding="24,16">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="DownloadButton" 
+                        Content="Download" 
+                        Click="DownloadButton_Click"
+                        Style="{StaticResource ModernButton}"
+                        MinWidth="100"
+                        Margin="0,0,8,0"/>
+                <Button x:Name="CancelButton" 
+                        Content="Cancel" 
+                        Click="CancelButton_Click"
+                        Style="{StaticResource SecondaryButton}"
+                        MinWidth="80"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

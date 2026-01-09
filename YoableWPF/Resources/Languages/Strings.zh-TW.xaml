@@ -1,0 +1,154 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+    
+    <!-- 通用 -->
+    <system:String x:Key="Common_OK">確定</system:String>
+    <system:String x:Key="Common_Cancel">取消</system:String>
+    <system:String x:Key="Common_Save">保存</system:String>
+    <system:String x:Key="Common_Close">關閉</system:String>
+    <system:String x:Key="Common_Yes">是</system:String>
+    <system:String x:Key="Common_No">否</system:String>
+    
+    <!-- 主窗口 -->
+    <system:String x:Key="MainWindow_Title">Yoable</system:String>
+    
+    <!-- 設置窗口 -->
+    <system:String x:Key="Settings_Title">設置</system:String>
+    <system:String x:Key="Settings_General">常規</system:String>
+    <system:String x:Key="Settings_AI">AI &amp; 檢測</system:String>
+    <system:String x:Key="Settings_Performance">性能</system:String>
+    <system:String x:Key="Settings_UI">界面</system:String>
+    
+    <!-- UI 設置 -->
+    <system:String x:Key="UI_Language">語言</system:String>
+    <system:String x:Key="UI_Language_Description">選擇應用程序的顯示語言</system:String>
+    
+    <!-- Settings Window - Header -->
+    <system:String x:Key="Settings_Subtitle">配置 Yoable 以符合您的工作流程和偏好</system:String>
+    
+    <!-- Settings Window - General Tab -->
+    <system:String x:Key="Settings_Appearance">外觀</system:String>
+    <system:String x:Key="Settings_DarkMode">深色模式</system:String>
+    <system:String x:Key="Settings_AccentColor">強調色（十六進制）</system:String>
+    <system:String x:Key="Settings_AccentColor_Tooltip">輸入十六進制顏色值（例如：#FF0000 代表紅色）</system:String>
+    <system:String x:Key="Settings_AccentColor_Help">更改應用程序中使用的強調色</system:String>
+    <system:String x:Key="Settings_General_Section">常規</system:String>
+    <system:String x:Key="Settings_CheckUpdates">啟動時檢查更新</system:String>
+    <system:String x:Key="Settings_CheckUpdates_Tooltip">啟動 Yoable 時自動檢查新版本</system:String>
+    <system:String x:Key="Settings_Project_Section">專案</system:String>
+    <system:String x:Key="Settings_AutoSave">啟用自動儲存</system:String>
+    <system:String x:Key="Settings_AutoSave_Help">當偵測到變更時，每 2 分鐘自動儲存您的專案</system:String>
+    <system:String x:Key="Settings_Labels_Section">標籤</system:String>
+    <system:String x:Key="Settings_LabelColor">標籤顏色</system:String>
+    <system:String x:Key="Settings_LabelThickness">標籤粗細</system:String>
+    <system:String x:Key="Settings_Crosshair_Section">十字準線</system:String>
+    <system:String x:Key="Settings_EnableCrosshair">啟用十字準線</system:String>
+    <system:String x:Key="Settings_CrosshairColor">十字準線顏色</system:String>
+    <system:String x:Key="Settings_CrosshairSize">十字準線大小</system:String>
+    
+    <!-- Color Names -->
+    <system:String x:Key="Settings_Color_Red">紅色</system:String>
+    <system:String x:Key="Settings_Color_Green">綠色</system:String>
+    <system:String x:Key="Settings_Color_Blue">藍色</system:String>
+    <system:String x:Key="Settings_Color_Yellow">黃色</system:String>
+    <system:String x:Key="Settings_Color_White">白色</system:String>
+    <system:String x:Key="Settings_Color_Black">黑色</system:String>
+    <system:String x:Key="Settings_Color_Purple">紫色</system:String>
+    <system:String x:Key="Settings_Color_Orange">橙色</system:String>
+    
+    <!-- Settings Window - AI Tab -->
+    <system:String x:Key="Settings_Detection_Section">檢測</system:String>
+    <system:String x:Key="Settings_ProcessingDevice">處理裝置</system:String>
+    <system:String x:Key="Settings_Device_CPU">CPU</system:String>
+    <system:String x:Key="Settings_Device_GPU">GPU (CUDA)</system:String>
+    <system:String x:Key="Settings_ConfidenceThreshold">信心閾值</system:String>
+    <system:String x:Key="Settings_ConfidenceThreshold_Help">顯示 AI 檢測所需的最低信心值</system:String>
+    <system:String x:Key="Settings_EnsembleMode_Section">集成模式</system:String>
+    <system:String x:Key="Settings_NoModelsLoaded">未載入模型</system:String>
+    <system:String x:Key="Settings_ModelLoaded_Single">已載入 1 個模型（單一模型模式）</system:String>
+    <system:String x:Key="Settings_ModelLoaded_Ensemble">已載入 {0} 個模型（集成模式已啟用）</system:String>
+    <system:String x:Key="Settings_MinConsensus">所需最低共識</system:String>
+    <system:String x:Key="Settings_ConsensusIoU">共識 IoU 閾值</system:String>
+    <system:String x:Key="Settings_EnsembleIoU">最終集成 IoU 閾值</system:String>
+    <system:String x:Key="Settings_UseWeightedAverage">使用加權平均進行框合併</system:String>
+    <system:String x:Key="Settings_EnsembleInfo">當載入 2 個或更多 YOLO 模型時，集成模式會啟用。模型會對檢測結果進行投票以提高準確性。</system:String>
+    
+    <!-- Settings Window - Performance Tab -->
+    <system:String x:Key="Settings_LoadingProcessing_Section">載入與處理</system:String>
+    <system:String x:Key="Settings_UIBatchSize">UI 批次大小</system:String>
+    <system:String x:Key="Settings_UIBatchSize_Help">填充 UI 時一次載入的圖片數量</system:String>
+    <system:String x:Key="Settings_ProcessingBatchSize">檔案處理批次大小</system:String>
+    <system:String x:Key="Settings_ProcessingBatchSize_Help">操作期間每批次處理的檔案數量</system:String>
+    <system:String x:Key="Settings_LabelLoadBatchSize">標籤載入批次大小</system:String>
+    <system:String x:Key="Settings_LabelLoadBatchSize_Help">並行批次處理的標籤檔案數量（較高值 = 大型資料集處理更快）</system:String>
+    <system:String x:Key="Settings_EnableParallel">啟用並行處理</system:String>
+    <system:String x:Key="Settings_EnableParallel_Help">使用多個 CPU 核心以加快處理速度（建議）</system:String>
+    <system:String x:Key="Settings_PerformanceTip">較小的批次大小使用較少的記憶體，但可能較慢。如果您的 RAM 充足，可以增加此值。</system:String>
+    
+    <!-- Settings Window - UI Tab -->
+    <system:String x:Key="Settings_DisplayLanguage">顯示語言</system:String>
+    <system:String x:Key="Settings_Language_Description">選擇應用程序的顯示語言。變更將在重新啟動後生效。</system:String>
+    
+    <!-- Main Window - Menu -->
+    <system:String x:Key="Menu_Project">專案</system:String>
+    <system:String x:Key="Menu_Settings">設置</system:String>
+    <system:String x:Key="Menu_NewProject">新增專案...</system:String>
+    <system:String x:Key="Menu_OpenProject">開啟專案...</system:String>
+    <system:String x:Key="Menu_SaveProject">儲存專案</system:String>
+    <system:String x:Key="Menu_SaveProjectAs">另存專案為...</system:String>
+    <system:String x:Key="Menu_CloseProject">關閉專案</system:String>
+    <system:String x:Key="Menu_File">檔案</system:String>
+    <system:String x:Key="Menu_ImportDirectory">匯入目錄</system:String>
+    <system:String x:Key="Menu_ImportLabelsAndImage">匯入標籤與圖片</system:String>
+    <system:String x:Key="Menu_ImportImage">匯入圖片</system:String>
+    <system:String x:Key="Menu_ImportLabels">匯入標籤</system:String>
+    <system:String x:Key="Menu_YoutubeToImages">YouTube 轉圖片</system:String>
+    <system:String x:Key="Menu_ExportLabels">匯出標籤</system:String>
+    <system:String x:Key="Menu_ClearAll">清除全部</system:String>
+    <system:String x:Key="Menu_AI">AI</system:String>
+    <system:String x:Key="Menu_ManageModels">管理模型</system:String>
+    <system:String x:Key="Menu_AutoLabelImages">自動標籤圖片</system:String>
+    <system:String x:Key="Menu_AutoSuggestLabels">自動建議標籤</system:String>
+    
+    <!-- Main Window - Left Panel -->
+    <system:String x:Key="Main_Images">圖片</system:String>
+    <system:String x:Key="Main_Sort">排序</system:String>
+    <system:String x:Key="Main_SortByName">依名稱</system:String>
+    <system:String x:Key="Main_SortByStatus">依狀態</system:String>
+    <system:String x:Key="Main_Filter">篩選</system:String>
+    <system:String x:Key="Main_FilterAll">全部</system:String>
+    <system:String x:Key="Main_FilterReview">審查</system:String>
+    <system:String x:Key="Main_FilterNone">無</system:String>
+    <system:String x:Key="Main_FilterDone">已完成</system:String>
+    <system:String x:Key="Main_StatusReview">審查</system:String>
+    <system:String x:Key="Main_StatusNoLabel">無標籤</system:String>
+    <system:String x:Key="Main_StatusVerified">已驗證</system:String>
+    
+    <!-- Main Window - Right Panel -->
+    <system:String x:Key="Main_LabelsAndClasses">標籤與類別</system:String>
+    <system:String x:Key="Main_Classes">類別</system:String>
+    <system:String x:Key="Main_AddClass">新增類別</system:String>
+    <system:String x:Key="Main_Remove">移除</system:String>
+    <system:String x:Key="Main_ImageLabels">圖片標籤</system:String>
+    <system:String x:Key="Main_EditClass">編輯類別</system:String>
+    <system:String x:Key="Main_RemoveSelectedClass">移除選取的類別</system:String>
+    
+    <!-- Main Window - Status Bar -->
+    <system:String x:Key="Status_NoProject">無專案</system:String>
+    <system:String x:Key="Status_AllChangesSaved">所有變更已儲存</system:String>
+    <system:String x:Key="Status_UnsavedChanges">未儲存的變更</system:String>
+    <system:String x:Key="Status_NotSaved">未儲存</system:String>
+    <system:String x:Key="Status_NotSavedYet">尚未儲存</system:String>
+    <system:String x:Key="Status_SavedJustNow">剛剛儲存</system:String>
+    <system:String x:Key="Status_SavedSecondsAgo">{0} 秒前儲存</system:String>
+    <system:String x:Key="Status_SavedMinutesAgo">{0} 分鐘前儲存</system:String>
+    <system:String x:Key="Status_SavedHoursAgo">{0} 小時前儲存</system:String>
+    <system:String x:Key="Status_SavedOn">於 {0} 儲存</system:String>
+    <system:String x:Key="Status_Active">（使用中）</system:String>
+    <system:String x:Key="Status_AutoSaveEnabled">自動儲存已啟用</system:String>
+    <system:String x:Key="Status_AutoSaveDisabled">自動儲存已停用</system:String>
+    
+</ResourceDictionary>
+
+

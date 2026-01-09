@@ -1,0 +1,154 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+    
+    <!-- Common -->
+    <system:String x:Key="Common_OK">OK</system:String>
+    <system:String x:Key="Common_Cancel">Cancel</system:String>
+    <system:String x:Key="Common_Save">Save</system:String>
+    <system:String x:Key="Common_Close">Close</system:String>
+    <system:String x:Key="Common_Yes">Yes</system:String>
+    <system:String x:Key="Common_No">No</system:String>
+    
+    <!-- Main Window -->
+    <system:String x:Key="MainWindow_Title">Yoable</system:String>
+    
+    <!-- Settings Window -->
+    <system:String x:Key="Settings_Title">Settings</system:String>
+    <system:String x:Key="Settings_General">General</system:String>
+    <system:String x:Key="Settings_AI">AI &amp; Detection</system:String>
+    <system:String x:Key="Settings_Performance">Performance</system:String>
+    <system:String x:Key="Settings_UI">UI</system:String>
+    
+    <!-- UI Settings -->
+    <system:String x:Key="UI_Language">Language</system:String>
+    <system:String x:Key="UI_Language_Description">Select the display language for the application</system:String>
+    
+    <!-- Settings Window - Header -->
+    <system:String x:Key="Settings_Subtitle">Configure Yoable to match your workflow and preferences</system:String>
+    
+    <!-- Settings Window - General Tab -->
+    <system:String x:Key="Settings_Appearance">Appearance</system:String>
+    <system:String x:Key="Settings_DarkMode">Dark Mode</system:String>
+    <system:String x:Key="Settings_AccentColor">Accent Color (Hex)</system:String>
+    <system:String x:Key="Settings_AccentColor_Tooltip">Enter hex color value (e.g. #FF0000 for red)</system:String>
+    <system:String x:Key="Settings_AccentColor_Help">Changes the accent color used throughout the application</system:String>
+    <system:String x:Key="Settings_General_Section">General</system:String>
+    <system:String x:Key="Settings_CheckUpdates">Check for updates on launch</system:String>
+    <system:String x:Key="Settings_CheckUpdates_Tooltip">Automatically check for new versions when starting Yoable</system:String>
+    <system:String x:Key="Settings_Project_Section">Project</system:String>
+    <system:String x:Key="Settings_AutoSave">Enable Auto-Save</system:String>
+    <system:String x:Key="Settings_AutoSave_Help">Automatically save your project every 2 minutes when changes are detected</system:String>
+    <system:String x:Key="Settings_Labels_Section">Labels</system:String>
+    <system:String x:Key="Settings_LabelColor">Label Color</system:String>
+    <system:String x:Key="Settings_LabelThickness">Label Thickness</system:String>
+    <system:String x:Key="Settings_Crosshair_Section">Crosshair</system:String>
+    <system:String x:Key="Settings_EnableCrosshair">Enable Crosshair</system:String>
+    <system:String x:Key="Settings_CrosshairColor">Crosshair Color</system:String>
+    <system:String x:Key="Settings_CrosshairSize">Crosshair Size</system:String>
+    
+    <!-- Color Names -->
+    <system:String x:Key="Settings_Color_Red">Red</system:String>
+    <system:String x:Key="Settings_Color_Green">Green</system:String>
+    <system:String x:Key="Settings_Color_Blue">Blue</system:String>
+    <system:String x:Key="Settings_Color_Yellow">Yellow</system:String>
+    <system:String x:Key="Settings_Color_White">White</system:String>
+    <system:String x:Key="Settings_Color_Black">Black</system:String>
+    <system:String x:Key="Settings_Color_Purple">Purple</system:String>
+    <system:String x:Key="Settings_Color_Orange">Orange</system:String>
+    
+    <!-- Settings Window - AI Tab -->
+    <system:String x:Key="Settings_Detection_Section">Detection</system:String>
+    <system:String x:Key="Settings_ProcessingDevice">Processing Device</system:String>
+    <system:String x:Key="Settings_Device_CPU">CPU</system:String>
+    <system:String x:Key="Settings_Device_GPU">GPU (CUDA)</system:String>
+    <system:String x:Key="Settings_ConfidenceThreshold">Confidence Threshold</system:String>
+    <system:String x:Key="Settings_ConfidenceThreshold_Help">Minimum confidence required to display AI detections</system:String>
+    <system:String x:Key="Settings_EnsembleMode_Section">Ensemble Mode</system:String>
+    <system:String x:Key="Settings_NoModelsLoaded">No models loaded</system:String>
+    <system:String x:Key="Settings_ModelLoaded_Single">1 model loaded (single model mode)</system:String>
+    <system:String x:Key="Settings_ModelLoaded_Ensemble">{0} models loaded (ensemble mode active)</system:String>
+    <system:String x:Key="Settings_MinConsensus">Minimum Consensus Required</system:String>
+    <system:String x:Key="Settings_ConsensusIoU">Consensus IoU Threshold</system:String>
+    <system:String x:Key="Settings_EnsembleIoU">Final Ensemble IoU Threshold</system:String>
+    <system:String x:Key="Settings_UseWeightedAverage">Use Weighted Average for Box Merging</system:String>
+    <system:String x:Key="Settings_EnsembleInfo">Ensemble mode activates when 2 or more YOLO models are loaded. Models vote on detections for improved accuracy.</system:String>
+    
+    <!-- Settings Window - Performance Tab -->
+    <system:String x:Key="Settings_LoadingProcessing_Section">Loading &amp; Processing</system:String>
+    <system:String x:Key="Settings_UIBatchSize">UI Batch Size</system:String>
+    <system:String x:Key="Settings_UIBatchSize_Help">Number of images to load at once when populating the UI</system:String>
+    <system:String x:Key="Settings_ProcessingBatchSize">File Processing Batch Size</system:String>
+    <system:String x:Key="Settings_ProcessingBatchSize_Help">Number of files to process in each batch during operations</system:String>
+    <system:String x:Key="Settings_LabelLoadBatchSize">Label Loading Batch Size</system:String>
+    <system:String x:Key="Settings_LabelLoadBatchSize_Help">Number of label files to process in parallel batches (higher = faster for large datasets)</system:String>
+    <system:String x:Key="Settings_EnableParallel">Enable parallel processing</system:String>
+    <system:String x:Key="Settings_EnableParallel_Help">Use multiple CPU cores for faster processing (recommended)</system:String>
+    <system:String x:Key="Settings_PerformanceTip">Lower batch sizes use less memory but may be slower. Increase if you have plenty of RAM.</system:String>
+    
+    <!-- Settings Window - UI Tab -->
+    <system:String x:Key="Settings_DisplayLanguage">Display Language</system:String>
+    <system:String x:Key="Settings_Language_Description">Select the display language for the application. Changes will take effect after restart.</system:String>
+    
+    <!-- Main Window - Menu -->
+    <system:String x:Key="Menu_Project">Project</system:String>
+    <system:String x:Key="Menu_Settings">Settings</system:String>
+    <system:String x:Key="Menu_NewProject">New Project...</system:String>
+    <system:String x:Key="Menu_OpenProject">Open Project...</system:String>
+    <system:String x:Key="Menu_SaveProject">Save Project</system:String>
+    <system:String x:Key="Menu_SaveProjectAs">Save Project As...</system:String>
+    <system:String x:Key="Menu_CloseProject">Close Project</system:String>
+    <system:String x:Key="Menu_File">File</system:String>
+    <system:String x:Key="Menu_ImportDirectory">Import Directory</system:String>
+    <system:String x:Key="Menu_ImportLabelsAndImage">Import Labels&amp;Image</system:String>
+    <system:String x:Key="Menu_ImportImage">Import Image</system:String>
+    <system:String x:Key="Menu_ImportLabels">Import Labels</system:String>
+    <system:String x:Key="Menu_YoutubeToImages">Youtube To Images</system:String>
+    <system:String x:Key="Menu_ExportLabels">Export Labels</system:String>
+    <system:String x:Key="Menu_ClearAll">Clear All</system:String>
+    <system:String x:Key="Menu_AI">AI</system:String>
+    <system:String x:Key="Menu_ManageModels">Manage Models</system:String>
+    <system:String x:Key="Menu_AutoLabelImages">Auto Label Images</system:String>
+    <system:String x:Key="Menu_AutoSuggestLabels">Auto Suggest Labels</system:String>
+    
+    <!-- Main Window - Left Panel -->
+    <system:String x:Key="Main_Images">Images</system:String>
+    <system:String x:Key="Main_Sort">Sort</system:String>
+    <system:String x:Key="Main_SortByName">By Name</system:String>
+    <system:String x:Key="Main_SortByStatus">By Status</system:String>
+    <system:String x:Key="Main_Filter">Filter</system:String>
+    <system:String x:Key="Main_FilterAll">All</system:String>
+    <system:String x:Key="Main_FilterReview">Review</system:String>
+    <system:String x:Key="Main_FilterNone">None</system:String>
+    <system:String x:Key="Main_FilterDone">Done</system:String>
+    <system:String x:Key="Main_StatusReview">REVIEW</system:String>
+    <system:String x:Key="Main_StatusNoLabel">NO LABEL</system:String>
+    <system:String x:Key="Main_StatusVerified">VERIFIED</system:String>
+    
+    <!-- Main Window - Right Panel -->
+    <system:String x:Key="Main_LabelsAndClasses">Labels &amp; Classes</system:String>
+    <system:String x:Key="Main_Classes">Classes</system:String>
+    <system:String x:Key="Main_AddClass">Add Class</system:String>
+    <system:String x:Key="Main_Remove">Remove</system:String>
+    <system:String x:Key="Main_ImageLabels">Image Labels</system:String>
+    <system:String x:Key="Main_EditClass">Edit class</system:String>
+    <system:String x:Key="Main_RemoveSelectedClass">Remove selected class</system:String>
+    
+    <!-- Main Window - Status Bar -->
+    <system:String x:Key="Status_NoProject">No Project</system:String>
+    <system:String x:Key="Status_AllChangesSaved">All changes saved</system:String>
+    <system:String x:Key="Status_UnsavedChanges">Unsaved changes</system:String>
+    <system:String x:Key="Status_NotSaved">Not saved</system:String>
+    <system:String x:Key="Status_NotSavedYet">Not saved yet</system:String>
+    <system:String x:Key="Status_SavedJustNow">Saved just now</system:String>
+    <system:String x:Key="Status_SavedSecondsAgo">Saved {0} seconds ago</system:String>
+    <system:String x:Key="Status_SavedMinutesAgo">Saved {0} minutes ago</system:String>
+    <system:String x:Key="Status_SavedHoursAgo">Saved {0} hours ago</system:String>
+    <system:String x:Key="Status_SavedOn">Saved on {0}</system:String>
+    <system:String x:Key="Status_Active">(active)</system:String>
+    <system:String x:Key="Status_AutoSaveEnabled">Auto-save enabled</system:String>
+    <system:String x:Key="Status_AutoSaveDisabled">Auto-save disabled</system:String>
+    
+</ResourceDictionary>
+
+
