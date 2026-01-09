@@ -24,6 +24,22 @@
     <system:String x:Key="UI_Language">Language</system:String>
     <system:String x:Key="UI_Language_Description">Select the display language for the application. Changes will take effect after restart.</system:String>
     
+    <!-- Keyboard Shortcuts -->
+    <system:String x:Key="Settings_Shortcuts">Shortcuts</system:String>
+    <system:String x:Key="Settings_KeyboardShortcuts">Keyboard Shortcuts</system:String>
+    <system:String x:Key="Settings_ProjectShortcuts">Project Shortcuts</system:String>
+    <system:String x:Key="Settings_ImageNavigationShortcuts">Image Navigation</system:String>
+    <system:String x:Key="Settings_LabelMovementShortcuts">Label Movement</system:String>
+    <system:String x:Key="Settings_Hotkey_SaveProject">Save Project</system:String>
+    <system:String x:Key="Settings_Hotkey_PreviousImage">Previous Image</system:String>
+    <system:String x:Key="Settings_Hotkey_NextImage">Next Image</system:String>
+    <system:String x:Key="Settings_Hotkey_MoveLabelUp">Move Label Up</system:String>
+    <system:String x:Key="Settings_Hotkey_MoveLabelDown">Move Label Down</system:String>
+    <system:String x:Key="Settings_Hotkey_MoveLabelLeft">Move Label Left</system:String>
+    <system:String x:Key="Settings_Hotkey_MoveLabelRight">Move Label Right</system:String>
+    <system:String x:Key="Settings_Hotkey_Clear">Clear</system:String>
+    <system:String x:Key="Settings_Hotkey_Description">Click the button and press the key combination you want to use as a shortcut. Press Escape to cancel.</system:String>
+    
     <!-- Settings Window - Header -->
     <system:String x:Key="Settings_Subtitle">Configure Yoable to match your workflow and preferences.</system:String>
     
@@ -68,6 +84,9 @@
     <system:String x:Key="Settings_NoModelsLoaded">No models loaded</system:String>
     <system:String x:Key="Settings_ModelLoaded_Single">1 model loaded (single model mode)</system:String>
     <system:String x:Key="Settings_ModelLoaded_Ensemble">{0} models loaded (ensemble mode active)</system:String>
+    <system:String x:Key="Settings_DetectionMode">Detection Mode</system:String>
+    <system:String x:Key="Settings_DetectionMode_Voting">Voting Mode (requires consensus from multiple models)</system:String>
+    <system:String x:Key="Settings_DetectionMode_Union">Union Mode (any model detection is marked)</system:String>
     <system:String x:Key="Settings_MinConsensus">Minimum Consensus Required</system:String>
     <system:String x:Key="Settings_ConsensusIoU">Consensus IoU Threshold</system:String>
     <system:String x:Key="Settings_EnsembleIoU">Final Ensemble IoU Threshold</system:String>
@@ -121,6 +140,7 @@
     <system:String x:Key="Main_FilterReview">Review</system:String>
     <system:String x:Key="Main_FilterNone">None</system:String>
     <system:String x:Key="Main_FilterDone">Done</system:String>
+    <system:String x:Key="Main_FilterByClass">Filter by Class</system:String>
     <system:String x:Key="Main_StatusReview">REVIEW</system:String>
     <system:String x:Key="Main_StatusNoLabel">NO LABEL</system:String>
     <system:String x:Key="Main_StatusVerified">VERIFIED</system:String>
@@ -131,8 +151,15 @@
     <system:String x:Key="Main_AddClass">Add Class</system:String>
     <system:String x:Key="Main_Remove">Remove</system:String>
     <system:String x:Key="Main_ImageLabels">Image Labels</system:String>
+    <system:String x:Key="Main_ClearImageClasses">Clear Image Classes</system:String>
     <system:String x:Key="Main_EditClass">Edit class</system:String>
     <system:String x:Key="Main_RemoveSelectedClass">Remove selected class</system:String>
+    <system:String x:Key="Main_NoImageSelected">No image selected.</system:String>
+    <system:String x:Key="Main_NoLabelsToClear">No labels to clear.</system:String>
+    <system:String x:Key="Main_ConfirmClearLabels">Are you sure you want to clear all {0} label(s) from this image?</system:String>
+    <system:String x:Key="Main_ConfirmClear">Confirm Clear</system:String>
+    <system:String x:Key="Main_Error">Error</system:String>
+    <system:String x:Key="Main_Information">Information</system:String>
     
     <!-- Main Window - Status Bar -->
     <system:String x:Key="Status_NoProject">No Project</system:String>
@@ -165,6 +192,40 @@
     <system:String x:Key="Mapping_LoadSuccessTitle">Load Successful</system:String>
     <system:String x:Key="Mapping_LoadError">An error occurred while loading the class file:&#x0a;{0}</system:String>
     <system:String x:Key="Mapping_NotDetected">nan (not detected)</system:String>
+    
+    <!-- Model Manager Dialog -->
+    <system:String x:Key="ModelManager_Title">YOLO Model Manager</system:String>
+    <system:String x:Key="ModelManager_NoModelsLoaded">No models loaded yet. Click 'Add Model' to load your first YOLO model.</system:String>
+    <system:String x:Key="ModelManager_OneModelLoaded">1 model loaded. Add more models to enable ensemble detection.</system:String>
+    <system:String x:Key="ModelManager_MultipleModelsLoaded">{0} models loaded for ensemble detection.</system:String>
+    <system:String x:Key="ModelManager_WarningMessage">Each additional model increases processing time. GPU recommended for 3+ models.</system:String>
+    <system:String x:Key="ModelManager_AddModel">Add Model</system:String>
+    <system:String x:Key="ModelManager_EditMapping">Edit Mapping</system:String>
+    <system:String x:Key="ModelManager_Remove">Remove</system:String>
+    <system:String x:Key="ModelManager_ClearAll">Clear All</system:String>
+    <system:String x:Key="ModelManager_SelectModel">Select YOLO ONNX Model</system:String>
+    <system:String x:Key="ModelManager_ConfirmClearAll">Remove all loaded models?</system:String>
+    <system:String x:Key="ModelManager_ClearModels">Clear Models</system:String>
+    <system:String x:Key="ModelManager_NeedProjectClasses">Please create classes in the project first, then configure model class mapping.&#x0a;&#x0a;You can add classes in the 'Classes' area on the right panel.</system:String>
+    <system:String x:Key="ModelManager_NeedProjectClassesTitle">Project Classes Required</system:String>
+    
+    <!-- Import Labels and Image Dialog -->
+    <system:String x:Key="Dialog_ImportLabelsAndImage_Title">Import Labels &amp; Images</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_Description">Select image and label folders to import into the project</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_ImagesFolder">Images Folder</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_LabelsFolder">Labels Folder</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_Browse">Browse</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_NotSelected">Not selected</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_ImagesNotSelected">Images folder not selected</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_ImagesSelected">Images folder selected</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_LabelsNotSelected">Labels folder not selected</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_LabelsSelected">Labels folder selected</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_Confirm">Confirm</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_SelectImagesFolder">Select Images Folder</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_SelectLabelsFolder">Select Labels Folder</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_InvalidPath">Invalid folder path.</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_InvalidImagesPath">Please select a valid images folder.</system:String>
+    <system:String x:Key="Dialog_ImportLabelsAndImage_InvalidLabelsPath">Please select a valid labels folder.</system:String>
     
 </ResourceDictionary>
 

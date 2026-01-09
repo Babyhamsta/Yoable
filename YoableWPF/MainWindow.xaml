@@ -196,7 +196,7 @@
                 </MenuItem>
                 <MenuItem Header="{DynamicResource Menu_ImportLabelsAndImage}" Click="ImportLabelsAndImage_Click">
                     <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8B7;" FontSize="16" Foreground="#FF9C27B0"/>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A5;" FontSize="16" Foreground="#FF00BCD4"/>
                     </MenuItem.Icon>
                 </MenuItem>
                 <MenuItem Header="{DynamicResource Menu_ImportImage}" Click="ImportImage_Click">
@@ -282,6 +282,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
@@ -410,6 +411,35 @@
                                         BorderThickness="0"/>
                             </Grid>
                         </Grid>
+
+                        <!-- Class Filter Expander -->
+                        <Expander Grid.Row="3" 
+                                  x:Name="ClassFilterExpander"
+                                  Header="{DynamicResource Main_FilterByClass}"
+                                  Margin="0,8,0,0"
+                                  IsExpanded="False">
+                            <Expander.HeaderTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" 
+                                                   Text="&#xE8C8;" 
+                                                   FontSize="12"
+                                                   Foreground="#FF9C27B0"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,6,0"/>
+                                        <TextBlock Text="{Binding}" 
+                                                   FontSize="11" 
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </Expander.HeaderTemplate>
+                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0">
+                                <StackPanel x:Name="ClassFilterCheckBoxPanel" Orientation="Vertical">
+                                    <!-- Checkboxes will be added dynamically -->
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Expander>
                     </Grid>
                 </Border>
 
@@ -758,9 +788,26 @@
                         </Grid.RowDefinitions>
                         
                         <!-- Labels Header -->
-                        <TextBlock Grid.Row="0" Text="{DynamicResource Main_ImageLabels}" 
-                                   FontSize="13" FontWeight="SemiBold" 
-                                   Margin="12,12,12,8"/>
+                        <Grid Grid.Row="0" Margin="12,12,12,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{DynamicResource Main_ImageLabels}" 
+                                       FontSize="13" FontWeight="SemiBold" 
+                                       VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" 
+                                    x:Name="ClearImageClassesButton"
+                                    Content="{DynamicResource Main_ClearImageClasses}"
+                                    Click="ClearImageClasses_Click"
+                                    Padding="8,6"
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Center">
+                                <Button.ToolTip>
+                                    <ToolTip Content="{DynamicResource Main_ClearImageClasses}"/>
+                                </Button.ToolTip>
+                            </Button>
+                        </Grid>
                         
                         <!-- Labels ListBox -->
                         <ListBox Grid.Row="1" x:Name="LabelListBox" 

@@ -56,6 +56,8 @@ namespace YoableWPF.Models
         public string CurrentFilterMode { get; set; } = "All";
 
         // Model configurations
+        // List of loaded model paths
+        public List<string> LoadedModelPaths { get; set; } = new List<string>();
         // Key: model path, Value: class mapping (Model Class ID -> Project Class ID)
         public Dictionary<string, Dictionary<int, int>> ModelClassMappings { get; set; } = new Dictionary<string, Dictionary<int, int>>();
 

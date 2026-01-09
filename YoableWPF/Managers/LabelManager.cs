@@ -524,11 +524,33 @@ namespace YoableWPF.Managers
             }, cancellationToken);
         }
 
-        // For AI labels
+        // 計算兩個矩形框的 IoU
+        private double ComputeIoU(Rect rect1, Rect rect2)
+        {
+            double x1 = Math.Max(rect1.Left, rect2.Left);
+            double y1 = Math.Max(rect1.Top, rect2.Top);
+            double x2 = Math.Min(rect1.Right, rect2.Right);
+            double y2 = Math.Min(rect1.Bottom, rect2.Bottom);
+
+            double intersectionWidth = Math.Max(0, x2 - x1);
+            double intersectionHeight = Math.Max(0, y2 - y1);
+            double intersectionArea = intersectionWidth * intersectionHeight;
+
+            double area1 = rect1.Width * rect1.Height;
+            double area2 = rect2.Width * rect2.Height;
+            double unionArea = area1 + area2 - intersectionArea;
+
+            return unionArea == 0 ? 0 : intersectionArea / unionArea;
+        }
+
+        // For AI labels - 合併現有標記
         public void AddAILabels(string fileName, List<(Rectangle box, int classId)> detectedBoxes)
         {
             if (!labelStorage.ContainsKey(fileName))
                 labelStorage.TryAdd(fileName, new List<LabelData>());
+
+            var existingLabels = labelStorage[fileName].ToList();
+            float mergeIoUThreshold = Properties.Settings.Default.EnsembleIoUThreshold;
 
             foreach (var detection in detectedBoxes)
             {
@@ -545,20 +567,45 @@ namespace YoableWPF.Managers
                     classId = defaultClassId;
                 }
 
-                var labelCount = labelStorage[fileName].Count + 1;
-                var label = new LabelData($"AI Label {labelCount}", 
-                    new Rect(detection.box.X, detection.box.Y, detection.box.Width, detection.box.Height),
-                    classId);
-
-                labelStorage.AddOrUpdate(
-                    fileName,
-                    new List<LabelData> { label },
-                    (k, existing) =>
+                var newRect = new Rect(detection.box.X, detection.box.Y, detection.box.Width, detection.box.Height);
+                
+                // 檢查是否與現有標記重疊
+                bool merged = false;
+                for (int i = 0; i < existingLabels.Count; i++)
+                {
+                    double iou = ComputeIoU(newRect, existingLabels[i].Rect);
+                    if (iou >= mergeIoUThreshold)
                     {
-                        existing.Add(label);
-                        return existing;
-                    });
+                        // 合併標記：使用較大的矩形框
+                        var existingRect = existingLabels[i].Rect;
+                        var mergedRect = new Rect(
+                            Math.Min(newRect.Left, existingRect.Left),
+                            Math.Min(newRect.Top, existingRect.Top),
+                            Math.Max(newRect.Right, existingRect.Right) - Math.Min(newRect.Left, existingRect.Left),
+                            Math.Max(newRect.Bottom, existingRect.Bottom) - Math.Min(newRect.Top, existingRect.Top)
+                        );
+                        
+                        // 更新現有標記
+                        existingLabels[i] = new LabelData(existingLabels[i].Name, mergedRect, existingLabels[i].ClassId);
+                        merged = true;
+                        break;
+                    }
+                }
+
+                // 如果沒有合併，添加新標記
+                if (!merged)
+                {
+                    var labelCount = existingLabels.Count + 1;
+                    var label = new LabelData($"AI Label {labelCount}", newRect, classId);
+                    existingLabels.Add(label);
+                }
             }
+
+            // 更新存儲
+            labelStorage.AddOrUpdate(
+                fileName,
+                existingLabels,
+                (k, existing) => existingLabels);
         }
     }
 }

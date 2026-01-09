@@ -30,6 +30,7 @@ namespace YoableWPF
         public YoloAI yoloAI;
         public OverlayManager overlayManager;
         private YoutubeDownloader youtubeDownloader;
+        private HotkeyManager hotkeyManager;
 
         public MainWindow()
         {
@@ -70,6 +71,10 @@ namespace YoableWPF
             yoloAI = new YoloAI();
             overlayManager = new OverlayManager(this);
             youtubeDownloader = new YoutubeDownloader(this, overlayManager);
+            hotkeyManager = new HotkeyManager();
+            
+            // Load hotkey settings
+            LoadHotkeys();
 
             // Subscribe to class changes from DrawingCanvas
             drawingCanvas.CurrentClassChanged += DrawingCanvas_CurrentClassChanged;
@@ -913,6 +918,80 @@ namespace YoableWPF
             drawingCanvas.InvalidateVisual();
         }
 
+        /// <summary>
+        /// Clears all labels (classes) from the current image
+        /// </summary>
+        private void ClearImageClasses_Click(object sender, RoutedEventArgs e)
+        {
+            // Check if there's a current image
+            if (string.IsNullOrEmpty(imageManager.CurrentImagePath))
+            {
+                MessageBox.Show(
+                    LanguageManager.Instance.GetString("Main_NoImageSelected") ?? "No image selected.",
+                    LanguageManager.Instance.GetString("Main_Error") ?? "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            // Check if there are any labels to clear
+            if (drawingCanvas.Labels == null || drawingCanvas.Labels.Count == 0)
+            {
+                MessageBox.Show(
+                    LanguageManager.Instance.GetString("Main_NoLabelsToClear") ?? "No labels to clear.",
+                    LanguageManager.Instance.GetString("Main_Information") ?? "Information",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            // Confirm with user
+            string confirmMessage = LanguageManager.Instance.GetString("Main_ConfirmClearLabels");
+            if (string.IsNullOrEmpty(confirmMessage))
+            {
+                confirmMessage = $"Are you sure you want to clear all {drawingCanvas.Labels.Count} label(s) from this image?";
+            }
+            else
+            {
+                confirmMessage = string.Format(confirmMessage, drawingCanvas.Labels.Count);
+            }
+            
+            var result = MessageBox.Show(
+                confirmMessage,
+                LanguageManager.Instance.GetString("Main_ConfirmClear") ?? "Confirm Clear",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            // Get current image filename
+            string currentFileName = imageManager.CurrentImagePath;
+            if (currentFileName.Contains("\\") || currentFileName.Contains("/"))
+            {
+                currentFileName = Path.GetFileName(currentFileName);
+            }
+
+            // Clear all labels from canvas
+            drawingCanvas.Labels.Clear();
+            drawingCanvas.SelectedLabel = null;
+            drawingCanvas.SelectedLabels.Clear();
+
+            // Clear labels from storage
+            labelManager.SaveLabels(currentFileName, drawingCanvas.Labels);
+
+            // Update image status
+            UpdateImageStatus(currentFileName);
+
+            // Update UI
+            uiStateManager.UpdateStatusCounts();
+            uiStateManager.RefreshLabelList();
+            drawingCanvas.InvalidateVisual();
+
+            // Mark project as modified
+            MarkProjectDirty();
+        }
+
         private void ImportDirectory_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog
@@ -944,68 +1023,17 @@ namespace YoableWPF
 
         private async void ImportLabelsAndImage_Click(object sender, RoutedEventArgs e)
         {
-            // Step 1: Select Images folder
-            OpenFileDialog imageDialog = new OpenFileDialog
-            {
-                ValidateNames = false,
-                CheckFileExists = false,
-                CheckPathExists = true,
-                FileName = "Select Images Folder",
-                Title = "選擇圖片資料夾"
-            };
+            // Show dialog for selecting folders
+            var dialog = new ImportLabelsAndImageDialog();
+            dialog.Owner = this;
 
-            // Set initial directory to last used location
-            if (!string.IsNullOrEmpty(Properties.Settings.Default.LastImageDirectory) &&
-                Directory.Exists(Properties.Settings.Default.LastImageDirectory))
-            {
-                imageDialog.InitialDirectory = Properties.Settings.Default.LastImageDirectory;
-            }
-
-            if (imageDialog.ShowDialog() != true)
+            if (dialog.ShowDialog() != true)
             {
                 return; // User cancelled
             }
 
-            string imagesFolderPath = Path.GetDirectoryName(imageDialog.FileName);
-            if (string.IsNullOrEmpty(imagesFolderPath) || !Directory.Exists(imagesFolderPath))
-            {
-                MessageBox.Show("無效的圖片資料夾路徑。", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
-            // Step 2: Select Labels folder
-            OpenFileDialog labelDialog = new OpenFileDialog
-            {
-                ValidateNames = false,
-                CheckFileExists = false,
-                CheckPathExists = true,
-                FileName = "Select Labels Folder",
-                Title = "選擇標籤資料夾"
-            };
-
-            // Set initial directory to last used location
-            if (!string.IsNullOrEmpty(Properties.Settings.Default.LastLabelDirectory) &&
-                Directory.Exists(Properties.Settings.Default.LastLabelDirectory))
-            {
-                labelDialog.InitialDirectory = Properties.Settings.Default.LastLabelDirectory;
-            }
-
-            if (labelDialog.ShowDialog() != true)
-            {
-                return; // User cancelled
-            }
-
-            string labelsFolderPath = Path.GetDirectoryName(labelDialog.FileName);
-            if (string.IsNullOrEmpty(labelsFolderPath) || !Directory.Exists(labelsFolderPath))
-            {
-                MessageBox.Show("無效的標籤資料夾路徑。", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
-                return;
-            }
-
-            // Save directories for next time
-            Properties.Settings.Default.LastImageDirectory = imagesFolderPath;
-            Properties.Settings.Default.LastLabelDirectory = labelsFolderPath;
-            Properties.Settings.Default.Save();
+            string imagesFolderPath = dialog.ImagesFolderPath;
+            string labelsFolderPath = dialog.LabelsFolderPath;
 
             // Step 3: Load images first
             var tokenSource = new CancellationTokenSource();
@@ -1277,12 +1305,11 @@ namespace YoableWPF
 
                     using Bitmap image = new Bitmap(imagePath.Path);
                     string fileName = Path.GetFileName(imagePath.Path);
-                    System.Collections.Generic.List<Rectangle> detectedBoxes = yoloAI.RunInference(image);
-
-                    // Convert to (Rectangle, ClassId) format - default to class 0
-                    var boxesWithClasses = detectedBoxes.Select(box => (box, 0)).ToList();
+                    
+                    // 使用帶有 ClassId 的推理方法
+                    var boxesWithClasses = yoloAI.RunInferenceWithClasses(image);
                     labelManager.AddAILabels(fileName, boxesWithClasses);
-                    totalDetections += detectedBoxes.Count;
+                    totalDetections += boxesWithClasses.Count;
 
                     // Only update UI if this is the current image
                     Dispatcher.Invoke(() =>
@@ -1649,35 +1676,186 @@ namespace YoableWPF
             }, System.Windows.Threading.DispatcherPriority.Render);
         }
 
+        private void LoadHotkeys()
+        {
+            if (hotkeyManager == null) return;
+
+            hotkeyManager.RegisterHotkey("SaveProject", Properties.Settings.Default.Hotkey_SaveProject ?? "Ctrl + S");
+            hotkeyManager.RegisterHotkey("PreviousImage", Properties.Settings.Default.Hotkey_PreviousImage ?? "A");
+            hotkeyManager.RegisterHotkey("NextImage", Properties.Settings.Default.Hotkey_NextImage ?? "D");
+            hotkeyManager.RegisterHotkey("MoveLabelUp", Properties.Settings.Default.Hotkey_MoveLabelUp ?? "Up");
+            hotkeyManager.RegisterHotkey("MoveLabelDown", Properties.Settings.Default.Hotkey_MoveLabelDown ?? "Down");
+            hotkeyManager.RegisterHotkey("MoveLabelLeft", Properties.Settings.Default.Hotkey_MoveLabelLeft ?? "Left");
+            hotkeyManager.RegisterHotkey("MoveLabelRight", Properties.Settings.Default.Hotkey_MoveLabelRight ?? "Right");
+        }
+
         private async void Window_KeyDown(object sender, KeyEventArgs e)
         {
-            // Handle Ctrl+S for save
-            if ((Keyboard.Modifiers & ModifierKeys.Control) == ModifierKeys.Control && e.Key == Key.S)
-            {
-                SaveProject_Click(sender, e);
-                e.Handled = true;
-                return;
-            }
-
+            // KeyDown is handled in OnPreviewKeyDown for better event routing
             OnPreviewKeyDown(e);
+        }
+
+        private bool IsInputControlFocused()
+        {
+            // Check if any input control has focus
+            var focusedElement = Keyboard.FocusedElement;
+            return focusedElement is System.Windows.Controls.TextBox ||
+                   focusedElement is System.Windows.Controls.RichTextBox ||
+                   focusedElement is System.Windows.Controls.PasswordBox ||
+                   focusedElement is System.Windows.Controls.ComboBox;
+        }
+
+        private void NavigateToPreviousImage()
+        {
+            if (ImageListBox.Items.Count == 0) return;
+
+            int currentIndex = ImageListBox.SelectedIndex;
+            if (currentIndex > 0)
+            {
+                ImageListBox.SelectedIndex = currentIndex - 1;
+                ImageListBox.ScrollIntoView(ImageListBox.SelectedItem);
+            }
+        }
+
+        private void NavigateToNextImage()
+        {
+            if (ImageListBox.Items.Count == 0) return;
+
+            int currentIndex = ImageListBox.SelectedIndex;
+            if (currentIndex < ImageListBox.Items.Count - 1)
+            {
+                ImageListBox.SelectedIndex = currentIndex + 1;
+                ImageListBox.ScrollIntoView(ImageListBox.SelectedItem);
+            }
+        }
+
+        private void MoveSelectedLabel(double deltaX, double deltaY)
+        {
+            if (drawingCanvas.SelectedLabel != null)
+            {
+                var rect = drawingCanvas.SelectedLabel.Rect;
+                drawingCanvas.SelectedLabel.Rect = new Rect(
+                    rect.X + deltaX,
+                    rect.Y + deltaY,
+                    rect.Width,
+                    rect.Height
+                );
+
+                // Also move all selected labels if multi-selection
+                if (drawingCanvas.SelectedLabels.Count > 1)
+                {
+                    foreach (var label in drawingCanvas.SelectedLabels)
+                    {
+                        if (label != drawingCanvas.SelectedLabel)
+                        {
+                            var labelRect = label.Rect;
+                            label.Rect = new Rect(
+                                labelRect.X + deltaX,
+                                labelRect.Y + deltaY,
+                                labelRect.Width,
+                                labelRect.Height
+                            );
+                        }
+                    }
+                }
+            }
         }
 
         protected override void OnPreviewKeyDown(KeyEventArgs e)
         {
             base.OnPreviewKeyDown(e);
 
+            // Handle custom hotkeys first (before other handlers)
+            if (hotkeyManager != null && !IsInputControlFocused())
+            {
+                // Save Project (always available, but check if input control is focused)
+                if (hotkeyManager.IsHotkeyPressed("SaveProject", e))
+                {
+                    SaveProject_Click(this, e);
+                    e.Handled = true;
+                    return;
+                }
+
+                // Image Navigation (only when canvas doesn't have focus or when not editing)
+                if (!drawingCanvas.IsFocused || (drawingCanvas.SelectedLabel == null && drawingCanvas.SelectedLabels.Count == 0))
+                {
+                    if (hotkeyManager.IsHotkeyPressed("PreviousImage", e))
+                    {
+                        NavigateToPreviousImage();
+                        e.Handled = true;
+                        return;
+                    }
+
+                    if (hotkeyManager.IsHotkeyPressed("NextImage", e))
+                    {
+                        NavigateToNextImage();
+                        e.Handled = true;
+                        return;
+                    }
+                }
+
+                // Label Movement (when label is selected, allow custom hotkeys even if canvas has focus)
+                if (drawingCanvas.SelectedLabel != null || drawingCanvas.SelectedLabels.Count > 0)
+                {
+                    int moveAmount = 1;
+                    bool moved = false;
+
+                    // Check if any custom label movement hotkey is pressed
+                    if (hotkeyManager.IsHotkeyPressed("MoveLabelUp", e))
+                    {
+                        MoveSelectedLabel(0, -moveAmount);
+                        moved = true;
+                    }
+                    else if (hotkeyManager.IsHotkeyPressed("MoveLabelDown", e))
+                    {
+                        MoveSelectedLabel(0, moveAmount);
+                        moved = true;
+                    }
+                    else if (hotkeyManager.IsHotkeyPressed("MoveLabelLeft", e))
+                    {
+                        MoveSelectedLabel(-moveAmount, 0);
+                        moved = true;
+                    }
+                    else if (hotkeyManager.IsHotkeyPressed("MoveLabelRight", e))
+                    {
+                        MoveSelectedLabel(moveAmount, 0);
+                        moved = true;
+                    }
+
+                    if (moved)
+                    {
+                        e.Handled = true;
+                        drawingCanvas.InvalidateVisual();
+                        MarkProjectDirty();
+                        return;
+                    }
+                }
+            }
+
             // If DrawingCanvas has focus and Ctrl is pressed, let it handle the shortcuts
+            // But only if the key is not a custom label movement hotkey
             if (drawingCanvas.IsFocused && (Keyboard.IsKeyDown(Key.LeftCtrl) || Keyboard.IsKeyDown(Key.RightCtrl)))
             {
-                switch (e.Key)
+                // Check if this is a custom label movement hotkey
+                bool isLabelMovementHotkey = hotkeyManager != null && drawingCanvas.SelectedLabel != null &&
+                    (hotkeyManager.IsHotkeyPressed("MoveLabelUp", e) ||
+                     hotkeyManager.IsHotkeyPressed("MoveLabelDown", e) ||
+                     hotkeyManager.IsHotkeyPressed("MoveLabelLeft", e) ||
+                     hotkeyManager.IsHotkeyPressed("MoveLabelRight", e));
+
+                // Don't intercept if it's a label movement hotkey
+                if (!isLabelMovementHotkey)
                 {
-                    case Key.C:
-                    case Key.V:
-                    case Key.Z:
-                    case Key.Y:
-                    case Key.A:
-                        // Let DrawingCanvas handle these
-                        return;
+                    switch (e.Key)
+                    {
+                        case Key.C:
+                        case Key.V:
+                        case Key.Z:
+                        case Key.Y:
+                        case Key.A:
+                            // Let DrawingCanvas handle these
+                            return;
+                    }
                 }
             }
 
@@ -1731,32 +1909,57 @@ namespace YoableWPF
             }
 
             // Handle label movement and deletion - but only if DrawingCanvas doesn't have focus
+            // Note: Custom hotkeys are handled in Window_KeyDown, this is for backward compatibility
             if (!drawingCanvas.IsFocused && drawingCanvas.SelectedLabel != null)
             {
                 int moveAmount = 1;
+                bool moved = false;
 
+                // Check if custom hotkeys are set (different from default arrow keys)
+                bool useCustomHotkeys = hotkeyManager != null && 
+                    ((!string.IsNullOrEmpty(Properties.Settings.Default.Hotkey_MoveLabelUp) && Properties.Settings.Default.Hotkey_MoveLabelUp != "Up") ||
+                     (!string.IsNullOrEmpty(Properties.Settings.Default.Hotkey_MoveLabelDown) && Properties.Settings.Default.Hotkey_MoveLabelDown != "Down") ||
+                     (!string.IsNullOrEmpty(Properties.Settings.Default.Hotkey_MoveLabelLeft) && Properties.Settings.Default.Hotkey_MoveLabelLeft != "Left") ||
+                     (!string.IsNullOrEmpty(Properties.Settings.Default.Hotkey_MoveLabelRight) && Properties.Settings.Default.Hotkey_MoveLabelRight != "Right"));
+
+                // Only use arrow keys if custom hotkeys are not set (backward compatibility)
+                if (!useCustomHotkeys)
+                {
+                    switch (e.Key)
+                    {
+                        case Key.Up:
+                            MoveSelectedLabel(0, -moveAmount);
+                            moved = true;
+                            break;
+
+                        case Key.Down:
+                            MoveSelectedLabel(0, moveAmount);
+                            moved = true;
+                            break;
+
+                        case Key.Left:
+                            MoveSelectedLabel(-moveAmount, 0);
+                            moved = true;
+                            break;
+
+                        case Key.Right:
+                            MoveSelectedLabel(moveAmount, 0);
+                            moved = true;
+                            break;
+                    }
+                }
+
+                if (moved)
+                {
+                    e.Handled = true;
+                    drawingCanvas.InvalidateVisual();
+                    MarkProjectDirty();
+                    return;
+                }
+
+                // Handle Delete key
                 switch (e.Key)
                 {
-                    case Key.Up:
-                        drawingCanvas.SelectedLabel.Rect = new Rect(drawingCanvas.SelectedLabel.Rect.X, drawingCanvas.SelectedLabel.Rect.Y - moveAmount, drawingCanvas.SelectedLabel.Rect.Width, drawingCanvas.SelectedLabel.Rect.Height);
-                        e.Handled = true;
-                        break;
-
-                    case Key.Down:
-                        drawingCanvas.SelectedLabel.Rect = new Rect(drawingCanvas.SelectedLabel.Rect.X, drawingCanvas.SelectedLabel.Rect.Y + moveAmount, drawingCanvas.SelectedLabel.Rect.Width, drawingCanvas.SelectedLabel.Rect.Height);
-                        e.Handled = true;
-                        break;
-
-                    case Key.Left:
-                        drawingCanvas.SelectedLabel.Rect = new Rect(drawingCanvas.SelectedLabel.Rect.X - moveAmount, drawingCanvas.SelectedLabel.Rect.Y, drawingCanvas.SelectedLabel.Rect.Width, drawingCanvas.SelectedLabel.Rect.Height);
-                        e.Handled = true;
-                        break;
-
-                    case Key.Right:
-                        drawingCanvas.SelectedLabel.Rect = new Rect(drawingCanvas.SelectedLabel.Rect.X + moveAmount, drawingCanvas.SelectedLabel.Rect.Y, drawingCanvas.SelectedLabel.Rect.Width, drawingCanvas.SelectedLabel.Rect.Height);
-                        e.Handled = true;
-                        break;
-
                     case Key.Delete:
                         // Handle multi-selection deletion
                         if (drawingCanvas.SelectedLabels.Count > 0)
@@ -1898,6 +2101,13 @@ namespace YoableWPF
                 imageManager.BatchSize = Properties.Settings.Default.ProcessingBatchSize;
                 labelManager.LabelLoadBatchSize = Properties.Settings.Default.LabelLoadBatchSize;
 
+                // Reload hotkeys after settings are saved
+                if (hotkeyManager != null)
+                {
+                    hotkeyManager.Clear();
+                    LoadHotkeys();
+                }
+
                 // Update the UI to reflect any changes
                 UpdateProjectUI();
             }
@@ -1919,6 +2129,10 @@ namespace YoableWPF
             {
                 projectClasses.Add(new LabelClass("default", "#E57373", 0));
                 RefreshClassList();
+            }
+            else
+            {
+                RefreshClassFilterCheckBoxes();
             }
         }
 
@@ -1946,6 +2160,103 @@ namespace YoableWPF
             
             // Update UI display
             UpdateCurrentClassUI();
+            
+            // Refresh class filter checkboxes
+            RefreshClassFilterCheckBoxes();
+        }
+
+        /// <summary>
+        /// Refreshes the class filter checkboxes in the Expander
+        /// </summary>
+        private void RefreshClassFilterCheckBoxes()
+        {
+            if (ClassFilterCheckBoxPanel == null)
+                return;
+
+            // Clear existing checkboxes
+            ClassFilterCheckBoxPanel.Children.Clear();
+
+            // Create checkbox for each class
+            foreach (var labelClass in projectClasses)
+            {
+                var checkBox = new CheckBox
+                {
+                    Content = labelClass.Name,
+                    Tag = labelClass.ClassId,
+                    IsChecked = true, // Default: all classes are selected
+                    Margin = new Thickness(0, 4, 0, 4),
+                    FontSize = 11
+                };
+
+                // Add color indicator
+                var stackPanel = new StackPanel { Orientation = Orientation.Horizontal };
+                
+                // Color bar
+                var colorBar = new Border
+                {
+                    Width = 4,
+                    Height = 16,
+                    Background = new SolidColorBrush(
+                        (Color)ColorConverter.ConvertFromString(labelClass.ColorHex)),
+                    Margin = new Thickness(0, 0, 8, 0),
+                    CornerRadius = new CornerRadius(2),
+                    VerticalAlignment = VerticalAlignment.Center
+                };
+                stackPanel.Children.Add(colorBar);
+
+                // Checkbox
+                stackPanel.Children.Add(checkBox);
+
+                // Wrap in a container
+                var container = new StackPanel { Orientation = Orientation.Horizontal };
+                container.Children.Add(stackPanel);
+
+                // Subscribe to checkbox change event
+                checkBox.Checked += ClassFilterCheckBox_Changed;
+                checkBox.Unchecked += ClassFilterCheckBox_Changed;
+
+                ClassFilterCheckBoxPanel.Children.Add(container);
+            }
+        }
+
+        /// <summary>
+        /// Handles class filter checkbox changes
+        /// </summary>
+        private void ClassFilterCheckBox_Changed(object sender, RoutedEventArgs e)
+        {
+            // Get all checked class IDs
+            var checkedClassIds = new HashSet<int>();
+            
+            foreach (var container in ClassFilterCheckBoxPanel.Children.OfType<StackPanel>())
+            {
+                var stackPanel = container.Children.OfType<StackPanel>().FirstOrDefault();
+                if (stackPanel != null)
+                {
+                    var checkBox = stackPanel.Children.OfType<CheckBox>().FirstOrDefault();
+                    if (checkBox != null && checkBox.IsChecked == true && checkBox.Tag is int classId)
+                    {
+                        checkedClassIds.Add(classId);
+                    }
+                }
+            }
+
+            // Apply filter
+            if (checkedClassIds.Count == 0)
+            {
+                // If no classes are selected, show nothing
+                ImageListBox.Items.Clear();
+                uiStateManager.UpdateStatusCounts();
+            }
+            else if (checkedClassIds.Count == projectClasses.Count)
+            {
+                // If all classes are selected, show all images (no class filter)
+                uiStateManager.FilterImagesByClasses(null);
+            }
+            else
+            {
+                // Filter by selected classes
+                uiStateManager.FilterImagesByClasses(checkedClassIds);
+            }
         }
 
         private void UpdateCurrentClassUI()
@@ -2002,11 +2313,18 @@ namespace YoableWPF
             
             if (dialog.ShowDialog() == true)
             {
-                int newClassId = projectManager?.CurrentProject?.GetNextClassId() ?? 
-                                (projectClasses.Any() ? projectClasses.Max(c => c.ClassId) + 1 : 0);
+                // Calculate next class ID based on projectClasses (the actual working list)
+                // Find the maximum ClassId and add 1, or use 0 if no classes exist
+                int newClassId = projectClasses.Any() ? projectClasses.Max(c => c.ClassId) + 1 : 0;
                 
                 var newClass = new LabelClass(dialog.ClassName, dialog.ClassColor, newClassId);
                 projectClasses.Add(newClass);
+                
+                // Sync with CurrentProject.Classes if project is open
+                if (projectManager?.IsProjectOpen == true && projectManager.CurrentProject != null)
+                {
+                    projectManager.CurrentProject.Classes = new List<LabelClass>(projectClasses);
+                }
                 
                 RefreshClassList();
                 

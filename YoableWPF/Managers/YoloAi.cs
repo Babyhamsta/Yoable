@@ -5,6 +5,7 @@ using System.Drawing.Imaging;
 using System.Windows;
 using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Text.Json;
 using System.Reflection;
 using Point = System.Drawing.Point;
@@ -71,6 +72,12 @@ namespace YoableWPF.Managers
         Unknown,
         YoloV5,      // [batch, num_detections, 5+num_classes]
         YoloV8       // [batch, 4+num_classes, num_detections]
+    }
+
+    public enum EnsembleDetectionMode
+    {
+        Voting,      // 投票模式（需要多個模型共識）
+        Union        // 聯合模式（任何模型檢測到即標記）
     }
 
     public class YoloModelInfo
@@ -495,10 +502,77 @@ namespace YoableWPF.Managers
             return ApplyNMSYolo(consensusDetections, ensembleIoUThreshold);
         }
 
+        private List<YoloDetection> ApplyEnsembleUnion(List<YoloDetection> allDetections)
+        {
+            if (allDetections.Count == 0) return new List<YoloDetection>();
+            
+            float mergeIoUThreshold = Properties.Settings.Default.EnsembleIoUThreshold;
+            bool useWeightedAverage = Properties.Settings.Default.UseWeightedAverage;
+            float confidenceThreshold = Properties.Settings.Default.AIConfidence;
+            
+            // 過濾低置信度的檢測
+            var validDetections = allDetections
+                .Where(d => d.Score >= confidenceThreshold)
+                .OrderByDescending(d => d.Score)
+                .ToList();
+            
+            if (validDetections.Count == 0) return new List<YoloDetection>();
+            
+            // 合併重疊的檢測（多個模型檢測到同一個物體）
+            var mergedDetections = new List<YoloDetection>();
+            var processed = new bool[validDetections.Count];
+            
+            for (int i = 0; i < validDetections.Count; i++)
+            {
+                if (processed[i]) continue;
+                
+                var cluster = new List<YoloDetection> { validDetections[i] };
+                processed[i] = true;
+                
+                // 尋找重疊的檢測
+                for (int j = i + 1; j < validDetections.Count; j++)
+                {
+                    if (processed[j]) continue;
+                    
+                    float iou = ComputeIoUYolo(validDetections[i], validDetections[j]);
+                    if (iou >= mergeIoUThreshold)
+                    {
+                        cluster.Add(validDetections[j]);
+                        processed[j] = true;
+                    }
+                }
+                
+                // 合併同一物體的多個檢測
+                if (cluster.Count > 1)
+                {
+                    var merged = MergeYoloDetections(cluster, useWeightedAverage);
+                    mergedDetections.Add(merged);
+                }
+                else
+                {
+                    mergedDetections.Add(cluster[0]);
+                }
+            }
+            
+            // 應用 NMS 移除重複檢測
+            return ApplyNMSYolo(mergedDetections, mergeIoUThreshold);
+        }
+
         private YoloDetection MergeYoloDetections(List<YoloDetection> detections, bool useWeightedAverage)
         {
             if (detections.Count == 0) return null;
             if (detections.Count == 1) return detections[0];
+
+            // Determine final class ID by voting (most common class wins)
+            // If there's a tie, use the class with highest confidence
+            var classVotes = detections
+                .GroupBy(d => d.ClassId)
+                .Select(g => new { ClassId = g.Key, Count = g.Count(), MaxConfidence = g.Max(d => d.Confidence) })
+                .OrderByDescending(x => x.Count)
+                .ThenByDescending(x => x.MaxConfidence)
+                .ToList();
+
+            int finalClassId = classVotes.Count > 0 ? classVotes[0].ClassId : detections[0].ClassId;
 
             if (useWeightedAverage)
             {
@@ -512,7 +586,7 @@ namespace YoableWPF.Managers
                     Height = detections.Sum(d => d.Height * d.Score) / totalWeight,
                     Confidence = detections.Average(d => d.Confidence),
                     ClassConfidence = detections.Average(d => d.ClassConfidence),
-                    ClassId = detections[0].ClassId,
+                    ClassId = finalClassId,  // Use voted class ID
                     ModelIndex = -1
                 };
             }
@@ -526,7 +600,7 @@ namespace YoableWPF.Managers
                     Height = detections.Average(d => d.Height),
                     Confidence = detections.Average(d => d.Confidence),
                     ClassConfidence = detections.Average(d => d.ClassConfidence),
-                    ClassId = detections[0].ClassId,
+                    ClassId = finalClassId,  // Use voted class ID
                     ModelIndex = -1
                 };
             }
@@ -668,6 +742,20 @@ namespace YoableWPF.Managers
             return RunEnsembleInference(image);
         }
 
+        // 新增方法：返回帶有 ClassId 的檢測結果
+        public List<(Rectangle box, int classId)> RunInferenceWithClasses(Bitmap image)
+        {
+            if (loadedModels.Count == 0) return new List<(Rectangle, int)>();
+
+            if (loadedModels.Count == 1)
+            {
+                var detections = RunSingleModelInferenceWithClasses(image, loadedModels[0]);
+                return detections.Select(d => (d.Box, d.ClassId)).ToList();
+            }
+
+            return RunEnsembleInferenceWithClasses(image);
+        }
+
         private List<Rectangle> RunSingleModelInference(Bitmap image, YoloModel model)
         {
             try
@@ -713,6 +801,54 @@ namespace YoableWPF.Managers
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 return new List<Rectangle>();
+            }
+        }
+
+        private List<Detection> RunSingleModelInferenceWithClasses(Bitmap image, YoloModel model)
+        {
+            try
+            {
+                // Convert to 24bpp first
+                Bitmap processedImage = ConvertTo24bpp(image);
+
+                // Resize image to match model's expected input size
+                Bitmap resizedImage = ResizeImageForModel(processedImage, model.ModelInfo.ModelInputSize);
+
+                // Convert resized image to float array
+                float[] inputArray = BitmapToFloatArray(resizedImage);
+
+                // Create tensor with model's expected dimensions
+                var inputTensor = new DenseTensor<float>(inputArray,
+                    new int[] { 1, 3, model.ModelInfo.ModelInputSize, model.ModelInfo.ModelInputSize });
+
+                var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("images", inputTensor) };
+
+                // Run inference with error handling
+                using var results = model.Session.Run(inputs, model.OutputNames);
+                var outputTensor = results.First().AsTensor<float>();
+
+                // Post-process using original image dimensions for proper scaling
+                var detections = PostProcessYoloOutput(outputTensor, model, image.Width, image.Height);
+                var finalDetections = ApplyImprovedNMS(detections);
+                TotalDetections += finalDetections.Count;
+
+                // Clean up temporary bitmaps
+                if (processedImage != image) processedImage.Dispose();
+                resizedImage.Dispose();
+
+                return finalDetections;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Error running AI inference on image:\n\n{ex.Message}\n\n" +
+                    $"Image size: {image.Width}x{image.Height}\n" +
+                    $"Model expected size: {model.ModelInfo.ModelInputSize}x{model.ModelInfo.ModelInputSize}\n\n" +
+                    $"Please ensure your model is compatible with the image.",
+                    "AI Inference Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return new List<Detection>();
             }
         }
 
@@ -789,10 +925,22 @@ namespace YoableWPF.Managers
                     return new List<Rectangle>();
                 }
 
-                var consensusDetections = ApplyEnsembleConsensus(allYoloDetections);
-                TotalDetections += consensusDetections.Count;
+                // 根據模式選擇處理方法
+                EnsembleDetectionMode mode = (EnsembleDetectionMode)Properties.Settings.Default.EnsembleDetectionMode;
+                List<YoloDetection> finalDetections;
+                
+                if (mode == EnsembleDetectionMode.Union)
+                {
+                    finalDetections = ApplyEnsembleUnion(allYoloDetections);
+                }
+                else // Voting mode (default)
+                {
+                    finalDetections = ApplyEnsembleConsensus(allYoloDetections);
+                }
+                
+                TotalDetections += finalDetections.Count;
 
-                return consensusDetections.Select(d => d.ToRectangle()).ToList();
+                return finalDetections.Select(d => d.ToRectangle()).ToList();
             }
             catch (Exception ex)
             {
@@ -804,6 +952,109 @@ namespace YoableWPF.Managers
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 return new List<Rectangle>();
+            }
+        }
+
+        private List<(Rectangle box, int classId)> RunEnsembleInferenceWithClasses(Bitmap image)
+        {
+            try
+            {
+                var allYoloDetections = new List<YoloDetection>();
+
+                // Convert to 24bpp first
+                Bitmap processedImage = ConvertTo24bpp(image);
+
+                for (int modelIdx = 0; modelIdx < loadedModels.Count; modelIdx++)
+                {
+                    var model = loadedModels[modelIdx];
+
+                    try
+                    {
+                        // Resize image to match this model's expected input size
+                        Bitmap resizedImage = ResizeImageForModel(processedImage, model.ModelInfo.ModelInputSize);
+
+                        // Convert resized image to float array
+                        float[] inputArray = BitmapToFloatArray(resizedImage);
+
+                        // Create tensor with model's expected dimensions
+                        var inputTensor = new DenseTensor<float>(inputArray,
+                            new int[] { 1, 3, model.ModelInfo.ModelInputSize, model.ModelInfo.ModelInputSize });
+
+                        var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("images", inputTensor) };
+
+                        // Run inference
+                        using var results = model.Session.Run(inputs, model.OutputNames);
+                        var outputTensor = results.First().AsTensor<float>();
+
+                        // Post-process using original image dimensions for proper scaling
+                        var detections = PostProcessYoloOutputDynamic(outputTensor, model, image.Width, image.Height);
+                        detections = ApplyNMSYolo(detections, 0.5f);
+
+                        foreach (var det in detections)
+                        {
+                            det.ModelIndex = modelIdx;
+                        }
+
+                        allYoloDetections.AddRange(detections);
+
+                        // Clean up resized image
+                        resizedImage.Dispose();
+                    }
+                    catch (Exception modelEx)
+                    {
+                        // Log error but continue with other models
+                        System.Diagnostics.Debug.WriteLine(
+                            $"Error running model {model.Name}: {modelEx.Message}");
+
+                        // If this is a critical error (like wrong dimensions), show warning
+                        if (modelEx.Message.Contains("dimension") || modelEx.Message.Contains("shape"))
+                        {
+                            MessageBox.Show(
+                                $"Warning: Model '{model.Name}' failed to process the image.\n\n" +
+                                $"Error: {modelEx.Message}\n\n" +
+                                $"Continuing with remaining models...",
+                                "Model Processing Warning",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Warning);
+                        }
+                    }
+                }
+
+                // Clean up processed image
+                if (processedImage != image) processedImage.Dispose();
+
+                if (allYoloDetections.Count == 0)
+                {
+                    return new List<(Rectangle, int)>();
+                }
+
+                // 根據模式選擇處理方法
+                EnsembleDetectionMode mode = (EnsembleDetectionMode)Properties.Settings.Default.EnsembleDetectionMode;
+                List<YoloDetection> finalDetections;
+                
+                if (mode == EnsembleDetectionMode.Union)
+                {
+                    finalDetections = ApplyEnsembleUnion(allYoloDetections);
+                }
+                else // Voting mode (default)
+                {
+                    finalDetections = ApplyEnsembleConsensus(allYoloDetections);
+                }
+                
+                TotalDetections += finalDetections.Count;
+
+                return finalDetections.Select(d => (d.ToRectangle(), d.ClassId)).ToList();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(
+                    $"Error running ensemble AI inference:\n\n{ex.Message}\n\n" +
+                    $"Image size: {image.Width}x{image.Height}\n\n" +
+                    $"Please check your models and image compatibility.",
+                    "Ensemble Inference Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return new List<(Rectangle, int)>();
             }
         }
 
@@ -857,12 +1108,28 @@ namespace YoableWPF.Managers
 
         public YoloModel LoadModelFromPath(string modelPath)
         {
+            return LoadModelFromPath(modelPath, silent: false);
+        }
+
+        /// <summary>
+        /// Loads a YOLO model from file path (silent mode for project restoration)
+        /// </summary>
+        public YoloModel LoadModelFromPathSilent(string modelPath)
+        {
+            return LoadModelFromPath(modelPath, silent: true);
+        }
+
+        private YoloModel LoadModelFromPath(string modelPath, bool silent)
+        {
             try
             {
                 if (loadedModels.Any(m => m.ModelPath == modelPath))
                 {
-                    MessageBox.Show("This model is already loaded.", "Model Already Loaded",
-                        MessageBoxButton.OK, MessageBoxImage.Information);
+                    if (!silent)
+                    {
+                        MessageBox.Show("This model is already loaded.", "Model Already Loaded",
+                            MessageBoxButton.OK, MessageBoxImage.Information);
+                    }
                     return loadedModels.FirstOrDefault(m => m.ModelPath == modelPath);
                 }
 
@@ -874,13 +1141,19 @@ namespace YoableWPF.Managers
 
                 if (!TryInitializeSession(model, Properties.Settings.Default.UseGPU, out string errorMessage))
                 {
-                    MessageBox.Show($"GPU initialization failed: {errorMessage}\nFalling back to CPU.",
-                                  "GPU Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    if (!silent)
+                    {
+                        MessageBox.Show($"GPU initialization failed: {errorMessage}\nFalling back to CPU.",
+                                      "GPU Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    }
 
                     if (!TryInitializeSession(model, false, out errorMessage))
                     {
-                        MessageBox.Show($"Failed to initialize model: {errorMessage}",
-                                      "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        if (!silent)
+                        {
+                            MessageBox.Show($"Failed to initialize model: {errorMessage}",
+                                          "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                        }
                         return null;
                     }
                 }
@@ -889,12 +1162,15 @@ namespace YoableWPF.Managers
                 if (modelInfo.Format == YoloFormat.Unknown)
                 {
                     model.Session?.Dispose();
-                    MessageBox.Show("Failed to detect YOLO model format or unsupported model type.\n\n" +
-                                  "Supported formats:\n" +
-                                  "- YOLOv5: [batch, detections, 5+classes]\n" +
-                                  "- YOLOv8: [batch, 4+classes, detections]\n\n" +
-                                  "Note: Segmentation models are not supported.",
-                                  "Unsupported Model", MessageBoxButton.OK, MessageBoxImage.Error);
+                    if (!silent)
+                    {
+                        MessageBox.Show("Failed to detect YOLO model format or unsupported model type.\n\n" +
+                                      "Supported formats:\n" +
+                                      "- YOLOv5: [batch, detections, 5+classes]\n" +
+                                      "- YOLOv8: [batch, 4+classes, detections]\n\n" +
+                                      "Note: Segmentation models are not supported.",
+                                      "Unsupported Model", MessageBoxButton.OK, MessageBoxImage.Error);
+                    }
                     return null;
                 }
 
@@ -945,27 +1221,41 @@ namespace YoableWPF.Managers
                 model.ModelInfo = modelInfo;
                 loadedModels.Add(model);
 
-                string formatName = modelInfo.Format switch
+                if (!silent)
                 {
-                    YoloFormat.YoloV5 => "YOLOv5",
-                    YoloFormat.YoloV8 => "YOLOv8",
-                    _ => "Unknown"
-                };
+                    string formatName = modelInfo.Format switch
+                    {
+                        YoloFormat.YoloV5 => "YOLOv5",
+                        YoloFormat.YoloV8 => "YOLOv8",
+                        _ => "Unknown"
+                    };
 
-                MessageBox.Show($"Model '{model.Name}' loaded successfully.\n" +
-                              $"Format: {formatName}\n" +
-                              $"Classes: {modelInfo.NumClasses}\n" +
-                              $"Detections: {modelInfo.NumDetections}\n" +
-                              $"Input Size: {modelInfo.ModelInputSize}x{modelInfo.ModelInputSize}\n" +
-                              $"Total models: {loadedModels.Count}",
-                    "Model Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
+                    MessageBox.Show($"Model '{model.Name}' loaded successfully.\n" +
+                                  $"Format: {formatName}\n" +
+                                  $"Classes: {modelInfo.NumClasses}\n" +
+                                  $"Detections: {modelInfo.NumDetections}\n" +
+                                  $"Input Size: {modelInfo.ModelInputSize}x{modelInfo.ModelInputSize}\n" +
+                                  $"Total models: {loadedModels.Count}",
+                        "Model Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                else
+                {
+                    Debug.WriteLine($"Model '{model.Name}' loaded silently (project restoration)");
+                }
 
                 return model;
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading model: {ex.Message}",
-                              "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                if (!silent)
+                {
+                    MessageBox.Show($"Error loading model: {ex.Message}",
+                                  "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                else
+                {
+                    Debug.WriteLine($"Error loading model silently: {ex.Message}");
+                }
                 return null;
             }
         }

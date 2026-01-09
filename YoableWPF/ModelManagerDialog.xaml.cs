@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using YoableWPF.Managers;
+using System.Linq;
 
 namespace YoableWPF
 {
@@ -101,15 +102,16 @@ namespace YoableWPF
             int modelCount = yoloAI.GetLoadedModelsCount();
             if (modelCount == 0)
             {
-                InfoText.Text = "No models loaded yet. Click 'Add Model' to load your first YOLO model.";
+                InfoText.Text = LanguageManager.Instance.GetString("ModelManager_NoModelsLoaded") ?? "No models loaded yet. Click 'Add Model' to load your first YOLO model.";
             }
             else if (modelCount == 1)
             {
-                InfoText.Text = "1 model loaded. Add more models to enable ensemble detection.";
+                InfoText.Text = LanguageManager.Instance.GetString("ModelManager_OneModelLoaded") ?? "1 model loaded. Add more models to enable ensemble detection.";
             }
             else
             {
-                InfoText.Text = $"{modelCount} models loaded for ensemble detection.";
+                string template = LanguageManager.Instance.GetString("ModelManager_MultipleModelsLoaded") ?? "{0} models loaded for ensemble detection.";
+                InfoText.Text = string.Format(template, modelCount);
             }
         }
 
@@ -125,7 +127,7 @@ namespace YoableWPF
             var openFileDialog = new OpenFileDialog
             {
                 Filter = "ONNX Model Files|*.onnx",
-                Title = "Select YOLO ONNX Model",
+                Title = LanguageManager.Instance.GetString("ModelManager_SelectModel") ?? "Select YOLO ONNX Model",
                 Multiselect = true
             };
 
@@ -161,10 +163,12 @@ namespace YoableWPF
                         }
                         else
                         {
-                            MessageBox.Show(
-                                "請先在項目中創建類別，然後再配置模型類別映射。\n\n" +
-                                "您可以在右側面板的 'Classes' 區域添加類別。",
-                                "需要項目類別",
+                            string message = LanguageManager.Instance.GetString("ModelManager_NeedProjectClasses") ?? 
+                                "Please create classes in the project first, then configure model class mapping.\n\n" +
+                                "You can add classes in the 'Classes' area on the right panel.";
+                            string title = LanguageManager.Instance.GetString("ModelManager_NeedProjectClassesTitle") ?? 
+                                "Project Classes Required";
+                            MessageBox.Show(message, title,
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Information);
                         }
@@ -181,10 +185,12 @@ namespace YoableWPF
             {
                 if (projectClasses == null || projectClasses.Count == 0)
                 {
-                    MessageBox.Show(
-                        "請先在項目中創建類別，然後再配置模型類別映射。\n\n" +
-                        "您可以在右側面板的 'Classes' 區域添加類別。",
-                        "需要項目類別",
+                    string message = LanguageManager.Instance.GetString("ModelManager_NeedProjectClasses") ?? 
+                        "Please create classes in the project first, then configure model class mapping.\n\n" +
+                        "You can add classes in the 'Classes' area on the right panel.";
+                    string title = LanguageManager.Instance.GetString("ModelManager_NeedProjectClassesTitle") ?? 
+                        "Project Classes Required";
+                    MessageBox.Show(message, title,
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
                     return;
@@ -220,7 +226,9 @@ namespace YoableWPF
 
         private void ClearButton_Click(object sender, RoutedEventArgs e)
         {
-            var result = MessageBox.Show("Remove all loaded models?", "Clear Models",
+            string message = LanguageManager.Instance.GetString("ModelManager_ConfirmClearAll") ?? "Remove all loaded models?";
+            string title = LanguageManager.Instance.GetString("ModelManager_ClearModels") ?? "Clear Models";
+            var result = MessageBox.Show(message, title,
                 MessageBoxButton.YesNo, MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes)

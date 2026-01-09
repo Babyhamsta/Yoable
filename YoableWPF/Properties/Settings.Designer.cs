@@ -301,6 +301,18 @@ namespace YoableWPF.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int EnsembleDetectionMode {
+            get {
+                return ((int)(this["EnsembleDetectionMode"]));
+            }
+            set {
+                this["EnsembleDetectionMode"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("")]
         public string RecentProjects {
             get {
@@ -404,6 +416,90 @@ namespace YoableWPF.Properties {
             }
             set {
                 this["Language"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Ctrl + S")]
+        public string Hotkey_SaveProject {
+            get {
+                return ((string)(this["Hotkey_SaveProject"]));
+            }
+            set {
+                this["Hotkey_SaveProject"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("A")]
+        public string Hotkey_PreviousImage {
+            get {
+                return ((string)(this["Hotkey_PreviousImage"]));
+            }
+            set {
+                this["Hotkey_PreviousImage"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("D")]
+        public string Hotkey_NextImage {
+            get {
+                return ((string)(this["Hotkey_NextImage"]));
+            }
+            set {
+                this["Hotkey_NextImage"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Up")]
+        public string Hotkey_MoveLabelUp {
+            get {
+                return ((string)(this["Hotkey_MoveLabelUp"]));
+            }
+            set {
+                this["Hotkey_MoveLabelUp"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Down")]
+        public string Hotkey_MoveLabelDown {
+            get {
+                return ((string)(this["Hotkey_MoveLabelDown"]));
+            }
+            set {
+                this["Hotkey_MoveLabelDown"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Left")]
+        public string Hotkey_MoveLabelLeft {
+            get {
+                return ((string)(this["Hotkey_MoveLabelLeft"]));
+            }
+            set {
+                this["Hotkey_MoveLabelLeft"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Right")]
+        public string Hotkey_MoveLabelRight {
+            get {
+                return ((string)(this["Hotkey_MoveLabelRight"]));
+            }
+            set {
+                this["Hotkey_MoveLabelRight"] = value;
             }
         }
     }

@@ -137,7 +137,7 @@ namespace YoableWPF
         private void Tab_Changed(object sender, RoutedEventArgs e)
         {
             // Don't process if controls aren't loaded yet
-            if (GeneralSettingsPanel == null || AISettingsPanel == null || PerformanceSettingsPanel == null || UISettingsPanel == null)
+            if (GeneralSettingsPanel == null || AISettingsPanel == null || PerformanceSettingsPanel == null || UISettingsPanel == null || ShortcutsSettingsPanel == null)
                 return;
 
             if (sender is RadioButton radioButton)
@@ -147,6 +147,7 @@ namespace YoableWPF
                 AISettingsPanel.Visibility = Visibility.Collapsed;
                 PerformanceSettingsPanel.Visibility = Visibility.Collapsed;
                 UISettingsPanel.Visibility = Visibility.Collapsed;
+                ShortcutsSettingsPanel.Visibility = Visibility.Collapsed;
 
                 // Show selected panel
                 if (radioButton == GeneralTab)
@@ -164,6 +165,10 @@ namespace YoableWPF
                 else if (radioButton == UITab)
                 {
                     UISettingsPanel.Visibility = Visibility.Visible;
+                }
+                else if (radioButton == ShortcutsTab)
+                {
+                    ShortcutsSettingsPanel.Visibility = Visibility.Visible;
                 }
             }
         }
@@ -213,10 +218,14 @@ namespace YoableWPF
             FormHexAccent.Text = Properties.Settings.Default.FormAccent;
 
             // Load Ensemble Settings
+            DetectionModeComboBox.SelectedIndex = Properties.Settings.Default.EnsembleDetectionMode;
             MinConsensusSlider.Value = Properties.Settings.Default.MinimumConsensus;
             ConsensusIoUSlider.Value = Properties.Settings.Default.ConsensusIoUThreshold;
             EnsembleIoUSlider.Value = Properties.Settings.Default.EnsembleIoUThreshold;
             UseWeightedAverageCheckBox.IsChecked = Properties.Settings.Default.UseWeightedAverage;
+            
+            // 根據模式顯示/隱藏相關設定
+            UpdateModeDependentSettings();
 
             // Load General Settings
             DarkModeCheckBox.IsChecked = Properties.Settings.Default.DarkTheme;
@@ -245,6 +254,36 @@ namespace YoableWPF
             if (selectedLanguage != null)
             {
                 LanguageComboBox.SelectedItem = selectedLanguage;
+            }
+
+            // Load Hotkey Settings
+            if (SaveProjectHotkeyControl != null)
+            {
+                SaveProjectHotkeyControl.Hotkey = Properties.Settings.Default.Hotkey_SaveProject ?? "Ctrl + S";
+            }
+            if (PreviousImageHotkeyControl != null)
+            {
+                PreviousImageHotkeyControl.Hotkey = Properties.Settings.Default.Hotkey_PreviousImage ?? "A";
+            }
+            if (NextImageHotkeyControl != null)
+            {
+                NextImageHotkeyControl.Hotkey = Properties.Settings.Default.Hotkey_NextImage ?? "D";
+            }
+            if (MoveLabelUpHotkeyControl != null)
+            {
+                MoveLabelUpHotkeyControl.Hotkey = Properties.Settings.Default.Hotkey_MoveLabelUp ?? "Up";
+            }
+            if (MoveLabelDownHotkeyControl != null)
+            {
+                MoveLabelDownHotkeyControl.Hotkey = Properties.Settings.Default.Hotkey_MoveLabelDown ?? "Down";
+            }
+            if (MoveLabelLeftHotkeyControl != null)
+            {
+                MoveLabelLeftHotkeyControl.Hotkey = Properties.Settings.Default.Hotkey_MoveLabelLeft ?? "Left";
+            }
+            if (MoveLabelRightHotkeyControl != null)
+            {
+                MoveLabelRightHotkeyControl.Hotkey = Properties.Settings.Default.Hotkey_MoveLabelRight ?? "Right";
             }
         }
 
@@ -318,6 +357,7 @@ namespace YoableWPF
             Properties.Settings.Default.AIConfidence = (float)(ConfidenceSlider.Value / 100);
 
             // Save Ensemble Settings
+            Properties.Settings.Default.EnsembleDetectionMode = DetectionModeComboBox.SelectedIndex;
             Properties.Settings.Default.MinimumConsensus = (int)MinConsensusSlider.Value;
             Properties.Settings.Default.ConsensusIoUThreshold = (float)ConsensusIoUSlider.Value;
             Properties.Settings.Default.EnsembleIoUThreshold = (float)EnsembleIoUSlider.Value;
@@ -352,6 +392,36 @@ namespace YoableWPF
                 LanguageManager.Instance.SetLanguage(selectedLanguage.Code);
             }
 
+            // Save Hotkey Settings
+            if (SaveProjectHotkeyControl != null)
+            {
+                Properties.Settings.Default.Hotkey_SaveProject = SaveProjectHotkeyControl.Hotkey;
+            }
+            if (PreviousImageHotkeyControl != null)
+            {
+                Properties.Settings.Default.Hotkey_PreviousImage = PreviousImageHotkeyControl.Hotkey;
+            }
+            if (NextImageHotkeyControl != null)
+            {
+                Properties.Settings.Default.Hotkey_NextImage = NextImageHotkeyControl.Hotkey;
+            }
+            if (MoveLabelUpHotkeyControl != null)
+            {
+                Properties.Settings.Default.Hotkey_MoveLabelUp = MoveLabelUpHotkeyControl.Hotkey;
+            }
+            if (MoveLabelDownHotkeyControl != null)
+            {
+                Properties.Settings.Default.Hotkey_MoveLabelDown = MoveLabelDownHotkeyControl.Hotkey;
+            }
+            if (MoveLabelLeftHotkeyControl != null)
+            {
+                Properties.Settings.Default.Hotkey_MoveLabelLeft = MoveLabelLeftHotkeyControl.Hotkey;
+            }
+            if (MoveLabelRightHotkeyControl != null)
+            {
+                Properties.Settings.Default.Hotkey_MoveLabelRight = MoveLabelRightHotkeyControl.Hotkey;
+            }
+
             Properties.Settings.Default.Save();
             DialogResult = true;
             Close();
@@ -361,6 +431,19 @@ namespace YoableWPF
         {
             ThemeManager.Current.ApplicationTheme = Properties.Settings.Default.DarkTheme ? ApplicationTheme.Dark : ApplicationTheme.Light; // Reset if not saved
             Close();
+        }
+
+        private void DetectionModeComboBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            UpdateModeDependentSettings();
+        }
+
+        private void UpdateModeDependentSettings()
+        {
+            // 根據模式顯示/隱藏相關設定
+            bool isVotingMode = DetectionModeComboBox.SelectedIndex == 0;
+            MinConsensusSlider.IsEnabled = isVotingMode;
+            ConsensusIoUSlider.IsEnabled = isVotingMode;
         }
 
         protected override void OnClosed(EventArgs e)

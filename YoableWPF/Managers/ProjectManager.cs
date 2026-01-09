@@ -253,6 +253,12 @@ namespace YoableWPF.Managers
             // Stop auto-save
             StopAutoSave();
 
+            // Clear models when closing project
+            if (mainWindow?.yoloAI != null)
+            {
+                mainWindow.yoloAI.ClearAllModels();
+            }
+
             // Clear project
             CurrentProject = null;
             hasUnsavedChanges = false;
@@ -645,6 +651,7 @@ namespace YoableWPF.Managers
             CurrentProject.Images.Clear();
             CurrentProject.ImageStatuses.Clear();
             CurrentProject.AppCreatedLabels.Clear();
+            CurrentProject.LoadedModelPaths.Clear();
             CurrentProject.ModelClassMappings.Clear();
 
             // Export images
@@ -706,20 +713,24 @@ namespace YoableWPF.Managers
                 CurrentProject.CurrentSortMode = mainWindow.SortComboBox.SelectedIndex == 1 ? "ByStatus" : "ByName";
             }
 
-            // Export model class mappings
+            // Export model paths and class mappings
             if (mainWindow.yoloAI != null)
             {
+                // Save loaded model paths
+                CurrentProject.LoadedModelPaths = new List<string>();
                 foreach (var model in mainWindow.yoloAI.GetLoadedModels())
                 {
-                    if (model.ClassMapping != null)
+                    CurrentProject.LoadedModelPaths.Add(model.ModelPath);
+                    
+                    // Save mapping using model path as key
+                    if (model.ClassMapping != null && model.ClassMapping.Count > 0)
                     {
-                        // Save mapping using model path as key
                         CurrentProject.ModelClassMappings[model.ModelPath] = new Dictionary<int, int>(model.ClassMapping);
                     }
                 }
             }
 
-            Debug.WriteLine($"Export complete: {CurrentProject.Images.Count} images, {CurrentProject.AppCreatedLabels.Count} label files, {CurrentProject.ModelClassMappings.Count} model mappings");
+            Debug.WriteLine($"Export complete: {CurrentProject.Images.Count} images, {CurrentProject.AppCreatedLabels.Count} label files, {CurrentProject.LoadedModelPaths.Count} models, {CurrentProject.ModelClassMappings.Count} model mappings");
         }
 
         /// <summary>
@@ -741,6 +752,11 @@ namespace YoableWPF.Managers
                 {
                     mainWindow.labelManager.ClearAll();
                     mainWindow.imageManager.ClearAll();
+                    // Clear existing models before loading project models
+                    if (mainWindow.yoloAI != null)
+                    {
+                        mainWindow.yoloAI.ClearAllModels();
+                    }
                 });
 
                 progress?.Report((10, 100, "Loading images..."));
@@ -894,6 +910,45 @@ namespace YoableWPF.Managers
 
                 // OPTIMIZED: Validate and correct statuses asynchronously with progress
                 await ValidateAndCorrectStatusesAsync(progress, cancellationToken);
+
+                progress?.Report((95, 100, "Restoring models..."));
+
+                // Restore loaded models
+                if (CurrentProject.LoadedModelPaths != null && CurrentProject.LoadedModelPaths.Count > 0 && mainWindow.yoloAI != null)
+                {
+                    await mainWindow.Dispatcher.InvokeAsync(() =>
+                    {
+                        foreach (var modelPath in CurrentProject.LoadedModelPaths)
+                        {
+                            if (File.Exists(modelPath))
+                            {
+                                try
+                                {
+                                    // Use silent loading to avoid showing message boxes during project load
+                                    var loadedModel = mainWindow.yoloAI.LoadModelFromPathSilent(modelPath);
+                                    if (loadedModel != null)
+                                    {
+                                        // Restore saved mapping if available
+                                        if (CurrentProject.ModelClassMappings != null && 
+                                            CurrentProject.ModelClassMappings.TryGetValue(modelPath, out var savedMapping))
+                                        {
+                                            loadedModel.ClassMapping = new Dictionary<int, int>(savedMapping);
+                                        }
+                                    }
+                                }
+                                catch (Exception ex)
+                                {
+                                    Debug.WriteLine($"Failed to restore model {modelPath}: {ex.Message}");
+                                    // Continue with other models even if one fails
+                                }
+                            }
+                            else
+                            {
+                                Debug.WriteLine($"Warning: Model file not found: {modelPath}");
+                            }
+                        }
+                    });
+                }
 
                 progress?.Report((100, 100, "Project loaded successfully"));
 

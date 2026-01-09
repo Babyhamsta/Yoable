@@ -198,8 +198,8 @@ namespace YoableWPF
                     }
                     else
                     {
-                        // Default to first project class (not nan) for new mappings
-                        selectedClass = projectClasses[0];
+                        // Default to "nan" (not detected) for new mappings
+                        selectedClass = nanOption;
                     }
                 }
                 else

@@ -20,10 +20,16 @@ This fork includes several important improvements and new features that enhance 
 
 - **🗺️ Model Class Mapping** - Map model class IDs to your project's class IDs, allowing you to use pre-trained models with different class structures. You can also filter out unwanted classes by setting them to "nan (不檢測)".
 - **🌐 Multilingual Support** - Full UI translation support for **繁體中文 (Traditional Chinese)**, **简体中文 (Simplified Chinese)**, and **English (US)**. Switch languages on the fly without restarting the application.
+- **⌨️ Customizable Hotkeys** - Fully customizable keyboard shortcuts for common actions including save project, image navigation, and label movement. Configure your preferred key combinations in settings.
+- **🔍 Class-Based Filtering** - Filter images by class labels using checkboxes. Quickly find images containing specific classes or combinations of classes for efficient workflow management.
 
 #### 🐛 Bug Fixes & Stability
 
 - **Filter Selection Crash Fix** - Fixed a critical bug that caused application crashes when switching between image filters. The fix ensures stable operation by properly managing event handlers during filter operations.
+- **Class ID Calculation Fix** - Fixed a bug where adding new classes could result in incorrect class ID calculation. Previously, `AddClass_Click` used `GetNextClassId()` which was based on `CurrentProject.Classes`, but the actual working list was `projectClasses`. If these were out of sync, it could cause ID calculation errors. The fix:
+  - Now directly calculates the next ID from `projectClasses` using `projectClasses.Max(c => c.ClassId) + 1`
+  - Synchronizes `CurrentProject.Classes` after adding a new class to ensure correct saving
+  - Ensures new classes always get the correct sequential ID (e.g., if IDs 0, 1, 2 exist, new class gets ID 3)
 
 #### 📝 Documentation
 
@@ -43,6 +49,8 @@ These improvements make this fork more robust and user-friendly, especially for 
 - **Adjustable AI Confidence** - Set detection confidence thresholds for better accuracy.
 - **Auto Updates** - Get the latest features and fixes with built-in update checks. (Can be disabled via settings)
 - **Project Support** - Yoable can create and save projects so you can pick back up where you left off.
+- **Customizable Hotkeys** - Configure keyboard shortcuts for all common actions to speed up your workflow.
+- **Class-Based Filtering** - Filter images by class labels to quickly find specific annotations.
 
 ### 📥 Installation
 
@@ -75,6 +83,28 @@ These improvements make this fork more robust and user-friendly, especially for 
 #### Updating Yoable
 - Yoable automatically checks for updates.
 - If a new version is available, you'll be prompted to update.
+
+#### Customizing Hotkeys
+- Open **Settings** from the menu
+- Navigate to the **Keyboard Shortcuts** section
+- Click on any action button to set a custom hotkey
+- Press your desired key combination (e.g., `Ctrl + S`, `A`, `D`, etc.)
+- Press **Escape** to cancel hotkey recording
+- Supported actions:
+  - **Save Project** - Default: `Ctrl + S`
+  - **Previous Image** - Default: `A`
+  - **Next Image** - Default: `D`
+  - **Move Label Up** - Default: `Up Arrow`
+  - **Move Label Down** - Default: `Down Arrow`
+  - **Move Label Left** - Default: `Left Arrow`
+  - **Move Label Right** - Default: `Right Arrow`
+
+#### Filtering by Class
+- Expand the **Class Filter** section in the filter panel
+- Use checkboxes to select which classes to filter by
+- Images containing labels with the selected classes will be displayed
+- Select all classes or clear all to show all images
+- Class filters work in combination with status filters (All, Review, No Label, Verified)
 
 ### 🗺️ Model Class Mapping
 
@@ -140,6 +170,24 @@ A critical bug that caused application crashes when switching between image filt
 
 This fix ensures stable operation when using the filter buttons, preventing crashes and maintaining proper selection state across filter changes.
 
+#### Class ID Calculation Fix
+
+A bug in class ID calculation has been fixed that could cause incorrect IDs when adding new classes. The issue occurred when:
+
+- `AddClass_Click` used `projectManager?.CurrentProject?.GetNextClassId()` to calculate new class IDs
+- `GetNextClassId()` was based on `CurrentProject.Classes`, but the actual working list was `projectClasses`
+- If these two lists were out of sync, it could result in duplicate or incorrect class IDs
+
+**The Fix:**
+- Now directly calculates the next ID from `projectClasses` using `projectClasses.Max(c => c.ClassId) + 1`
+- Synchronizes `CurrentProject.Classes` after adding a new class to ensure correct saving
+- Ensures new classes always get the correct sequential ID
+
+**Result:**
+- New classes now correctly get the next available ID (e.g., if IDs 0, 1, 2 exist, new class gets ID 3)
+- Project data is properly synchronized, ensuring correct saving
+- No more duplicate or incorrect class IDs
+
 ### 🌍 Contributing
 Yoable is **open-source**! Contribute by reporting issues, suggesting features, or improving the code.
 
@@ -160,10 +208,16 @@ For help and troubleshooting, visit our [GitHub Issues](https://github.com/Babyh
 
 - **🗺️ 模型類別映射** - 將模型類別 ID 映射到項目的類別 ID，允許您使用具有不同類別結構的預訓練模型。您還可以通過將不需要的類別設置為 "nan (不檢測)" 來過濾它們。
 - **🌐 多語言支持** - 完整的界面翻譯支持 **繁體中文 (Traditional Chinese)**、**简体中文 (Simplified Chinese)** 和 **English (US)**。無需重啟應用程序即可隨時切換語言。
+- **⌨️ 自定義快捷鍵** - 為常用操作（保存項目、圖片導航、標籤移動等）完全自定義鍵盤快捷鍵。在設置中配置您首選的按鍵組合。
+- **🔍 類別過濾** - 使用複選框按類別標籤過濾圖片。快速查找包含特定類別或類別組合的圖片，提高工作流程效率。
 
 #### 🐛 錯誤修復與穩定性
 
 - **過濾器選擇崩潰修復** - 修復了在切換圖片過濾器時導致應用程序崩潰的嚴重錯誤。此修復通過在過濾操作期間正確管理事件處理器來確保穩定運行。
+- **類別 ID 計算修復** - 修復了添加新類別時可能導致類別 ID 計算錯誤的問題。之前，`AddClass_Click` 使用 `GetNextClassId()`，該方法基於 `CurrentProject.Classes`，但實際使用的列表是 `projectClasses`。如果兩者不同步，會導致 ID 計算錯誤。修復方案：
+  - 現在直接從 `projectClasses` 計算下一個 ID：`projectClasses.Max(c => c.ClassId) + 1`
+  - 添加類別後同步更新 `CurrentProject.Classes`，確保保存時正確
+  - 確保新類別始終獲得正確的順序 ID（例如：如果已有 ID 0, 1, 2，新類別會得到 ID 3）
 
 #### 📝 文檔
 
@@ -183,6 +237,8 @@ For help and troubleshooting, visit our [GitHub Issues](https://github.com/Babyh
 - **可调节 AI 置信度** - 设置检测置信度阈值以获得更好的准确性。
 - **自动更新** - 通过内置更新检查获取最新功能和修复。（可通过设置禁用）
 - **项目支持** - Yoable 可以创建和保存项目，让您可以随时继续之前的工作。
+- **自定義快捷鍵** - 為所有常用操作配置鍵盤快捷鍵，加快您的工作流程。
+- **類別過濾** - 按類別標籤過濾圖片，快速查找特定標註。
 
 ### 📥 安装
 
@@ -215,6 +271,28 @@ For help and troubleshooting, visit our [GitHub Issues](https://github.com/Babyh
 #### 更新 Yoable
 - Yoable 会自动检查更新。
 - 如果有新版本可用，系统会提示您更新。
+
+#### 自定義快捷鍵
+- 从菜单打开 **设置**
+- 导航到 **键盘快捷键** 部分
+- 点击任何操作按钮来设置自定义快捷鍵
+- 按下您想要的按键组合（例如：`Ctrl + S`、`A`、`D` 等）
+- 按 **Escape** 取消快捷鍵录制
+- 支持的操作：
+  - **保存项目** - 默认：`Ctrl + S`
+  - **上一张图片** - 默认：`A`
+  - **下一张图片** - 默认：`D`
+  - **向上移动标签** - 默认：`上方向键`
+  - **向下移动标签** - 默认：`下方向键`
+  - **向左移动标签** - 默认：`左方向键`
+  - **向右移动标签** - 默认：`右方向键`
+
+#### 按類別過濾
+- 在過濾面板中展開 **類別過濾** 部分
+- 使用複選框選擇要過濾的類別
+- 將顯示包含所選類別標籤的圖片
+- 選擇所有類別或清除所有選擇以顯示所有圖片
+- 類別過濾器可與狀態過濾器（全部、審查、無標籤、已完成）組合使用
 
 ### 🗺️ 模型类别映射
 
@@ -279,6 +357,24 @@ Yoable 支持 **多种语言**，以提供更好的用户体验。您可以随�
 - 重新绑定事件处理器以确保正常功能继续运行
 
 此修复确保了使用过滤器按钮时的稳定运行，防止崩溃并在过滤器更改时保持正确的选择状态。
+
+#### 類別 ID 計算修復
+
+已修復一個類別 ID 計算錯誤，該問題在添加新類別時可能導致 ID 計算錯誤。該問題在以下情況下發生：
+
+- `AddClass_Click` 使用 `projectManager?.CurrentProject?.GetNextClassId()` 來計算新類別 ID
+- `GetNextClassId()` 基於 `CurrentProject.Classes`，但實際使用的列表是 `projectClasses`
+- 如果這兩個列表不同步，可能會導致重複或錯誤的類別 ID
+
+**修復方案：**
+- 現在直接從 `projectClasses` 計算下一個 ID：`projectClasses.Max(c => c.ClassId) + 1`
+- 添加類別後同步更新 `CurrentProject.Classes`，確保保存時正確
+- 確保新類別始終獲得正確的順序 ID
+
+**結果：**
+- 新類別現在會正確獲得下一個可用的 ID（例如：如果已有 ID 0, 1, 2，新類別會得到 ID 3）
+- 項目數據已正確同步，確保保存時正確
+- 不再出現重複或錯誤的類別 ID
 
 ### 🌍 贡献
 Yoable 是 **开源** 的！通过报告问题、建议功能或改进代码来做出贡献。
