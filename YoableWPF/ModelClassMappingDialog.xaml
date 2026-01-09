@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:ui="http://schemas.modernwpf.com/2019"
         ui:WindowHelper.UseModernWindowStyle="True"
-        Title="配置模型類別映射"
+        Title="{DynamicResource Mapping_Title}"
         Height="600"
         Width="800"
         WindowStartupLocation="CenterOwner"
@@ -61,18 +61,18 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="配置模型類別映射" 
+                    <TextBlock Text="{DynamicResource Mapping_Title}" 
                                FontSize="18" 
                                FontWeight="SemiBold"
                                Margin="0,0,0,8"/>
                     <TextBlock x:Name="InfoText"
-                               Text="請為模型的每個類別選擇對應的項目類別"
+                               Text="{DynamicResource Mapping_Description}"
                                Foreground="Gray"
                                TextWrapping="Wrap"/>
                 </StackPanel>
                 <Button Grid.Column="1"
                         x:Name="LoadClassFileButton"
-                        Content="載入類別文件"
+                        Content="{DynamicResource Mapping_LoadClassFile}"
                         Click="LoadClassFileButton_Click"
                         Padding="12,6"
                         Margin="8,0,0,0"
@@ -114,7 +114,7 @@
                                             <TextBlock Text="{Binding ModelClassName}" 
                                                        FontWeight="SemiBold"
                                                        FontSize="13"/>
-                                            <TextBlock Text="{Binding ModelClassId, StringFormat='模型 ID: {0}'}" 
+                                            <TextBlock Text="{Binding ModelIdDisplayText}"
                                                        FontSize="11"
                                                        Foreground="Gray"/>
                                         </StackPanel>
@@ -161,13 +161,13 @@
         <StackPanel Grid.Row="2" 
                     Orientation="Horizontal" 
                     HorizontalAlignment="Right">
-            <Button Content="確定" 
+            <Button Content="{DynamicResource Common_OK}" 
                     Click="OKButton_Click"
                     Style="{StaticResource ModernButton}"
                     MinWidth="100"
                     Margin="0,0,8,0"
                     IsDefault="True"/>
-            <Button Content="取消" 
+            <Button Content="{DynamicResource Common_Cancel}" 
                     Click="CancelButton_Click"
                     MinWidth="100"
                     IsCancel="True"/>

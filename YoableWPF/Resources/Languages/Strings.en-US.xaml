@@ -22,23 +22,23 @@
     
     <!-- UI Settings -->
     <system:String x:Key="UI_Language">Language</system:String>
-    <system:String x:Key="UI_Language_Description">Select the display language for the application</system:String>
+    <system:String x:Key="UI_Language_Description">Select the display language for the application. Changes will take effect after restart.</system:String>
     
     <!-- Settings Window - Header -->
-    <system:String x:Key="Settings_Subtitle">Configure Yoable to match your workflow and preferences</system:String>
+    <system:String x:Key="Settings_Subtitle">Configure Yoable to match your workflow and preferences.</system:String>
     
     <!-- Settings Window - General Tab -->
     <system:String x:Key="Settings_Appearance">Appearance</system:String>
     <system:String x:Key="Settings_DarkMode">Dark Mode</system:String>
     <system:String x:Key="Settings_AccentColor">Accent Color (Hex)</system:String>
-    <system:String x:Key="Settings_AccentColor_Tooltip">Enter hex color value (e.g. #FF0000 for red)</system:String>
-    <system:String x:Key="Settings_AccentColor_Help">Changes the accent color used throughout the application</system:String>
+    <system:String x:Key="Settings_AccentColor_Tooltip">Enter a hexadecimal color value (e.g., #FF0000 for red)</system:String>
+    <system:String x:Key="Settings_AccentColor_Help">Changes the accent color used throughout the application.</system:String>
     <system:String x:Key="Settings_General_Section">General</system:String>
     <system:String x:Key="Settings_CheckUpdates">Check for updates on launch</system:String>
-    <system:String x:Key="Settings_CheckUpdates_Tooltip">Automatically check for new versions when starting Yoable</system:String>
+    <system:String x:Key="Settings_CheckUpdates_Tooltip">Automatically check for new versions when starting Yoable.</system:String>
     <system:String x:Key="Settings_Project_Section">Project</system:String>
     <system:String x:Key="Settings_AutoSave">Enable Auto-Save</system:String>
-    <system:String x:Key="Settings_AutoSave_Help">Automatically save your project every 2 minutes when changes are detected</system:String>
+    <system:String x:Key="Settings_AutoSave_Help">Automatically save your project every 2 minutes when changes are detected.</system:String>
     <system:String x:Key="Settings_Labels_Section">Labels</system:String>
     <system:String x:Key="Settings_LabelColor">Label Color</system:String>
     <system:String x:Key="Settings_LabelThickness">Label Thickness</system:String>
@@ -63,7 +63,7 @@
     <system:String x:Key="Settings_Device_CPU">CPU</system:String>
     <system:String x:Key="Settings_Device_GPU">GPU (CUDA)</system:String>
     <system:String x:Key="Settings_ConfidenceThreshold">Confidence Threshold</system:String>
-    <system:String x:Key="Settings_ConfidenceThreshold_Help">Minimum confidence required to display AI detections</system:String>
+    <system:String x:Key="Settings_ConfidenceThreshold_Help">Minimum confidence required to display AI detections.</system:String>
     <system:String x:Key="Settings_EnsembleMode_Section">Ensemble Mode</system:String>
     <system:String x:Key="Settings_NoModelsLoaded">No models loaded</system:String>
     <system:String x:Key="Settings_ModelLoaded_Single">1 model loaded (single model mode)</system:String>
@@ -77,14 +77,14 @@
     <!-- Settings Window - Performance Tab -->
     <system:String x:Key="Settings_LoadingProcessing_Section">Loading &amp; Processing</system:String>
     <system:String x:Key="Settings_UIBatchSize">UI Batch Size</system:String>
-    <system:String x:Key="Settings_UIBatchSize_Help">Number of images to load at once when populating the UI</system:String>
+    <system:String x:Key="Settings_UIBatchSize_Help">Number of images to load at once when populating the UI.</system:String>
     <system:String x:Key="Settings_ProcessingBatchSize">File Processing Batch Size</system:String>
-    <system:String x:Key="Settings_ProcessingBatchSize_Help">Number of files to process in each batch during operations</system:String>
+    <system:String x:Key="Settings_ProcessingBatchSize_Help">Number of files to process in each batch during operations.</system:String>
     <system:String x:Key="Settings_LabelLoadBatchSize">Label Loading Batch Size</system:String>
-    <system:String x:Key="Settings_LabelLoadBatchSize_Help">Number of label files to process in parallel batches (higher = faster for large datasets)</system:String>
+    <system:String x:Key="Settings_LabelLoadBatchSize_Help">Number of label files to process in parallel batches (higher values = faster processing for large datasets).</system:String>
     <system:String x:Key="Settings_EnableParallel">Enable parallel processing</system:String>
-    <system:String x:Key="Settings_EnableParallel_Help">Use multiple CPU cores for faster processing (recommended)</system:String>
-    <system:String x:Key="Settings_PerformanceTip">Lower batch sizes use less memory but may be slower. Increase if you have plenty of RAM.</system:String>
+    <system:String x:Key="Settings_EnableParallel_Help">Use multiple CPU cores for faster processing (recommended).</system:String>
+    <system:String x:Key="Settings_PerformanceTip">Lower batch sizes use less memory but may be slower. Increase the batch size if you have plenty of RAM.</system:String>
     
     <!-- Settings Window - UI Tab -->
     <system:String x:Key="Settings_DisplayLanguage">Display Language</system:String>
@@ -103,7 +103,7 @@
     <system:String x:Key="Menu_ImportLabelsAndImage">Import Labels&amp;Image</system:String>
     <system:String x:Key="Menu_ImportImage">Import Image</system:String>
     <system:String x:Key="Menu_ImportLabels">Import Labels</system:String>
-    <system:String x:Key="Menu_YoutubeToImages">Youtube To Images</system:String>
+    <system:String x:Key="Menu_YoutubeToImages">YouTube To Images</system:String>
     <system:String x:Key="Menu_ExportLabels">Export Labels</system:String>
     <system:String x:Key="Menu_ClearAll">Clear All</system:String>
     <system:String x:Key="Menu_AI">AI</system:String>
@@ -148,6 +148,23 @@
     <system:String x:Key="Status_Active">(active)</system:String>
     <system:String x:Key="Status_AutoSaveEnabled">Auto-save enabled</system:String>
     <system:String x:Key="Status_AutoSaveDisabled">Auto-save disabled</system:String>
+    
+    <!-- Model Class Mapping Dialog -->
+    <system:String x:Key="Mapping_Title">Configure Model Class Mapping</system:String>
+    <system:String x:Key="Mapping_Description">Please select the corresponding project class for each model class</system:String>
+    <system:String x:Key="Mapping_LoadClassFile">Load Class File</system:String>
+    <system:String x:Key="Mapping_ModelID">Model ID: {0}</system:String>
+    <system:String x:Key="Mapping_InfoFormat">Model: {0}&#x0a;Number of Classes: {1}&#x0a;Number of Project Classes: {2}&#x0a;Hint: Select 'nan (not detected)' to skip detection for this class</system:String>
+    <system:String x:Key="Mapping_WarningGeneric">⚠ Warning: Class file not found, displaying generic class names.&#x0a;Please click the 'Load Class File' button in the top right corner to manually load the correct class names.</system:String>
+    <system:String x:Key="Mapping_SelectClassFile">Select Class File</system:String>
+    <system:String x:Key="Mapping_ClassFileEmpty">Class file is empty or incorrectly formatted.</system:String>
+    <system:String x:Key="Mapping_Error">Error</system:String>
+    <system:String x:Key="Mapping_ClassCountMismatch">Class file contains {0} classes, but the model has {1} classes.&#x0a;&#x0a;Do you still want to use this file?&#x0a;(Will use the first {2} classes)</system:String>
+    <system:String x:Key="Mapping_ClassCountMismatchTitle">Class Count Mismatch</system:String>
+    <system:String x:Key="Mapping_LoadSuccess">Successfully loaded {0} class names.</system:String>
+    <system:String x:Key="Mapping_LoadSuccessTitle">Load Successful</system:String>
+    <system:String x:Key="Mapping_LoadError">An error occurred while loading the class file:&#x0a;{0}</system:String>
+    <system:String x:Key="Mapping_NotDetected">nan (not detected)</system:String>
     
 </ResourceDictionary>
 

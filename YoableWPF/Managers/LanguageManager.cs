@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Markup;
 
@@ -14,12 +15,24 @@ namespace YoableWPF.Managers
         public static LanguageManager Instance => instance ??= new LanguageManager();
 
         private ResourceDictionary currentLanguageDictionary;
-        private string currentLanguage = "zh-TW"; // 默認繁體中文
+        private Dictionary<string, string> currentIniStrings; // 用於存儲從 INI 文件讀取的字符串
+        private string currentLanguage = "en-US"; // 默認英文（硬編碼）
+        private string langFolderPath;
 
         public event EventHandler LanguageChanged;
 
         private LanguageManager()
         {
+            // 獲取應用程序目錄下的 lang 文件夾
+            var appDir = AppDomain.CurrentDomain.BaseDirectory;
+            langFolderPath = Path.Combine(appDir, "lang");
+
+            // 如果 lang 文件夾不存在，創建它
+            if (!Directory.Exists(langFolderPath))
+            {
+                Directory.CreateDirectory(langFolderPath);
+            }
+
             // 從設置加載語言
             if (!string.IsNullOrEmpty(Properties.Settings.Default.Language))
             {
@@ -30,12 +43,74 @@ namespace YoableWPF.Managers
 
         public List<LanguageInfo> GetAvailableLanguages()
         {
-            return new List<LanguageInfo>
+            var languages = new List<LanguageInfo>();
+
+            // 英文始終可用（硬編碼）
+            languages.Add(new LanguageInfo { Code = "en-US", Name = "English", NativeName = "English" });
+
+            // 從 lang 文件夾掃描所有 .ini 文件
+            if (Directory.Exists(langFolderPath))
             {
-                new LanguageInfo { Code = "zh-TW", Name = "繁體中文", NativeName = "繁體中文" },
-                new LanguageInfo { Code = "zh-CN", Name = "简体中文", NativeName = "简体中文" },
-                new LanguageInfo { Code = "en-US", Name = "English", NativeName = "English" }
-            };
+                var iniFiles = Directory.GetFiles(langFolderPath, "*.ini");
+                foreach (var file in iniFiles)
+                {
+                    var langCode = Path.GetFileNameWithoutExtension(file);
+                    // 跳過英文，因為它已經在列表中
+                    if (langCode == "en-US") continue;
+
+                    var langInfo = GetLanguageInfoFromFile(file, langCode);
+                    if (langInfo != null)
+                    {
+                        languages.Add(langInfo);
+                    }
+                }
+            }
+
+            return languages;
+        }
+
+        private LanguageInfo GetLanguageInfoFromFile(string filePath, string langCode)
+        {
+            try
+            {
+                var lines = File.ReadAllLines(filePath, Encoding.UTF8);
+                var name = langCode; // 默認使用語言代碼
+                var nativeName = langCode;
+
+                // 從 [LanguageInfo] 區段讀取語言信息
+                bool inLanguageInfo = false;
+                foreach (var line in lines)
+                {
+                    var trimmed = line.Trim();
+                    if (trimmed == "[LanguageInfo]")
+                    {
+                        inLanguageInfo = true;
+                        continue;
+                    }
+                    if (trimmed.StartsWith("[") && trimmed != "[LanguageInfo]")
+                    {
+                        inLanguageInfo = false;
+                        continue;
+                    }
+                    if (inLanguageInfo && trimmed.Contains("="))
+                    {
+                        var parts = trimmed.Split(new[] { '=' }, 2);
+                        if (parts.Length == 2)
+                        {
+                            var key = parts[0].Trim();
+                            var value = parts[1].Trim();
+                            if (key == "Name") name = value;
+                            if (key == "NativeName") nativeName = value;
+                        }
+                    }
+                }
+
+                return new LanguageInfo { Code = langCode, Name = name, NativeName = nativeName };
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public string CurrentLanguage => currentLanguage;
@@ -64,79 +139,166 @@ namespace YoableWPF.Managers
                     Application.Current.Resources.MergedDictionaries.Remove(currentLanguageDictionary);
                     currentLanguageDictionary = null;
                 }
+                currentIniStrings = null;
 
-                // 加載新的語言資源
-                // 使用 ResourceDictionary.Source 屬性，這是最可靠的方式
-                var assemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
-                var resourcePath = $"Resources/Languages/Strings.{languageCode}.xaml";
-                
-                try
+                // 英文：從 XAML 資源加載（硬編碼）
+                if (languageCode == "en-US")
                 {
-                    // 方法 1: 使用 Source 屬性（最簡單可靠）
-                    currentLanguageDictionary = new ResourceDictionary();
-                    var uri = new Uri($"/{assemblyName};component/{resourcePath}", UriKind.Relative);
-                    currentLanguageDictionary.Source = uri;
-                    Application.Current.Resources.MergedDictionaries.Add(currentLanguageDictionary);
-                    System.Diagnostics.Debug.WriteLine($"Successfully loaded language: {languageCode} using Source property");
+                    LoadEnglishFromXaml();
                 }
-                catch (Exception ex1)
+                else
                 {
-                    System.Diagnostics.Debug.WriteLine($"Method 1 failed: {ex1.Message}");
-                    
-                    // 方法 2: 嘗試使用 Application.LoadComponent
-                    try
-                    {
-                        var uri = new Uri($"/{assemblyName};component/{resourcePath}", UriKind.Relative);
-                        currentLanguageDictionary = (ResourceDictionary)Application.LoadComponent(uri);
-                        Application.Current.Resources.MergedDictionaries.Add(currentLanguageDictionary);
-                        System.Diagnostics.Debug.WriteLine($"Successfully loaded language: {languageCode} using LoadComponent");
-                    }
-                    catch (Exception ex2)
-                    {
-                        System.Diagnostics.Debug.WriteLine($"Method 2 failed: {ex2.Message}");
-                        
-                        // 方法 3: 嘗試使用 pack URI
-                        try
-                        {
-                            var packUri = new Uri($"pack://application:,,,/{assemblyName};component/{resourcePath}", UriKind.Absolute);
-                            currentLanguageDictionary = (ResourceDictionary)Application.LoadComponent(packUri);
-                            Application.Current.Resources.MergedDictionaries.Add(currentLanguageDictionary);
-                            System.Diagnostics.Debug.WriteLine($"Successfully loaded language: {languageCode} using pack URI");
-                        }
-                        catch (Exception ex3)
-                        {
-                            System.Diagnostics.Debug.WriteLine($"Method 3 failed: {ex3.Message}");
-                            
-                            // 如果所有方法都失敗，嘗試使用默認語言
-                            if (languageCode != "zh-TW")
-                            {
-                                System.Diagnostics.Debug.WriteLine($"Failed to load language {languageCode}, falling back to zh-TW");
-                                LoadLanguage("zh-TW");
-                                return;
-                            }
-                            else
-                            {
-                                System.Diagnostics.Debug.WriteLine($"Failed to load default language zh-TW");
-                                System.Diagnostics.Debug.WriteLine($"All methods failed. Resource path: {resourcePath}");
-                            }
-                        }
-                    }
+                    // 其他語言：從 INI 文件加載
+                    LoadLanguageFromIni(languageCode);
                 }
             }
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"Error in LoadLanguage: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
-                // 不顯示錯誤對話框，避免在啟動時出現問題
+                
+                // 如果加載失敗，回退到英文
+                if (languageCode != "en-US")
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to load language {languageCode}, falling back to en-US");
+                    LoadLanguage("en-US");
+                }
             }
+        }
+
+        private void LoadEnglishFromXaml()
+        {
+            try
+            {
+                var assemblyName = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+                var resourcePath = $"Resources/Languages/Strings.en-US.xaml";
+                
+                currentLanguageDictionary = new ResourceDictionary();
+                var uri = new Uri($"/{assemblyName};component/{resourcePath}", UriKind.Relative);
+                currentLanguageDictionary.Source = uri;
+                Application.Current.Resources.MergedDictionaries.Add(currentLanguageDictionary);
+                System.Diagnostics.Debug.WriteLine($"Successfully loaded English from XAML");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to load English from XAML: {ex.Message}");
+                throw;
+            }
+        }
+
+        private void LoadLanguageFromIni(string languageCode)
+        {
+            var langFile = Path.Combine(langFolderPath, $"{languageCode}.ini");
+            
+            // 如果文件不存在，回退到英文
+            if (!File.Exists(langFile))
+            {
+                System.Diagnostics.Debug.WriteLine($"Language file not found: {langFile}, falling back to en-US");
+                LoadLanguage("en-US");
+                return;
+            }
+
+            try
+            {
+                // 讀取 INI 文件
+                currentIniStrings = ParseIniFile(langFile);
+
+                // 先加載英文作為基礎（fallback）
+                LoadEnglishFromXaml();
+
+                // 創建新的資源字典，覆蓋英文翻譯
+                var overrideDict = new ResourceDictionary();
+                foreach (var kvp in currentIniStrings)
+                {
+                    overrideDict[kvp.Key] = kvp.Value;
+                }
+
+                Application.Current.Resources.MergedDictionaries.Add(overrideDict);
+                System.Diagnostics.Debug.WriteLine($"Successfully loaded language {languageCode} from INI file");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error loading language from INI: {ex.Message}");
+                throw;
+            }
+        }
+
+        private Dictionary<string, string> ParseIniFile(string filePath)
+        {
+            var result = new Dictionary<string, string>();
+            string currentSection = "";
+
+            try
+            {
+                var lines = File.ReadAllLines(filePath, Encoding.UTF8);
+                
+                foreach (var line in lines)
+                {
+                    var trimmed = line.Trim();
+                    
+                    // 跳過空行和註釋
+                    if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith(";") || trimmed.StartsWith("#"))
+                        continue;
+
+                    // 處理區段
+                    if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
+                    {
+                        currentSection = trimmed.Substring(1, trimmed.Length - 2);
+                        continue;
+                    }
+
+                    // 處理鍵值對
+                    if (trimmed.Contains("="))
+                    {
+                        var parts = trimmed.Split(new[] { '=' }, 2);
+                        if (parts.Length == 2)
+                        {
+                            var key = parts[0].Trim();
+                            var value = parts[1].Trim();
+                            
+                            // 支持轉義字符
+                            value = value.Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t");
+                            
+                            // 使用完整鍵名（Section_Key）
+                            var fullKey = string.IsNullOrEmpty(currentSection) ? key : $"{currentSection}_{key}";
+                            result[fullKey] = value;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error parsing INI file: {ex.Message}");
+            }
+
+            return result;
         }
 
         public string GetString(string key)
         {
-            if (currentLanguageDictionary != null && currentLanguageDictionary.Contains(key))
+            // 如果當前語言是英文，從 XAML 資源字典讀取
+            if (currentLanguage == "en-US")
             {
-                return currentLanguageDictionary[key]?.ToString() ?? key;
+                if (currentLanguageDictionary != null && currentLanguageDictionary.Contains(key))
+                {
+                    return currentLanguageDictionary[key]?.ToString() ?? key;
+                }
             }
+            else
+            {
+                // 其他語言：先從 INI 讀取，如果沒有則從英文 fallback
+                if (currentIniStrings != null && currentIniStrings.ContainsKey(key))
+                {
+                    return currentIniStrings[key];
+                }
+                
+                // Fallback 到英文
+                if (currentLanguageDictionary != null && currentLanguageDictionary.Contains(key))
+                {
+                    return currentLanguageDictionary[key]?.ToString() ?? key;
+                }
+            }
+            
             return key; // 如果找不到，返回 key 本身
         }
     }
@@ -148,4 +310,3 @@ namespace YoableWPF.Managers
         public string NativeName { get; set; }
     }
 }
-

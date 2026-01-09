@@ -17,6 +17,14 @@ namespace YoableWPF
         public string ModelClassName { get; set; }
         public List<LabelClass> ProjectClasses { get; set; }
         
+        public string ModelIdDisplayText
+        {
+            get
+            {
+                return string.Format(LanguageManager.Instance.GetString("Mapping_ModelID"), ModelClassId);
+            }
+        }
+        
         public LabelClass SelectedProjectClass
         {
             get => _selectedProjectClass;
@@ -36,6 +44,12 @@ namespace YoableWPF
         {
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
+
+        // 公共方法，用於通知 ModelIdDisplayText 屬性變更
+        public void NotifyModelIdDisplayTextChanged()
+        {
+            OnPropertyChanged(nameof(ModelIdDisplayText));
+        }
     }
 
     public partial class ModelClassMappingDialog : Window
@@ -43,6 +57,7 @@ namespace YoableWPF
         private YoloModel model;
         private List<LabelClass> projectClasses;
         private List<ClassMappingItem> mappingItems;
+        private List<string> storedModelClassNames;
 
         public Dictionary<int, int> ClassMapping { get; private set; }
 
@@ -54,7 +69,72 @@ namespace YoableWPF
             mappingItems = new List<ClassMappingItem>();
             ClassMapping = new Dictionary<int, int>();
 
+            // Subscribe to language changes
+            LanguageManager.Instance.LanguageChanged += LanguageManager_LanguageChanged;
+
             InitializeMapping();
+        }
+
+        private void LanguageManager_LanguageChanged(object sender, EventArgs e)
+        {
+            // Reload window resources when language changes
+            Dispatcher.Invoke(() =>
+            {
+                ReloadWindowResources();
+                // Update nan option name in all mapping items
+                foreach (var item in mappingItems)
+                {
+                    if (item.ProjectClasses != null && item.ProjectClasses.Any())
+                    {
+                        var nanOption = item.ProjectClasses.FirstOrDefault(c => c.ClassId == -1);
+                        if (nanOption != null)
+                        {
+                            nanOption.Name = LanguageManager.Instance.GetString("Mapping_NotDetected");
+                        }
+                    }
+                    // Trigger property change for ModelIdDisplayText
+                    item.NotifyModelIdDisplayTextChanged();
+                }
+                // Update info text
+                UpdateInfoText();
+            });
+        }
+
+        private void ReloadWindowResources()
+        {
+            // LanguageManager 已經更新了 Application.Current.Resources
+            // 由於窗口使用 DynamicResource，它會自動從 Application.Current.Resources 獲取更新的資源
+            // 這裡只需要觸發 UI 更新即可
+            try
+            {
+                // 強制刷新窗口標題和所有使用 DynamicResource 的控件
+                this.Title = LanguageManager.Instance.GetString("Mapping_Title");
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to reload language resources in ModelClassMappingDialog: {ex.Message}");
+            }
+        }
+
+        private void UpdateInfoText()
+        {
+            int projectClassCount = projectClasses?.Count ?? 0;
+            string infoText = string.Format(LanguageManager.Instance.GetString("Mapping_InfoFormat"), 
+                model.Name, 
+                model.ModelInfo.NumClasses, 
+                projectClassCount);
+
+            // Check if class names are generic (class_0, class_1, etc.)
+            if (storedModelClassNames != null && storedModelClassNames.Any())
+            {
+                bool hasGenericNames = storedModelClassNames.All(name => name.StartsWith("class_") && int.TryParse(name.Substring(6), out _));
+                if (hasGenericNames && storedModelClassNames.Count > 0)
+                {
+                    infoText += "\n\n" + LanguageManager.Instance.GetString("Mapping_WarningGeneric");
+                }
+            }
+
+            InfoText.Text = infoText;
         }
 
         private void InitializeMapping()
@@ -79,7 +159,7 @@ namespace YoableWPF
             }
 
             // Create "nan" option (ClassId = -1 means skip detection)
-            var nanOption = new LabelClass("nan (不檢測)", "#808080", -1);
+            var nanOption = new LabelClass(LanguageManager.Instance.GetString("Mapping_NotDetected"), "#808080", -1);
 
             // Create mapping items
             for (int i = 0; i < actualNumClasses; i++)
@@ -139,21 +219,11 @@ namespace YoableWPF
 
             MappingList.ItemsSource = mappingItems;
 
+            // Store model class names for UpdateInfoText
+            storedModelClassNames = modelClassNames;
+
             // Update info text
-            int projectClassCount = projectClasses?.Count ?? 0;
-            string infoText = $"模型: {model.Name}\n" +
-                          $"類別數量: {model.ModelInfo.NumClasses}\n" +
-                          $"項目類別數量: {projectClassCount}\n" +
-                          $"提示: 選擇 'nan (不檢測)' 可跳過該類別的檢測";
-
-            // Check if class names are generic (class_0, class_1, etc.)
-            bool hasGenericNames = modelClassNames.All(name => name.StartsWith("class_") && int.TryParse(name.Substring(6), out _));
-            if (hasGenericNames && modelClassNames.Count > 0)
-            {
-                infoText += $"\n\n⚠ 警告: 未找到類別文件，顯示通用類別名稱。\n請點擊右上角「載入類別文件」按鈕手動載入正確的類別名稱。";
-            }
-
-            InfoText.Text = infoText;
+            UpdateInfoText();
         }
 
         private void OKButton_Click(object sender, RoutedEventArgs e)
@@ -182,12 +252,22 @@ namespace YoableWPF
             Close();
         }
 
+        protected override void OnClosed(EventArgs e)
+        {
+            // Unsubscribe from language changes
+            if (LanguageManager.Instance != null)
+            {
+                LanguageManager.Instance.LanguageChanged -= LanguageManager_LanguageChanged;
+            }
+            base.OnClosed(e);
+        }
+
         private void LoadClassFileButton_Click(object sender, RoutedEventArgs e)
         {
             var openFileDialog = new Microsoft.Win32.OpenFileDialog
             {
                 Filter = "Text Files|*.txt;*.names|All Files|*.*",
-                Title = "選擇類別文件",
+                Title = LanguageManager.Instance.GetString("Mapping_SelectClassFile"),
                 CheckFileExists = true
             };
 
@@ -210,7 +290,11 @@ namespace YoableWPF
 
                     if (lines.Count == 0)
                     {
-                        MessageBox.Show("類別文件為空或格式不正確。", "錯誤", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        MessageBox.Show(
+                            LanguageManager.Instance.GetString("Mapping_ClassFileEmpty"), 
+                            LanguageManager.Instance.GetString("Mapping_Error"), 
+                            MessageBoxButton.OK, 
+                            MessageBoxImage.Warning);
                         return;
                     }
 
@@ -257,10 +341,11 @@ namespace YoableWPF
                     if (classNames.Count != model.ModelInfo.NumClasses)
                     {
                         var result = MessageBox.Show(
-                            $"類別文件包含 {classNames.Count} 個類別，但模型有 {model.ModelInfo.NumClasses} 個類別。\n\n" +
-                            $"是否仍要使用此文件？\n" +
-                            $"(將使用前 {Math.Min(classNames.Count, model.ModelInfo.NumClasses)} 個類別)",
-                            "類別數量不匹配",
+                            string.Format(LanguageManager.Instance.GetString("Mapping_ClassCountMismatch"), 
+                                classNames.Count, 
+                                model.ModelInfo.NumClasses, 
+                                Math.Min(classNames.Count, model.ModelInfo.NumClasses)),
+                            LanguageManager.Instance.GetString("Mapping_ClassCountMismatchTitle"),
                             MessageBoxButton.YesNo,
                             MessageBoxImage.Question);
 
@@ -274,18 +359,20 @@ namespace YoableWPF
                     mappingItems.Clear();
                     InitializeMappingWithClassNames(classNames);
                     MappingList.ItemsSource = mappingItems;
+                    // Update info text after loading
+                    UpdateInfoText();
 
                     MessageBox.Show(
-                        $"成功載入 {classNames.Count} 個類別名稱。",
-                        "載入成功",
+                        string.Format(LanguageManager.Instance.GetString("Mapping_LoadSuccess"), classNames.Count),
+                        LanguageManager.Instance.GetString("Mapping_LoadSuccessTitle"),
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
                 }
                 catch (Exception ex)
                 {
                     MessageBox.Show(
-                        $"載入類別文件時發生錯誤：\n{ex.Message}",
-                        "錯誤",
+                        string.Format(LanguageManager.Instance.GetString("Mapping_LoadError"), ex.Message),
+                        LanguageManager.Instance.GetString("Mapping_Error"),
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
                 }
