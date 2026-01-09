@@ -1,5 +1,7 @@
 # Yoable
 
+**English** | [简体中文](#简体中文)
+
 **Yoable** is an AI-powered image annotation tool designed to make dataset labeling faster and more efficient. It supports **YOLO v5/v8/v11 (ONNX)** models for automatic object detection and labeling. Yoable provides an intuitive interface for managing images, running AI-assisted labeling, and exporting labels in a format compatible with machine learning models.
 
 For non-WPF version you can build the legacy source or use v1.2.0 from releases - [Legacy branch](https://github.com/Babyhamsta/Yoable/tree/legacy).
@@ -8,7 +10,26 @@ For non-WPF version you can build the legacy source or use v1.2.0 from releases 
 
 ---
 
-## English / 英文
+## English
+
+### 🆕 What's New in This Fork?
+
+This fork includes several important improvements and new features that enhance the usability and stability of Yoable:
+
+#### ✨ New Features
+
+- **🗺️ Model Class Mapping** - Map model class IDs to your project's class IDs, allowing you to use pre-trained models with different class structures. You can also filter out unwanted classes by setting them to "nan (不檢測)".
+- **🌐 Multilingual Support** - Full UI translation support for **繁體中文 (Traditional Chinese)**, **简体中文 (Simplified Chinese)**, and **English (US)**. Switch languages on the fly without restarting the application.
+
+#### 🐛 Bug Fixes & Stability
+
+- **Filter Selection Crash Fix** - Fixed a critical bug that caused application crashes when switching between image filters. The fix ensures stable operation by properly managing event handlers during filter operations.
+
+#### 📝 Documentation
+
+- **Bilingual README** - Complete documentation in both English and Simplified Chinese for better accessibility.
+
+These improvements make this fork more robust and user-friendly, especially for users working with different model architectures and multilingual environments.
 
 ### 🚀 Features
 
@@ -127,7 +148,28 @@ For help and troubleshooting, visit our [GitHub Issues](https://github.com/Babyh
 
 ---
 
-## 简体中文 / Simplified Chinese
+## 简体中文
+
+[English](#english) | **简体中文**
+
+### 🆕 此 Fork 版本的新功能
+
+此 fork 版本包含了多項重要的改進和新功能，提升了 Yoable 的可用性和穩定性：
+
+#### ✨ 新功能
+
+- **🗺️ 模型類別映射** - 將模型類別 ID 映射到項目的類別 ID，允許您使用具有不同類別結構的預訓練模型。您還可以通過將不需要的類別設置為 "nan (不檢測)" 來過濾它們。
+- **🌐 多語言支持** - 完整的界面翻譯支持 **繁體中文 (Traditional Chinese)**、**简体中文 (Simplified Chinese)** 和 **English (US)**。無需重啟應用程序即可隨時切換語言。
+
+#### 🐛 錯誤修復與穩定性
+
+- **過濾器選擇崩潰修復** - 修復了在切換圖片過濾器時導致應用程序崩潰的嚴重錯誤。此修復通過在過濾操作期間正確管理事件處理器來確保穩定運行。
+
+#### 📝 文檔
+
+- **雙語 README** - 提供完整的英文和簡體中文文檔，提高可訪問性。
+
+這些改進使此 fork 版本更加穩定和用戶友好，特別適合使用不同模型架構和多語言環境的用戶。
 
 ### 🚀 功能特性
 
