@@ -36,32 +36,32 @@ namespace YoableWPF
         {
             try
             {
-                // LanguageManager 已經將資源加載到 Application.Current.Resources 中
-                // 需要強制所有 DynamicResource 綁定重新評估
-                
-                // 移除窗口本地的語言資源字典（如果存在）
+                // LanguageManager has already loaded resources into Application.Current.Resources
+                // Need to force all DynamicResource bindings to re-evaluate
+
+                // Remove local language resource dictionary from window (if exists)
                 var languageDictToRemove = this.Resources.MergedDictionaries
                     .FirstOrDefault(d => d.Source != null && d.Source.ToString().Contains("Languages/Strings."));
-                
+
                 if (languageDictToRemove != null)
                 {
                     this.Resources.MergedDictionaries.Remove(languageDictToRemove);
                 }
 
-                // 強制所有 DynamicResource 綁定重新查找資源
-                // 通過臨時移除並重新添加資源字典來觸發重新評估
+                // Force all DynamicResource bindings to re-lookup resources
+                // Trigger re-evaluation by temporarily removing and re-adding resource dictionary
                 var tempDict = new ResourceDictionary();
                 this.Resources.MergedDictionaries.Add(tempDict);
                 this.Resources.MergedDictionaries.Remove(tempDict);
 
-                // 強制刷新所有使用 DynamicResource 的控件
+                // Force refresh all controls using DynamicResource
                 this.InvalidateVisual();
                 this.UpdateLayout();
-                
-                // 手動更新窗口標題（因為 Title 綁定可能不會自動更新）
+
+                // Manually update window title (because Title binding may not auto-update)
                 this.Title = LanguageManager.Instance.GetString("Settings_Title");
-                
-                // 強制更新所有文本控件
+
+                // Force update all text controls
                 UpdateAllTextControls();
                 
                 // Update ensemble controls text if available
@@ -78,7 +78,7 @@ namespace YoableWPF
 
         private void UpdateAllTextControls()
         {
-            // 遞歸更新所有使用 DynamicResource 的控件
+            // Recursively update all controls using DynamicResource
             UpdateTextControlsRecursive(this);
         }
 
@@ -88,17 +88,17 @@ namespace YoableWPF
 
             try
             {
-                // 強制所有可能的屬性重新評估 DynamicResource
+                // Force re-evaluation of all possible DynamicResource properties
                 if (obj is FrameworkElement fe)
                 {
-                    // 檢查常見的 DynamicResource 屬性
+                    // Check common DynamicResource properties
                     var properties = new List<DependencyProperty>
-                    { 
+                    {
                         FrameworkElement.TagProperty,
                         TextBlock.TextProperty
                     };
 
-                    // 根據控件類型添加相應的屬性
+                    // Add corresponding properties based on control type
                     if (fe is ContentControl)
                     {
                         properties.Add(ContentControl.ContentProperty);
@@ -112,7 +112,7 @@ namespace YoableWPF
                     {
                         if (fe.ReadLocalValue(prop) == DependencyProperty.UnsetValue)
                         {
-                            // 可能是使用 DynamicResource，強制重新評估
+                            // Possibly using DynamicResource, force re-evaluation
                             fe.InvalidateProperty(prop);
                         }
                     }
@@ -120,7 +120,7 @@ namespace YoableWPF
             }
             catch { }
 
-            // 遞歸處理子元素
+            // Recursively process child elements
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
             {
                 var child = VisualTreeHelper.GetChild(obj, i);
@@ -223,8 +223,8 @@ namespace YoableWPF
             ConsensusIoUSlider.Value = Properties.Settings.Default.ConsensusIoUThreshold;
             EnsembleIoUSlider.Value = Properties.Settings.Default.EnsembleIoUThreshold;
             UseWeightedAverageCheckBox.IsChecked = Properties.Settings.Default.UseWeightedAverage;
-            
-            // 根據模式顯示/隱藏相關設定
+
+            // Show/hide relevant settings based on mode
             UpdateModeDependentSettings();
 
             // Load General Settings
@@ -297,7 +297,7 @@ namespace YoableWPF
         {
             if (LanguageComboBox.SelectedItem is LanguageInfo selectedLanguage)
             {
-                // 語言切換將在保存時應用
+                // Language change will be applied when saved
             }
         }
 
@@ -440,7 +440,7 @@ namespace YoableWPF
 
         private void UpdateModeDependentSettings()
         {
-            // 根據模式顯示/隱藏相關設定
+            // Show/hide relevant settings based on mode
             bool isVotingMode = DetectionModeComboBox.SelectedIndex == 0;
             MinConsensusSlider.IsEnabled = isVotingMode;
             ConsensusIoUSlider.IsEnabled = isVotingMode;

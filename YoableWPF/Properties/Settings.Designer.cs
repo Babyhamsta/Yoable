@@ -409,7 +409,7 @@ namespace YoableWPF.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("zh-TW")]
+        [global::System.Configuration.DefaultSettingValueAttribute("en-US")]
         public string Language {
             get {
                 return ((string)(this["Language"]));

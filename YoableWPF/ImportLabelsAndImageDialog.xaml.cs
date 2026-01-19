@@ -46,7 +46,7 @@ namespace YoableWPF
                 CheckFileExists = false,
                 CheckPathExists = true,
                 FileName = "Select Images Folder",
-                Title = LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_SelectImagesFolder") ?? "選擇圖片資料夾"
+                Title = LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_SelectImagesFolder") ?? "Select Images Folder"
             };
 
             // Set initial directory
@@ -73,8 +73,8 @@ namespace YoableWPF
                 else
                 {
                     MessageBox.Show(
-                        LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_InvalidPath") ?? "無效的資料夾路徑。",
-                        LanguageManager.Instance.GetString("Main_Error") ?? "錯誤",
+                        LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_InvalidPath") ?? "Invalid folder path.",
+                        LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
                 }
@@ -89,7 +89,7 @@ namespace YoableWPF
                 CheckFileExists = false,
                 CheckPathExists = true,
                 FileName = "Select Labels Folder",
-                Title = LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_SelectLabelsFolder") ?? "選擇標籤資料夾"
+                Title = LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_SelectLabelsFolder") ?? "Select Labels Folder"
             };
 
             // Set initial directory
@@ -116,8 +116,8 @@ namespace YoableWPF
                 else
                 {
                     MessageBox.Show(
-                        LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_InvalidPath") ?? "無效的資料夾路徑。",
-                        LanguageManager.Instance.GetString("Main_Error") ?? "錯誤",
+                        LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_InvalidPath") ?? "Invalid folder path.",
+                        LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
                 }
@@ -130,8 +130,8 @@ namespace YoableWPF
             if (string.IsNullOrEmpty(ImagesFolderPath) || !Directory.Exists(ImagesFolderPath))
             {
                 MessageBox.Show(
-                    LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_InvalidImagesPath") ?? "請選擇有效的圖片資料夾。",
-                    LanguageManager.Instance.GetString("Main_Error") ?? "錯誤",
+                    LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_InvalidImagesPath") ?? "Please select a valid images folder.",
+                    LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 return;
@@ -140,8 +140,8 @@ namespace YoableWPF
             if (string.IsNullOrEmpty(LabelsFolderPath) || !Directory.Exists(LabelsFolderPath))
             {
                 MessageBox.Show(
-                    LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_InvalidLabelsPath") ?? "請選擇有效的標籤資料夾。",
-                    LanguageManager.Instance.GetString("Main_Error") ?? "錯誤",
+                    LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_InvalidLabelsPath") ?? "Please select a valid labels folder.",
+                    LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 return;
@@ -163,14 +163,14 @@ namespace YoableWPF
             {
                 ImagesStatusIcon.Text = "&#xE73E;"; // Check mark
                 ImagesStatusIcon.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF4CAF50"));
-                ImagesStatusText.Text = LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_ImagesSelected") ?? "圖片資料夾已選擇";
+                ImagesStatusText.Text = LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_ImagesSelected") ?? "Images folder selected";
                 ImagesStatusText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF4CAF50"));
             }
             else
             {
                 ImagesStatusIcon.Text = "&#xE73A;"; // Circle
                 ImagesStatusIcon.Foreground = new SolidColorBrush(Colors.Gray);
-                ImagesStatusText.Text = LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_ImagesNotSelected") ?? "圖片資料夾未選擇";
+                ImagesStatusText.Text = LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_ImagesNotSelected") ?? "Images folder not selected";
                 ImagesStatusText.Foreground = new SolidColorBrush(Colors.Gray);
             }
         }
@@ -181,14 +181,14 @@ namespace YoableWPF
             {
                 LabelsStatusIcon.Text = "&#xE73E;"; // Check mark
                 LabelsStatusIcon.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF4CAF50"));
-                LabelsStatusText.Text = LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_LabelsSelected") ?? "標籤資料夾已選擇";
+                LabelsStatusText.Text = LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_LabelsSelected") ?? "Labels folder selected";
                 LabelsStatusText.Foreground = new SolidColorBrush((Color)ColorConverter.ConvertFromString("#FF4CAF50"));
             }
             else
             {
                 LabelsStatusIcon.Text = "&#xE73A;"; // Circle
                 LabelsStatusIcon.Foreground = new SolidColorBrush(Colors.Gray);
-                LabelsStatusText.Text = LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_LabelsNotSelected") ?? "標籤資料夾未選擇";
+                LabelsStatusText.Text = LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_LabelsNotSelected") ?? "Labels folder not selected";
                 LabelsStatusText.Foreground = new SolidColorBrush(Colors.Gray);
             }
         }

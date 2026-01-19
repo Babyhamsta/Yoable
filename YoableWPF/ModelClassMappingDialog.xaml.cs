@@ -45,7 +45,7 @@ namespace YoableWPF
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
         }
 
-        // 公共方法，用於通知 ModelIdDisplayText 屬性變更
+        // Public method to notify ModelIdDisplayText property change
         public void NotifyModelIdDisplayTextChanged()
         {
             OnPropertyChanged(nameof(ModelIdDisplayText));
@@ -102,12 +102,12 @@ namespace YoableWPF
 
         private void ReloadWindowResources()
         {
-            // LanguageManager 已經更新了 Application.Current.Resources
-            // 由於窗口使用 DynamicResource，它會自動從 Application.Current.Resources 獲取更新的資源
-            // 這裡只需要觸發 UI 更新即可
+            // LanguageManager has already updated Application.Current.Resources
+            // Since the window uses DynamicResource, it will automatically get updated resources from Application.Current.Resources
+            // Just need to trigger UI update here
             try
             {
-                // 強制刷新窗口標題和所有使用 DynamicResource 的控件
+                // Force refresh window title and all controls using DynamicResource
                 this.Title = LanguageManager.Instance.GetString("Mapping_Title");
             }
             catch (Exception ex)

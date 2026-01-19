@@ -47,9 +47,9 @@
                 Margin="0,0,0,16"
                 Visibility="Collapsed">
             <StackPanel>
-                <TextBlock Text="合併選項:" FontSize="11" Opacity="0.7" Margin="0,0,0,8"/>
-                <CheckBox x:Name="MergeCheckBox" 
-                          Content="將此類別的所有標籤合併到以下類別:"
+                <TextBlock Text="Merge Option:" FontSize="11" Opacity="0.7" Margin="0,0,0,8"/>
+                <CheckBox x:Name="MergeCheckBox"
+                          Content="Merge all labels from this class to the following class:"
                           Margin="0,0,0,8"
                           Checked="MergeCheckBox_Checked"
                           Unchecked="MergeCheckBox_Unchecked"/>

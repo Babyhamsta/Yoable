@@ -15,26 +15,26 @@ namespace YoableWPF.Managers
         public static LanguageManager Instance => instance ??= new LanguageManager();
 
         private ResourceDictionary currentLanguageDictionary;
-        private ResourceDictionary currentIniOverrideDictionary; // 用於追蹤 INI 覆蓋資源字典
-        private Dictionary<string, string> currentIniStrings; // 用於存儲從 INI 文件讀取的字符串
-        private string currentLanguage = "en-US"; // 默認英文（硬編碼）
+        private ResourceDictionary currentIniOverrideDictionary; // Used to track INI override resource dictionary
+        private Dictionary<string, string> currentIniStrings; // Used to store strings read from INI file
+        private string currentLanguage = "en-US"; // Default to English (hardcoded)
         private string langFolderPath;
 
         public event EventHandler LanguageChanged;
 
         private LanguageManager()
         {
-            // 獲取應用程序目錄下的 lang 文件夾
+            // Get the lang folder in the application directory
             var appDir = AppDomain.CurrentDomain.BaseDirectory;
             langFolderPath = Path.Combine(appDir, "lang");
 
-            // 如果 lang 文件夾不存在，創建它
+            // Create the lang folder if it doesn't exist
             if (!Directory.Exists(langFolderPath))
             {
                 Directory.CreateDirectory(langFolderPath);
             }
 
-            // 從設置加載語言
+            // Load language from settings
             if (!string.IsNullOrEmpty(Properties.Settings.Default.Language))
             {
                 currentLanguage = Properties.Settings.Default.Language;
@@ -46,17 +46,17 @@ namespace YoableWPF.Managers
         {
             var languages = new List<LanguageInfo>();
 
-            // 英文始終可用（硬編碼）
+            // English is always available (hardcoded)
             languages.Add(new LanguageInfo { Code = "en-US", Name = "English", NativeName = "English" });
 
-            // 從 lang 文件夾掃描所有 .ini 文件
+            // Scan all .ini files in the lang folder
             if (Directory.Exists(langFolderPath))
             {
                 var iniFiles = Directory.GetFiles(langFolderPath, "*.ini");
                 foreach (var file in iniFiles)
                 {
                     var langCode = Path.GetFileNameWithoutExtension(file);
-                    // 跳過英文，因為它已經在列表中
+                    // Skip English since it's already in the list
                     if (langCode == "en-US") continue;
 
                     var langInfo = GetLanguageInfoFromFile(file, langCode);
@@ -75,10 +75,10 @@ namespace YoableWPF.Managers
             try
             {
                 var lines = File.ReadAllLines(filePath, Encoding.UTF8);
-                var name = langCode; // 默認使用語言代碼
+                var name = langCode; // Default to language code
                 var nativeName = langCode;
 
-                // 從 [LanguageInfo] 區段讀取語言信息
+                // Read language information from the [LanguageInfo] section
                 bool inLanguageInfo = false;
                 foreach (var line in lines)
                 {
@@ -122,8 +122,8 @@ namespace YoableWPF.Managers
 
             currentLanguage = languageCode;
             LoadLanguage(languageCode);
-            
-            // 保存到設置
+
+            // Save to settings
             Properties.Settings.Default.Language = languageCode;
             Properties.Settings.Default.Save();
 
@@ -134,30 +134,30 @@ namespace YoableWPF.Managers
         {
             try
             {
-                // 移除舊的語言資源（包括英文和 INI 覆蓋的資源）
+                // Remove old language resources (including English and INI override resources)
                 if (currentLanguageDictionary != null)
                 {
                     Application.Current.Resources.MergedDictionaries.Remove(currentLanguageDictionary);
                     currentLanguageDictionary = null;
                 }
-                
-                // 移除之前添加的 INI 覆蓋資源字典
+
+                // Remove previously added INI override resource dictionary
                 if (currentIniOverrideDictionary != null)
                 {
                     Application.Current.Resources.MergedDictionaries.Remove(currentIniOverrideDictionary);
                     currentIniOverrideDictionary = null;
                 }
-                
+
                 currentIniStrings = null;
 
-                // 英文：從 XAML 資源加載（硬編碼）
+                // English: Load from XAML resource (hardcoded)
                 if (languageCode == "en-US")
                 {
                     LoadEnglishFromXaml();
                 }
                 else
                 {
-                    // 其他語言：從 INI 文件加載
+                    // Other languages: Load from INI file
                     LoadLanguageFromIni(languageCode);
                 }
             }
@@ -165,8 +165,8 @@ namespace YoableWPF.Managers
             {
                 System.Diagnostics.Debug.WriteLine($"Error in LoadLanguage: {ex.Message}");
                 System.Diagnostics.Debug.WriteLine($"Stack trace: {ex.StackTrace}");
-                
-                // 如果加載失敗，回退到英文
+
+                // If loading fails, fallback to English
                 if (languageCode != "en-US")
                 {
                     System.Diagnostics.Debug.WriteLine($"Failed to load language {languageCode}, falling back to en-US");
@@ -198,8 +198,8 @@ namespace YoableWPF.Managers
         private void LoadLanguageFromIni(string languageCode)
         {
             var langFile = Path.Combine(langFolderPath, $"{languageCode}.ini");
-            
-            // 如果文件不存在，回退到英文
+
+            // If file doesn't exist, fallback to English
             if (!File.Exists(langFile))
             {
                 System.Diagnostics.Debug.WriteLine($"Language file not found: {langFile}, falling back to en-US");
@@ -209,28 +209,28 @@ namespace YoableWPF.Managers
 
             try
             {
-                // 讀取 INI 文件
+                // Read INI file
                 currentIniStrings = ParseIniFile(langFile);
 
-                // 先加載英文作為基礎（fallback）
+                // Load English first as a base (fallback)
                 LoadEnglishFromXaml();
 
-                // 創建新的資源字典，覆蓋英文翻譯
+                // Create new resource dictionary to override English translations
                 currentIniOverrideDictionary = new ResourceDictionary();
                 foreach (var kvp in currentIniStrings)
                 {
                     currentIniOverrideDictionary[kvp.Key] = kvp.Value;
                 }
 
-                // 將 INI 覆蓋字典添加到最後，確保它能覆蓋英文資源
+                // Add INI override dictionary last to ensure it overrides English resources
                 Application.Current.Resources.MergedDictionaries.Add(currentIniOverrideDictionary);
-                
-                // 強制觸發資源更新通知（用於觸發 DynamicResource 重新評估）
+
+                // Force trigger resource update notification (to trigger DynamicResource re-evaluation)
                 Application.Current.Resources["LanguageUpdated"] = DateTime.Now.Ticks;
-                
+
                 System.Diagnostics.Debug.WriteLine($"Successfully loaded language {languageCode} from INI file with {currentIniStrings.Count} translations");
-                
-                // 驗證一些關鍵翻譯是否正確加載
+
+                // Verify some key translations are loaded correctly
                 var testKeys = new[] { "Settings_Title", "Menu_Project", "Common_OK" };
                 foreach (var testKey in testKeys)
                 {
@@ -257,19 +257,19 @@ namespace YoableWPF.Managers
                 foreach (var line in lines)
                 {
                     var trimmed = line.Trim();
-                    
-                    // 跳過空行和註釋
+
+                    // Skip empty lines and comments
                     if (string.IsNullOrEmpty(trimmed) || trimmed.StartsWith(";") || trimmed.StartsWith("#"))
                         continue;
 
-                    // 處理區段
+                    // Process sections
                     if (trimmed.StartsWith("[") && trimmed.EndsWith("]"))
                     {
                         currentSection = trimmed.Substring(1, trimmed.Length - 2);
                         continue;
                     }
 
-                    // 處理鍵值對
+                    // Process key-value pairs
                     if (trimmed.Contains("="))
                     {
                         var parts = trimmed.Split(new[] { '=' }, 2);
@@ -277,12 +277,12 @@ namespace YoableWPF.Managers
                         {
                             var key = parts[0].Trim();
                             var value = parts[1].Trim();
-                            
-                            // 支持轉義字符
+
+                            // Support escape characters
                             value = value.Replace("\\n", "\n").Replace("\\r", "\r").Replace("\\t", "\t");
-                            
-                            // 檢查鍵名是否已經包含區段前綴
-                            // 如果鍵名已經以 "區段名_" 開頭，就直接使用；否則添加區段前綴
+
+                            // Check if key name already contains section prefix
+                            // If key name already starts with "SectionName_", use it directly; otherwise add section prefix
                             string fullKey;
                             if (string.IsNullOrEmpty(currentSection))
                             {
@@ -290,15 +290,15 @@ namespace YoableWPF.Managers
                             }
                             else if (key.StartsWith($"{currentSection}_", StringComparison.OrdinalIgnoreCase))
                             {
-                                // 鍵名已經包含區段前綴，直接使用
+                                // Key name already contains section prefix, use directly
                                 fullKey = key;
                             }
                             else
                             {
-                                // 添加區段前綴
+                                // Add section prefix
                                 fullKey = $"{currentSection}_{key}";
                             }
-                            
+
                             result[fullKey] = value;
                         }
                     }
@@ -314,7 +314,7 @@ namespace YoableWPF.Managers
 
         public string GetString(string key)
         {
-            // 如果當前語言是英文，從 XAML 資源字典讀取
+            // If current language is English, read from XAML resource dictionary
             if (currentLanguage == "en-US")
             {
                 if (currentLanguageDictionary != null && currentLanguageDictionary.Contains(key))
@@ -324,20 +324,20 @@ namespace YoableWPF.Managers
             }
             else
             {
-                // 其他語言：先從 INI 讀取，如果沒有則從英文 fallback
+                // Other languages: First read from INI, if not found fallback to English
                 if (currentIniStrings != null && currentIniStrings.ContainsKey(key))
                 {
                     return currentIniStrings[key];
                 }
-                
-                // Fallback 到英文
+
+                // Fallback to English
                 if (currentLanguageDictionary != null && currentLanguageDictionary.Contains(key))
                 {
                     return currentLanguageDictionary[key]?.ToString() ?? key;
                 }
             }
-            
-            return key; // 如果找不到，返回 key 本身
+
+            return key; // If not found, return the key itself
         }
     }
 

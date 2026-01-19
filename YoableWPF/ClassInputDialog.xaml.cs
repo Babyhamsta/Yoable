@@ -24,8 +24,8 @@ namespace YoableWPF
             {
                 // Edit mode
                 isEditMode = true;
-                Title = "編輯類別";
-                OKButton.Content = "確定";
+                Title = "Edit Class";
+                OKButton.Content = "OK";
                 ClassNameTextBox.Text = existingClass.Name;
                 
                 // Set the color picker to the existing color
@@ -50,8 +50,8 @@ namespace YoableWPF
             }
             else
             {
-                Title = "新增類別";
-                OKButton.Content = "新增類別";
+                Title = "Add Class";
+                OKButton.Content = "Add Class";
             }
             
             ClassNameTextBox.Focus();
@@ -114,8 +114,8 @@ namespace YoableWPF
             if (string.IsNullOrWhiteSpace(ClassName))
             {
                 System.Windows.MessageBox.Show(
-                    "請輸入類別名稱。",
-                    "驗證錯誤",
+                    "Please enter a class name.",
+                    "Validation Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 ClassNameTextBox.Focus();
@@ -129,8 +129,8 @@ namespace YoableWPF
                 if (MergeTargetComboBox.SelectedItem == null)
                 {
                     System.Windows.MessageBox.Show(
-                        "請選擇要合併到的目標類別。",
-                        "驗證錯誤",
+                        "Please select a target class to merge into.",
+                        "Validation Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
                     MergeTargetComboBox.Focus();

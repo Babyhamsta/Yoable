@@ -419,7 +419,7 @@
                                        FontStyle="Italic"
                                        Margin="0,0,0,8"/>
 
-                            <!-- 檢測模式選擇 -->
+                            <!-- Detection Mode Selection -->
                             <TextBlock Text="{DynamicResource Settings_DetectionMode}" Style="{StaticResource SettingLabel}"/>
                             <ComboBox x:Name="DetectionModeComboBox" 
                                       Margin="0,4,0,12"

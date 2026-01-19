@@ -524,7 +524,7 @@ namespace YoableWPF.Managers
             }, cancellationToken);
         }
 
-        // 計算兩個矩形框的 IoU
+        // Calculate IoU (Intersection over Union) of two rectangles
         private double ComputeIoU(Rect rect1, Rect rect2)
         {
             double x1 = Math.Max(rect1.Left, rect2.Left);
@@ -543,7 +543,7 @@ namespace YoableWPF.Managers
             return unionArea == 0 ? 0 : intersectionArea / unionArea;
         }
 
-        // For AI labels - 合併現有標記
+        // For AI labels - merge with existing labels
         public void AddAILabels(string fileName, List<(Rectangle box, int classId)> detectedBoxes)
         {
             if (!labelStorage.ContainsKey(fileName))
@@ -568,15 +568,15 @@ namespace YoableWPF.Managers
                 }
 
                 var newRect = new Rect(detection.box.X, detection.box.Y, detection.box.Width, detection.box.Height);
-                
-                // 檢查是否與現有標記重疊
+
+                // Check if it overlaps with existing labels
                 bool merged = false;
                 for (int i = 0; i < existingLabels.Count; i++)
                 {
                     double iou = ComputeIoU(newRect, existingLabels[i].Rect);
                     if (iou >= mergeIoUThreshold)
                     {
-                        // 合併標記：使用較大的矩形框
+                        // Merge labels: use the larger bounding box
                         var existingRect = existingLabels[i].Rect;
                         var mergedRect = new Rect(
                             Math.Min(newRect.Left, existingRect.Left),
@@ -584,15 +584,15 @@ namespace YoableWPF.Managers
                             Math.Max(newRect.Right, existingRect.Right) - Math.Min(newRect.Left, existingRect.Left),
                             Math.Max(newRect.Bottom, existingRect.Bottom) - Math.Min(newRect.Top, existingRect.Top)
                         );
-                        
-                        // 更新現有標記
+
+                        // Update existing label
                         existingLabels[i] = new LabelData(existingLabels[i].Name, mergedRect, existingLabels[i].ClassId);
                         merged = true;
                         break;
                     }
                 }
 
-                // 如果沒有合併，添加新標記
+                // If not merged, add new label
                 if (!merged)
                 {
                     var labelCount = existingLabels.Count + 1;
@@ -601,7 +601,7 @@ namespace YoableWPF.Managers
                 }
             }
 
-            // 更新存儲
+            // Update storage
             labelStorage.AddOrUpdate(
                 fileName,
                 existingLabels,

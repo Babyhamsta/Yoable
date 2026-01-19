@@ -76,8 +76,8 @@ namespace YoableWPF.Managers
 
     public enum EnsembleDetectionMode
     {
-        Voting,      // 投票模式（需要多個模型共識）
-        Union        // 聯合模式（任何模型檢測到即標記）
+        Voting,      // Voting mode (requires consensus from multiple models)
+        Union        // Union mode (mark if any model detects it)
     }
 
     public class YoloModelInfo
@@ -509,31 +509,31 @@ namespace YoableWPF.Managers
             float mergeIoUThreshold = Properties.Settings.Default.EnsembleIoUThreshold;
             bool useWeightedAverage = Properties.Settings.Default.UseWeightedAverage;
             float confidenceThreshold = Properties.Settings.Default.AIConfidence;
-            
-            // 過濾低置信度的檢測
+
+            // Filter low confidence detections
             var validDetections = allDetections
                 .Where(d => d.Score >= confidenceThreshold)
                 .OrderByDescending(d => d.Score)
                 .ToList();
-            
+
             if (validDetections.Count == 0) return new List<YoloDetection>();
-            
-            // 合併重疊的檢測（多個模型檢測到同一個物體）
+
+            // Merge overlapping detections (multiple models detecting the same object)
             var mergedDetections = new List<YoloDetection>();
             var processed = new bool[validDetections.Count];
-            
+
             for (int i = 0; i < validDetections.Count; i++)
             {
                 if (processed[i]) continue;
-                
+
                 var cluster = new List<YoloDetection> { validDetections[i] };
                 processed[i] = true;
-                
-                // 尋找重疊的檢測
+
+                // Find overlapping detections
                 for (int j = i + 1; j < validDetections.Count; j++)
                 {
                     if (processed[j]) continue;
-                    
+
                     float iou = ComputeIoUYolo(validDetections[i], validDetections[j]);
                     if (iou >= mergeIoUThreshold)
                     {
@@ -541,8 +541,8 @@ namespace YoableWPF.Managers
                         processed[j] = true;
                     }
                 }
-                
-                // 合併同一物體的多個檢測
+
+                // Merge multiple detections of the same object
                 if (cluster.Count > 1)
                 {
                     var merged = MergeYoloDetections(cluster, useWeightedAverage);
@@ -553,8 +553,8 @@ namespace YoableWPF.Managers
                     mergedDetections.Add(cluster[0]);
                 }
             }
-            
-            // 應用 NMS 移除重複檢測
+
+            // Apply NMS to remove duplicate detections
             return ApplyNMSYolo(mergedDetections, mergeIoUThreshold);
         }
 
@@ -742,7 +742,7 @@ namespace YoableWPF.Managers
             return RunEnsembleInference(image);
         }
 
-        // 新增方法：返回帶有 ClassId 的檢測結果
+        // New method: Returns detection results with ClassId
         public List<(Rectangle box, int classId)> RunInferenceWithClasses(Bitmap image)
         {
             if (loadedModels.Count == 0) return new List<(Rectangle, int)>();
@@ -925,7 +925,7 @@ namespace YoableWPF.Managers
                     return new List<Rectangle>();
                 }
 
-                // 根據模式選擇處理方法
+                // Choose processing method based on mode
                 EnsembleDetectionMode mode = (EnsembleDetectionMode)Properties.Settings.Default.EnsembleDetectionMode;
                 List<YoloDetection> finalDetections;
                 
@@ -1028,7 +1028,7 @@ namespace YoableWPF.Managers
                     return new List<(Rectangle, int)>();
                 }
 
-                // 根據模式選擇處理方法
+                // Choose processing method based on mode
                 EnsembleDetectionMode mode = (EnsembleDetectionMode)Properties.Settings.Default.EnsembleDetectionMode;
                 List<YoloDetection> finalDetections;
                 
@@ -1930,7 +1930,7 @@ namespace YoableWPF.Managers
             Debug.WriteLine($"WARNING: Could not find class names file for model: {modelPath}");
             Debug.WriteLine($"No class file found in any of the {possibleClassFiles.Count} attempted locations.");
             Debug.WriteLine($"Generating generic class names (class_0, class_1, ...) for {numClasses} classes.");
-            Debug.WriteLine($"Please use '載入類別文件' button in the mapping dialog to manually load the correct class names.");
+            Debug.WriteLine($"Please use 'Load Class File' button in the mapping dialog to manually load the correct class names.");
 
             // Generate generic names - user should manually load the correct class file
             return Enumerable.Range(0, numClasses)

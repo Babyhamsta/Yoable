@@ -107,32 +107,32 @@ namespace YoableWPF
         {
             try
             {
-                // LanguageManager 已經將資源加載到 Application.Current.Resources 中
-                // 需要強制所有 DynamicResource 綁定重新評估
-                
-                // 移除窗口本地的語言資源字典（如果存在）
+                // LanguageManager has already loaded resources into Application.Current.Resources
+                // Need to force all DynamicResource bindings to re-evaluate
+
+                // Remove local language resource dictionary from window (if exists)
                 var languageDictToRemove = this.Resources.MergedDictionaries
                     .FirstOrDefault(d => d.Source != null && d.Source.ToString().Contains("Languages/Strings."));
-                
+
                 if (languageDictToRemove != null)
                 {
                     this.Resources.MergedDictionaries.Remove(languageDictToRemove);
                 }
 
-                // 強制所有 DynamicResource 綁定重新查找資源
-                // 通過臨時移除並重新添加資源字典來觸發重新評估
+                // Force all DynamicResource bindings to re-lookup resources
+                // Trigger re-evaluation by temporarily removing and re-adding resource dictionary
                 var tempDict = new ResourceDictionary();
                 this.Resources.MergedDictionaries.Add(tempDict);
                 this.Resources.MergedDictionaries.Remove(tempDict);
 
-                // 強制刷新所有使用 DynamicResource 的控件
+                // Force refresh all controls using DynamicResource
                 this.InvalidateVisual();
                 this.UpdateLayout();
-                
-                // 手動更新窗口標題和動態文字
+
+                // Manually update window title and dynamic text
                 this.Title = LanguageManager.Instance.GetString("MainWindow_Title");
-                
-                // 更新項目名稱（如果項目已打開）
+
+                // Update project name (if project is open)
                 if (projectManager != null && projectManager.IsProjectOpen)
                 {
                     ProjectNameText.Text = projectManager.CurrentProject.ProjectName;
@@ -141,8 +141,8 @@ namespace YoableWPF
                 {
                     ProjectNameText.Text = LanguageManager.Instance.GetString("Status_NoProject");
                 }
-                
-                // 更新項目 UI（包括保存狀態）
+
+                // Update project UI (including save status)
                 UpdateProjectUI();
             }
             catch (Exception ex)
@@ -1037,7 +1037,7 @@ namespace YoableWPF
 
             // Step 3: Load images first
             var tokenSource = new CancellationTokenSource();
-            overlayManager.ShowOverlayWithProgress("正在載入圖片...", tokenSource);
+            overlayManager.ShowOverlayWithProgress("Loading images...", tokenSource);
 
             try
             {
@@ -1064,18 +1064,18 @@ namespace YoableWPF
                 uiStateManager.RefreshAllImagesList();
 
                 // Step 4: Load labels after images are loaded
-                overlayManager.UpdateMessage("正在載入標籤...");
+                overlayManager.UpdateMessage("Loading labels...");
                 await LoadYOLOLabelsFromDirectory(labelsFolderPath);
 
                 MarkProjectDirty();
             }
             catch (OperationCanceledException)
             {
-                MessageBox.Show("載入已取消。", "已取消", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show("Loading cancelled.", "Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"載入時發生錯誤：{ex.Message}", "錯誤", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Error occurred during loading: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -1305,8 +1305,8 @@ namespace YoableWPF
 
                     using Bitmap image = new Bitmap(imagePath.Path);
                     string fileName = Path.GetFileName(imagePath.Path);
-                    
-                    // 使用帶有 ClassId 的推理方法
+
+                    // Use inference method with ClassId
                     var boxesWithClasses = yoloAI.RunInferenceWithClasses(image);
                     labelManager.AddAILabels(fileName, boxesWithClasses);
                     totalDetections += boxesWithClasses.Count;
