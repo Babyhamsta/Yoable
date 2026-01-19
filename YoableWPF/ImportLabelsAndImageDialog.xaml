@@ -1,0 +1,286 @@
+<Window x:Class="YoableWPF.ImportLabelsAndImageDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.modernwpf.com/2019"
+        ui:WindowHelper.UseModernWindowStyle="True"
+        Title="{DynamicResource Dialog_ImportLabelsAndImage_Title}"
+        Width="600" 
+        Height="400"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        MinWidth="550"
+        MinHeight="350">
+
+    <Window.Resources>
+        <!-- Modern Button Style -->
+        <Style x:Key="ModernButton" TargetType="Button">
+            <Setter Property="Background" Value="#FF0078D4"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.9"/>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Secondary Button Style -->
+        <Style x:Key="SecondaryButton" TargetType="Button">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <SolidColorBrush Color="#33FFFFFF"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="20,10"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background">
+                                    <Setter.Value>
+                                        <SolidColorBrush Color="#44FFFFFF"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Icon Button Style (for browse button) -->
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Background">
+                <Setter.Value>
+                    <SolidColorBrush Color="#33FFFFFF"/>
+                </Setter.Value>
+            </Setter>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border"
+                                Background="{TemplateBinding Background}"
+                                BorderThickness="0"
+                                CornerRadius="4"
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" 
+                                            VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background">
+                                    <Setter.Value>
+                                        <SolidColorBrush Color="#44FFFFFF"/>
+                                    </Setter.Value>
+                                </Setter>
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <!-- Label Style -->
+        <Style x:Key="FormLabel" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="13"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,0,0,8"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0" 
+                Padding="24,20">
+            <Border.Background>
+                <SolidColorBrush Color="#19FFFFFF"/>
+            </Border.Background>
+            <Border.BorderBrush>
+                <SolidColorBrush Color="#0FFFFFFF"/>
+            </Border.BorderBrush>
+            <Border.BorderThickness>0,0,0,1</Border.BorderThickness>
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                    <TextBlock FontFamily="Segoe MDL2 Assets" 
+                               Text="&#xE8B7;" 
+                               FontSize="24"
+                               Foreground="#FF9C27B0"
+                               VerticalAlignment="Center"
+                               Margin="0,0,12,0"/>
+                    <TextBlock Text="{DynamicResource Dialog_ImportLabelsAndImage_Title}" 
+                               FontSize="22" 
+                               FontWeight="SemiBold"
+                               VerticalAlignment="Center"/>
+                </StackPanel>
+                <TextBlock Text="{DynamicResource Dialog_ImportLabelsAndImage_Description}"
+                           Foreground="Gray"
+                           FontSize="13"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Form Content -->
+        <ScrollViewer Grid.Row="1" 
+                      VerticalScrollBarVisibility="Auto"
+                      Padding="24,20">
+            <StackPanel>
+                <!-- Images Folder Selection -->
+                <TextBlock Text="{DynamicResource Dialog_ImportLabelsAndImage_ImagesFolder}" Style="{StaticResource FormLabel}"/>
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox x:Name="ImagesFolderTextBox"
+                             Grid.Column="0"
+                             FontSize="14"
+                             Padding="10,8"
+                             IsReadOnly="True"
+                             Margin="0,0,8,0"
+                             Text="{DynamicResource Dialog_ImportLabelsAndImage_NotSelected}"/>
+
+                    <Button Grid.Column="1"
+                            x:Name="BrowseImagesButton"
+                            Click="BrowseImagesButton_Click"
+                            Style="{StaticResource IconButton}"
+                            Content="{DynamicResource Dialog_ImportLabelsAndImage_Browse}"/>
+                </Grid>
+
+                <!-- Labels Folder Selection -->
+                <TextBlock Text="{DynamicResource Dialog_ImportLabelsAndImage_LabelsFolder}" Style="{StaticResource FormLabel}"/>
+                <Grid Margin="0,0,0,20">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+
+                    <TextBox x:Name="LabelsFolderTextBox"
+                             Grid.Column="0"
+                             FontSize="14"
+                             Padding="10,8"
+                             IsReadOnly="True"
+                             Margin="0,0,8,0"
+                             Text="{DynamicResource Dialog_ImportLabelsAndImage_NotSelected}"/>
+
+                    <Button Grid.Column="1"
+                            x:Name="BrowseLabelsButton"
+                            Click="BrowseLabelsButton_Click"
+                            Style="{StaticResource IconButton}"
+                            Content="{DynamicResource Dialog_ImportLabelsAndImage_Browse}"/>
+                </Grid>
+
+                <!-- Status Indicators -->
+                <StackPanel Margin="0,8,0,0">
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                        <TextBlock x:Name="ImagesStatusIcon"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   Text="&#xE73A;"
+                                   FontSize="16"
+                                   Foreground="Gray"
+                                   Margin="0,0,8,0"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock x:Name="ImagesStatusText"
+                                   Text="{DynamicResource Dialog_ImportLabelsAndImage_ImagesNotSelected}"
+                                   FontSize="12"
+                                   Foreground="Gray"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock x:Name="LabelsStatusIcon"
+                                   FontFamily="Segoe MDL2 Assets"
+                                   Text="&#xE73A;"
+                                   FontSize="16"
+                                   Foreground="Gray"
+                                   Margin="0,0,8,0"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock x:Name="LabelsStatusText"
+                                   Text="{DynamicResource Dialog_ImportLabelsAndImage_LabelsNotSelected}"
+                                   FontSize="12"
+                                   Foreground="Gray"
+                                   VerticalAlignment="Center"/>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Footer with Buttons -->
+        <Border Grid.Row="2"
+                Padding="24,16">
+            <Border.Background>
+                <SolidColorBrush Color="#19FFFFFF"/>
+            </Border.Background>
+            <Border.BorderBrush>
+                <SolidColorBrush Color="#0FFFFFFF"/>
+            </Border.BorderBrush>
+            <Border.BorderThickness>0,1,0,0</Border.BorderThickness>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
+                <Button x:Name="ConfirmButton"
+                        Content="{DynamicResource Dialog_ImportLabelsAndImage_Confirm}"
+                        Click="ConfirmButton_Click"
+                        Style="{StaticResource ModernButton}"
+                        MinWidth="120"
+                        Margin="0,0,8,0"
+                        IsEnabled="False"/>
+                <Button x:Name="CancelButton"
+                        Content="{DynamicResource Common_Cancel}"
+                        Click="CancelButton_Click"
+                        Style="{StaticResource SecondaryButton}"
+                        MinWidth="100"
+                        IsCancel="True"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>
+

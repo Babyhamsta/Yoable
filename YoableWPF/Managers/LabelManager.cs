@@ -136,7 +136,7 @@ namespace YoableWPF.Managers
         /// NEW: High-performance async batch label loader for large datasets
         /// Loads labels in parallel batches with progress reporting
         /// </summary>
-        public async Task<int> LoadYoloLabelsBatchAsync(
+        public async Task<(int labelsLoaded, HashSet<int> foundClassIds)> LoadYoloLabelsBatchAsync(
             string labelsDirectory,
             ImageManager imageManager,
             IProgress<(int current, int total, string message)> progress = null,
@@ -144,13 +144,13 @@ namespace YoableWPF.Managers
             bool enableParallelProcessing = true)
         {
             if (!Directory.Exists(labelsDirectory))
-                return 0;
+                return (0, new HashSet<int>());
 
             // Get all .txt label files
             var labelFiles = Directory.GetFiles(labelsDirectory, "*.txt").ToArray();
 
             if (labelFiles.Length == 0)
-                return 0;
+                return (0, new HashSet<int>());
 
             int totalLabelsAdded = 0;
             int processedFiles = 0;
@@ -159,6 +159,9 @@ namespace YoableWPF.Managers
 
             return await Task.Run(() =>
             {
+                // Track all class IDs found in label files
+                var foundClassIds = new ConcurrentDictionary<int, bool>();
+
                 // Process files in batches
                 for (int i = 0; i < labelFiles.Length; i += batchSize)
                 {
@@ -174,7 +177,7 @@ namespace YoableWPF.Managers
                             .WithCancellation(cancellationToken)
                             .Select(labelFile =>
                             {
-                                return LoadYoloLabelsOptimized(labelFile, imageManager);
+                                return LoadYoloLabelsOptimized(labelFile, imageManager, foundClassIds);
                             })
                             .ToArray();
 
@@ -185,7 +188,7 @@ namespace YoableWPF.Managers
                         // Process sequentially
                         foreach (var labelFile in batch)
                         {
-                            batchLabelsAdded += LoadYoloLabelsOptimized(labelFile, imageManager);
+                            batchLabelsAdded += LoadYoloLabelsOptimized(labelFile, imageManager, foundClassIds);
                         }
                     }
 
@@ -197,7 +200,7 @@ namespace YoableWPF.Managers
                         $"Loading labels... {processedFiles}/{totalFiles} ({totalLabelsAdded} labels)"));
                 }
 
-                return totalLabelsAdded;
+                return (totalLabelsAdded, new HashSet<int>(foundClassIds.Keys));
             }, cancellationToken);
         }
 
@@ -205,7 +208,7 @@ namespace YoableWPF.Managers
         /// OPTIMIZED: Faster label loading that uses cached image dimensions
         /// This avoids reopening bitmap files which is extremely slow for large datasets
         /// </summary>
-        private int LoadYoloLabelsOptimized(string labelFile, ImageManager imageManager)
+        private int LoadYoloLabelsOptimized(string labelFile, ImageManager imageManager, ConcurrentDictionary<int, bool> foundClassIds = null)
         {
             if (!File.Exists(labelFile))
                 return 0;
@@ -287,13 +290,23 @@ namespace YoableWPF.Managers
 
                         // Parse ClassId from first token
                         int classId = 0;
+                        int originalClassId = 0;
                         if (int.TryParse(tokens[0], out int parsedClassId))
                         {
                             classId = parsedClassId;
+                            originalClassId = parsedClassId;
                         }
                         
-                        // Validate and fix ClassId if it doesn't exist in current project
-                        if (!validClassIds.Contains(classId))
+                        // Track found class ID (before validation)
+                        if (foundClassIds != null && originalClassId >= 0)
+                        {
+                            foundClassIds.TryAdd(originalClassId, true);
+                        }
+                        
+                        // During import, keep original class ID even if it doesn't exist yet
+                        // We'll create missing classes after import completes
+                        // Only fix if we're not tracking found class IDs (legacy mode)
+                        if (foundClassIds == null && !validClassIds.Contains(classId))
                         {
                             Debug.WriteLine($"LabelManager: Fixing orphaned ClassId {classId} -> {defaultClassId} during import");
                             classId = defaultClassId;
@@ -511,11 +524,33 @@ namespace YoableWPF.Managers
             }, cancellationToken);
         }
 
-        // For AI labels
+        // 計算兩個矩形框的 IoU
+        private double ComputeIoU(Rect rect1, Rect rect2)
+        {
+            double x1 = Math.Max(rect1.Left, rect2.Left);
+            double y1 = Math.Max(rect1.Top, rect2.Top);
+            double x2 = Math.Min(rect1.Right, rect2.Right);
+            double y2 = Math.Min(rect1.Bottom, rect2.Bottom);
+
+            double intersectionWidth = Math.Max(0, x2 - x1);
+            double intersectionHeight = Math.Max(0, y2 - y1);
+            double intersectionArea = intersectionWidth * intersectionHeight;
+
+            double area1 = rect1.Width * rect1.Height;
+            double area2 = rect2.Width * rect2.Height;
+            double unionArea = area1 + area2 - intersectionArea;
+
+            return unionArea == 0 ? 0 : intersectionArea / unionArea;
+        }
+
+        // For AI labels - 合併現有標記
         public void AddAILabels(string fileName, List<(Rectangle box, int classId)> detectedBoxes)
         {
             if (!labelStorage.ContainsKey(fileName))
                 labelStorage.TryAdd(fileName, new List<LabelData>());
+
+            var existingLabels = labelStorage[fileName].ToList();
+            float mergeIoUThreshold = Properties.Settings.Default.EnsembleIoUThreshold;
 
             foreach (var detection in detectedBoxes)
             {
@@ -532,20 +567,45 @@ namespace YoableWPF.Managers
                     classId = defaultClassId;
                 }
 
-                var labelCount = labelStorage[fileName].Count + 1;
-                var label = new LabelData($"AI Label {labelCount}", 
-                    new Rect(detection.box.X, detection.box.Y, detection.box.Width, detection.box.Height),
-                    classId);
-
-                labelStorage.AddOrUpdate(
-                    fileName,
-                    new List<LabelData> { label },
-                    (k, existing) =>
+                var newRect = new Rect(detection.box.X, detection.box.Y, detection.box.Width, detection.box.Height);
+                
+                // 檢查是否與現有標記重疊
+                bool merged = false;
+                for (int i = 0; i < existingLabels.Count; i++)
+                {
+                    double iou = ComputeIoU(newRect, existingLabels[i].Rect);
+                    if (iou >= mergeIoUThreshold)
                     {
-                        existing.Add(label);
-                        return existing;
-                    });
+                        // 合併標記：使用較大的矩形框
+                        var existingRect = existingLabels[i].Rect;
+                        var mergedRect = new Rect(
+                            Math.Min(newRect.Left, existingRect.Left),
+                            Math.Min(newRect.Top, existingRect.Top),
+                            Math.Max(newRect.Right, existingRect.Right) - Math.Min(newRect.Left, existingRect.Left),
+                            Math.Max(newRect.Bottom, existingRect.Bottom) - Math.Min(newRect.Top, existingRect.Top)
+                        );
+                        
+                        // 更新現有標記
+                        existingLabels[i] = new LabelData(existingLabels[i].Name, mergedRect, existingLabels[i].ClassId);
+                        merged = true;
+                        break;
+                    }
+                }
+
+                // 如果沒有合併，添加新標記
+                if (!merged)
+                {
+                    var labelCount = existingLabels.Count + 1;
+                    var label = new LabelData($"AI Label {labelCount}", newRect, classId);
+                    existingLabels.Add(label);
+                }
             }
+
+            // 更新存儲
+            labelStorage.AddOrUpdate(
+                fileName,
+                existingLabels,
+                (k, existing) => existingLabels);
         }
     }
 }

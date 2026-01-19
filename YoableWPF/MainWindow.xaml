@@ -5,7 +5,7 @@
     xmlns:ui="http://schemas.modernwpf.com/2019"
     xmlns:local="clr-namespace:YoableWPF"
     ui:WindowHelper.UseModernWindowStyle="True"
-    Title="Yoable"
+    Title="{DynamicResource MainWindow_Title}"
     WindowStyle="None"
     ResizeMode="CanResize"
     Height="700" 
@@ -144,8 +144,8 @@
 
         <!-- Menu Bar -->
         <Menu Grid.Row="0" Grid.ColumnSpan="3" Padding="4,2">
-            <MenuItem Header="Project">
-                <MenuItem Header="New Project..." Click="NewProject_Click">
+            <MenuItem Header="{DynamicResource Menu_Project}">
+                <MenuItem Header="{DynamicResource Menu_NewProject}" Click="NewProject_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" 
                                    Text="&#xE710;" 
@@ -153,7 +153,7 @@
                                    Foreground="#FF9C27B0"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Open Project..." Click="OpenProject_Click">
+                <MenuItem Header="{DynamicResource Menu_OpenProject}" Click="OpenProject_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" 
                                    Text="&#xE8E5;" 
@@ -162,7 +162,7 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator/>
-                <MenuItem Header="Save Project" Click="SaveProject_Click" InputGestureText="Ctrl+S">
+                <MenuItem Header="{DynamicResource Menu_SaveProject}" Click="SaveProject_Click" InputGestureText="Ctrl+S">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" 
                                    Text="&#xE74E;" 
@@ -170,7 +170,7 @@
                                    Foreground="#2196F3"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Save Project As..." Click="SaveProjectAs_Click">
+                <MenuItem Header="{DynamicResource Menu_SaveProjectAs}" Click="SaveProjectAs_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" 
                                    Text="&#xE792;" 
@@ -179,7 +179,7 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator/>
-                <MenuItem Header="Close Project" Click="CloseProject_Click">
+                <MenuItem Header="{DynamicResource Menu_CloseProject}" Click="CloseProject_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" 
                                    Text="&#xE711;" 
@@ -188,57 +188,62 @@
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
-            <MenuItem Header="File">
-                <MenuItem Header="Import Directory" Click="ImportDirectory_Click">
+            <MenuItem Header="{DynamicResource Menu_File}">
+                <MenuItem Header="{DynamicResource Menu_ImportDirectory}" Click="ImportDirectory_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8B7;" FontSize="16" Foreground="#FF9C27B0"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Import Image" Click="ImportImage_Click">
+                <MenuItem Header="{DynamicResource Menu_ImportLabelsAndImage}" Click="ImportLabelsAndImage_Click">
+                    <MenuItem.Icon>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A5;" FontSize="16" Foreground="#FF00BCD4"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="{DynamicResource Menu_ImportImage}" Click="ImportImage_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEB9F;" FontSize="16" Foreground="#FF4CAF50"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Import Labels" Click="ImportLabels_Click">
+                <MenuItem Header="{DynamicResource Menu_ImportLabels}" Click="ImportLabels_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8E5;" FontSize="16" Foreground="#FF2196F3"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Youtube To Images" Click="YTToImage_Click">
+                <MenuItem Header="{DynamicResource Menu_YoutubeToImages}" Click="YTToImage_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE714;" FontSize="16" Foreground="#FFF44336"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Export Labels" Click="ExportLabels_Click">
+                <MenuItem Header="{DynamicResource Menu_ExportLabels}" Click="ExportLabels_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEDE1;" FontSize="16" Foreground="#FFFF9800"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Clear All" Click="ClearAll_Click">
+                <MenuItem Header="{DynamicResource Menu_ClearAll}" Click="ClearAll_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="16" Foreground="#FFF44336"/>
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
-            <MenuItem Header="AI">
-                <MenuItem Header="Manage Models" Click="ManageModels_Click">
+            <MenuItem Header="{DynamicResource Menu_AI}">
+                <MenuItem Header="{DynamicResource Menu_ManageModels}" Click="ManageModels_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE950;" FontSize="16" Foreground="#FF9C27B0"/>
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator/>
-                <MenuItem Header="Auto Label Images" Click="AutoLabelImages_Click">
+                <MenuItem Header="{DynamicResource Menu_AutoLabelImages}" Click="AutoLabelImages_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8FE;" FontSize="16" Foreground="#FF00BCD4"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Auto Suggest Labels" Click="AutoSuggestLabels_Click">
+                <MenuItem Header="{DynamicResource Menu_AutoSuggestLabels}" Click="AutoSuggestLabels_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEA80;" FontSize="16" Foreground="#FF3F51B5"/>
                     </MenuItem.Icon>
                 </MenuItem>
             </MenuItem>
-            <MenuItem Header="Settings" x:Name="SettingsMenuItem" Click="SettingsMenuItem_Click">
+            <MenuItem Header="{DynamicResource Menu_Settings}" x:Name="SettingsMenuItem" Click="SettingsMenuItem_Click">
                 <MenuItem.Icon>
                     <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE115;" FontSize="16" Foreground="#FF607D8B"/>
                 </MenuItem.Icon>
@@ -260,7 +265,7 @@
                 <!-- Panel Header -->
                 <Grid Grid.Row="0" Margin="0,0,0,12">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="Images" 
+                        <TextBlock Text="{DynamicResource Main_Images}" 
                                    FontSize="16" 
                                    FontWeight="SemiBold"
                                    VerticalAlignment="Center"/>
@@ -277,6 +282,7 @@
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
                             <RowDefinition Height="8"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="Auto"/>
                         </Grid.RowDefinitions>
 
@@ -297,7 +303,7 @@
                                            Foreground="#FFFF9800"
                                            VerticalAlignment="Center"
                                            Margin="0,0,6,0"/>
-                                <TextBlock Text="Sort" 
+                                <TextBlock Text="{DynamicResource Main_Sort}" 
                                            FontSize="11" 
                                            FontWeight="SemiBold"
                                            VerticalAlignment="Center"
@@ -310,8 +316,8 @@
                                       SelectionChanged="SortComboBox_SelectionChanged"
                                       FontSize="11"
                                       HorizontalAlignment="Stretch">
-                                <ComboBoxItem Content="By Name"/>
-                                <ComboBoxItem Content="By Status"/>
+                                <ComboBoxItem Content="{DynamicResource Main_SortByName}"/>
+                                <ComboBoxItem Content="{DynamicResource Main_SortByStatus}"/>
                             </ComboBox>
                         </Grid>
 
@@ -339,7 +345,7 @@
                                            Foreground="#FF3F51B5"
                                            VerticalAlignment="Center"
                                            Margin="0,0,6,0"/>
-                                <TextBlock Text="Filter" 
+                                <TextBlock Text="{DynamicResource Main_Filter}" 
                                            FontSize="11" 
                                            FontWeight="SemiBold"
                                            VerticalAlignment="Center"
@@ -356,7 +362,7 @@
 
                                 <Button Grid.Column="0"
                                         x:Name="FilterAllButton"
-                                        Content="All"
+                                        Content="{DynamicResource Main_FilterAll}"
                                         Click="FilterAll_Click"
                                         FontSize="10"
                                         FontWeight="SemiBold"
@@ -369,7 +375,7 @@
                                         BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
                                 <Button Grid.Column="1"
                                         x:Name="FilterReviewButton"
-                                        Content="Review"
+                                        Content="{DynamicResource Main_FilterReview}"
                                         Click="FilterReview_Click"
                                         FontSize="10"
                                         FontWeight="SemiBold"
@@ -381,7 +387,7 @@
                                         BorderThickness="0"/>
                                 <Button Grid.Column="2"
                                         x:Name="FilterNoLabelButton"
-                                        Content="None"
+                                        Content="{DynamicResource Main_FilterNone}"
                                         Click="FilterNoLabel_Click"
                                         FontSize="10"
                                         FontWeight="SemiBold"
@@ -393,7 +399,7 @@
                                         BorderThickness="0"/>
                                 <Button Grid.Column="3"
                                         x:Name="FilterVerifiedButton"
-                                        Content="Done"
+                                        Content="{DynamicResource Main_FilterDone}"
                                         Click="FilterVerified_Click"
                                         FontSize="10"
                                         FontWeight="SemiBold"
@@ -405,6 +411,35 @@
                                         BorderThickness="0"/>
                             </Grid>
                         </Grid>
+
+                        <!-- Class Filter Expander -->
+                        <Expander Grid.Row="3" 
+                                  x:Name="ClassFilterExpander"
+                                  Header="{DynamicResource Main_FilterByClass}"
+                                  Margin="0,8,0,0"
+                                  IsExpanded="False">
+                            <Expander.HeaderTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" 
+                                                   Text="&#xE8C8;" 
+                                                   FontSize="12"
+                                                   Foreground="#FF9C27B0"
+                                                   VerticalAlignment="Center"
+                                                   Margin="0,0,6,0"/>
+                                        <TextBlock Text="{Binding}" 
+                                                   FontSize="11" 
+                                                   FontWeight="SemiBold"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </Expander.HeaderTemplate>
+                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0">
+                                <StackPanel x:Name="ClassFilterCheckBoxPanel" Orientation="Vertical">
+                                    <!-- Checkboxes will be added dynamically -->
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Expander>
                     </Grid>
                 </Border>
 
@@ -461,13 +496,13 @@
                                                 <Style TargetType="TextBlock">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding Status}" Value="NoLabel">
-                                                            <Setter Property="Text" Value="NO LABEL"/>
+                                                            <Setter Property="Text" Value="{DynamicResource Main_StatusNoLabel}"/>
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Status}" Value="VerificationNeeded">
-                                                            <Setter Property="Text" Value="REVIEW"/>
+                                                            <Setter Property="Text" Value="{DynamicResource Main_StatusReview}"/>
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Status}" Value="Verified">
-                                                            <Setter Property="Text" Value="VERIFIED"/>
+                                                            <Setter Property="Text" Value="{DynamicResource Main_StatusVerified}"/>
                                                         </DataTrigger>
                                                     </Style.Triggers>
                                                 </Style>
@@ -511,7 +546,7 @@
                                            Foreground="#FFB74D"
                                            HorizontalAlignment="Center"
                                            Text="0"/>
-                                <TextBlock Text="REVIEW" 
+                                <TextBlock Text="{DynamicResource Main_StatusReview}" 
                                            FontSize="9" 
                                            FontWeight="SemiBold"
                                            Foreground="#CC7A00"
@@ -539,7 +574,7 @@
                                            Foreground="#E57373"
                                            HorizontalAlignment="Center"
                                            Text="0"/>
-                                <TextBlock Text="NO LABEL" 
+                                <TextBlock Text="{DynamicResource Main_StatusNoLabel}" 
                                            FontSize="9" 
                                            FontWeight="SemiBold"
                                            Foreground="#CC3300"
@@ -567,7 +602,7 @@
                                            Foreground="#81C784"
                                            HorizontalAlignment="Center"
                                            Text="0"/>
-                                <TextBlock Text="VERIFIED" 
+                                <TextBlock Text="{DynamicResource Main_StatusVerified}" 
                                            FontSize="9" 
                                            FontWeight="SemiBold"
                                            Foreground="#2E7D32"
@@ -609,7 +644,7 @@
 
                 <!-- Panel Header -->
                 <Grid Grid.Row="0" Margin="0,0,0,12">
-                    <TextBlock Text="Labels &amp; Classes" 
+                    <TextBlock Text="{DynamicResource Main_LabelsAndClasses}" 
                                FontSize="16" 
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
@@ -625,7 +660,7 @@
                         </Grid.RowDefinitions>
                         
                         <!-- Section Title -->
-                        <TextBlock Grid.Row="0" Text="Classes" 
+                        <TextBlock Grid.Row="0" Text="{DynamicResource Main_Classes}" 
                                    FontSize="13" FontWeight="SemiBold" 
                                    Margin="0,0,0,10"/>
                         
@@ -699,7 +734,7 @@
                                                 Style="{StaticResource IconButton}"
                                                 Click="EditClass_Click"
                                                 Tag="{Binding}"
-                                                ToolTip="Edit class">
+                                                ToolTip="{DynamicResource Main_EditClass}">
                                             <TextBlock FontFamily="Segoe MDL2 Assets" 
                                                        Text="&#xE70F;" 
                                                        FontSize="12"
@@ -718,17 +753,17 @@
                             </Grid.ColumnDefinitions>
                             
                             <Button Grid.Column="0" 
-                                    Content="Add Class" 
+                                    Content="{DynamicResource Main_AddClass}" 
                                     Click="AddClass_Click" 
                                     Padding="8,6"
                                     Margin="0,0,4,0"
                                     HorizontalAlignment="Stretch">
                                 <Button.ToolTip>
-                                    <ToolTip Content="Add new class"/>
+                                    <ToolTip Content="{DynamicResource Main_AddClass}"/>
                                 </Button.ToolTip>
                             </Button>
                             <Button Grid.Column="1" 
-                                    Content="Remove" 
+                                    Content="{DynamicResource Main_Remove}" 
                                     x:Name="RemoveClassButton"
                                     Click="RemoveClass_Click" 
                                     Padding="8,6"
@@ -736,7 +771,7 @@
                                     HorizontalAlignment="Stretch"
                                     IsEnabled="False">
                                 <Button.ToolTip>
-                                    <ToolTip Content="Remove selected class"/>
+                                    <ToolTip Content="{DynamicResource Main_RemoveSelectedClass}"/>
                                 </Button.ToolTip>
                             </Button>
                         </Grid>
@@ -753,9 +788,26 @@
                         </Grid.RowDefinitions>
                         
                         <!-- Labels Header -->
-                        <TextBlock Grid.Row="0" Text="Image Labels" 
-                                   FontSize="13" FontWeight="SemiBold" 
-                                   Margin="12,12,12,8"/>
+                        <Grid Grid.Row="0" Margin="12,12,12,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Grid.Column="0" Text="{DynamicResource Main_ImageLabels}" 
+                                       FontSize="13" FontWeight="SemiBold" 
+                                       VerticalAlignment="Center"/>
+                            <Button Grid.Column="1" 
+                                    x:Name="ClearImageClassesButton"
+                                    Content="{DynamicResource Main_ClearImageClasses}"
+                                    Click="ClearImageClasses_Click"
+                                    Padding="8,6"
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Center">
+                                <Button.ToolTip>
+                                    <ToolTip Content="{DynamicResource Main_ClearImageClasses}"/>
+                                </Button.ToolTip>
+                            </Button>
+                        </Grid>
                         
                         <!-- Labels ListBox -->
                         <ListBox Grid.Row="1" x:Name="LabelListBox" 
@@ -796,7 +848,7 @@
                                VerticalAlignment="Center"
                                Margin="0,0,8,0"/>
                     <TextBlock x:Name="ProjectNameText" 
-                               Text="No Project" 
+                               Text="{DynamicResource Status_NoProject}" 
                                FontWeight="SemiBold"
                                FontSize="12"
                                VerticalAlignment="Center"
@@ -809,7 +861,7 @@
                             Margin="0,0,16,0">
                         <StackPanel Orientation="Horizontal">
                             <TextBlock x:Name="LastSaveText" 
-                                       Text="All changes saved" 
+                                       Text="{DynamicResource Status_AllChangesSaved}" 
                                        Foreground="#81C784"
                                        FontSize="10"
                                        FontWeight="SemiBold"
@@ -818,7 +870,7 @@
                     </Border>
 
                     <TextBlock x:Name="LastSaveTimeText"
-                               Text="Not saved yet"
+                               Text="{DynamicResource Status_NotSavedYet}"
                                Foreground="Gray"
                                FontSize="11"
                                VerticalAlignment="Center"/>
@@ -847,7 +899,7 @@
                                    FontSize="10"
                                    VerticalAlignment="Center"
                                    Margin="0,0,4,0"/>
-                        <TextBlock Text="(active)" 
+                        <TextBlock Text="{DynamicResource Status_Active}" 
                                    FontSize="9" 
                                    VerticalAlignment="Center" 
                                    Opacity="0.6"/>
@@ -867,7 +919,7 @@
                                      VerticalAlignment="Center"
                                      Margin="0,0,6,0"/>
                             <TextBlock x:Name="AutoSaveText"
-                                       Text="Auto-save" 
+                                       Text="{DynamicResource Status_AutoSaveEnabled}" 
                                        Foreground="#00BCD4"
                                        FontSize="10"
                                        FontWeight="SemiBold"

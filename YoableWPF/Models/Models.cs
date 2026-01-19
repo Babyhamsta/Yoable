@@ -89,7 +89,7 @@ namespace YoableWPF
         
         // Helper properties for UI binding
         [JsonIgnore]
-        public string DisplayText => $"{Name} (ID: {ClassId})";
+        public string DisplayText => ClassId == -1 ? Name : $"{Name} (ID: {ClassId})";
         
         [JsonIgnore]
         public SolidColorBrush ColorBrush => new SolidColorBrush(

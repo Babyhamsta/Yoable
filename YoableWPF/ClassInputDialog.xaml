@@ -4,7 +4,7 @@
         xmlns:ui="http://schemas.modernwpf.com/2019"
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         ui:WindowHelper.UseModernWindowStyle="True"
-        Title="Add New Class" Height="360" Width="420"
+        Title="Add New Class" Height="460" Width="420"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize">
     <Grid Margin="20">
@@ -36,8 +36,46 @@
                           HorizontalAlignment="Left"
                           Margin="0,0,0,16"/>
         
-        <!-- Preview -->
+        <!-- Merge Option (only in edit mode) -->
         <Border Grid.Row="4" 
+                x:Name="MergeOptionBorder"
+                Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                BorderThickness="1"
+                CornerRadius="6"
+                Padding="12"
+                Margin="0,0,0,16"
+                Visibility="Collapsed">
+            <StackPanel>
+                <TextBlock Text="合併選項:" FontSize="11" Opacity="0.7" Margin="0,0,0,8"/>
+                <CheckBox x:Name="MergeCheckBox" 
+                          Content="將此類別的所有標籤合併到以下類別:"
+                          Margin="0,0,0,8"
+                          Checked="MergeCheckBox_Checked"
+                          Unchecked="MergeCheckBox_Unchecked"/>
+                <ComboBox x:Name="MergeTargetComboBox"
+                          IsEnabled="False"
+                          MinWidth="200"
+                          HorizontalAlignment="Left">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Width="4" 
+                                        Height="16" 
+                                        Background="{Binding ColorBrush}"
+                                        CornerRadius="2"
+                                        Margin="0,0,8,0"
+                                        VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding DisplayText}"/>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+            </StackPanel>
+        </Border>
+
+        <!-- Preview -->
+        <Border Grid.Row="5" 
                 Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"
                 BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
                 BorderThickness="1"
@@ -71,7 +109,7 @@
         <StackPanel Grid.Row="6" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Cancel" Click="Cancel_Click" 
                     Width="80" Margin="0,0,8,0" IsCancel="True"/>
-            <Button Content="Add Class" Click="OK_Click" 
+            <Button x:Name="OKButton" Content="Add Class" Click="OK_Click" 
                     Width="100" IsDefault="True"/>
         </StackPanel>
     </Grid>

@@ -3,8 +3,9 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:ui="http://schemas.modernwpf.com/2019"
+    xmlns:local="clr-namespace:YoableWPF"
     ui:WindowHelper.UseModernWindowStyle="True"
-    Title="Settings"
+    Title="{DynamicResource Settings_Title}"
     Height="650"
     Width="700"
     WindowStartupLocation="CenterOwner"
@@ -179,12 +180,12 @@
                                Foreground="{DynamicResource AccentButtonBrush}"
                                VerticalAlignment="Center"
                                Margin="0,0,12,0"/>
-                    <TextBlock Text="Settings" 
+                    <TextBlock Text="{DynamicResource Settings_Title}" 
                                FontSize="20" 
                                FontWeight="SemiBold"
                                VerticalAlignment="Center"/>
                 </StackPanel>
-                <TextBlock Text="Configure Yoable to match your workflow and preferences"
+                <TextBlock Text="{DynamicResource Settings_Subtitle}"
                            Foreground="Gray"
                            TextWrapping="Wrap"
                            FontSize="13"/>
@@ -198,19 +199,29 @@
                 Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
             <StackPanel Orientation="Horizontal" Margin="24,0">
                 <RadioButton x:Name="GeneralTab" 
-                             Content="General" 
+                             Content="{DynamicResource Settings_General}" 
                              Tag="&#xE713;"
                              Style="{StaticResource HorizontalTab}"
                              IsChecked="True"
                              Checked="Tab_Changed"/>
                 <RadioButton x:Name="AITab" 
-                             Content="AI &amp; Detection" 
+                             Content="{DynamicResource Settings_AI}" 
                              Tag="&#xE7F4;"
                              Style="{StaticResource HorizontalTab}"
                              Checked="Tab_Changed"/>
                 <RadioButton x:Name="PerformanceTab" 
-                             Content="Performance" 
+                             Content="{DynamicResource Settings_Performance}" 
                              Tag="&#xE7F8;"
+                             Style="{StaticResource HorizontalTab}"
+                             Checked="Tab_Changed"/>
+                <RadioButton x:Name="UITab" 
+                             Content="{DynamicResource Settings_UI}" 
+                             Tag="&#xE790;"
+                             Style="{StaticResource HorizontalTab}"
+                             Checked="Tab_Changed"/>
+                <RadioButton x:Name="ShortcutsTab" 
+                             Content="{DynamicResource Settings_Shortcuts}" 
+                             Tag="&#xE765;"
                              Style="{StaticResource HorizontalTab}"
                              Checked="Tab_Changed"/>
             </StackPanel>
@@ -226,20 +237,20 @@
                     <!-- Appearance Card -->
                     <Border Style="{StaticResource SettingCard}">
                         <StackPanel>
-                            <TextBlock Text="Appearance" Style="{StaticResource SectionHeader}"/>
+                            <TextBlock Text="{DynamicResource Settings_Appearance}" Style="{StaticResource SectionHeader}"/>
 
                             <CheckBox x:Name="DarkModeCheckBox" 
-                                      Content="Dark Mode"
+                                      Content="{DynamicResource Settings_DarkMode}"
                                       Margin="0,0,0,12"
                                       Click="DarkMode_Click"/>
 
-                            <TextBlock Text="Accent Color (Hex)" Style="{StaticResource SettingLabel}"/>
+                            <TextBlock Text="{DynamicResource Settings_AccentColor}" Style="{StaticResource SettingLabel}"/>
                             <TextBox x:Name="FormHexAccent" 
                                      FontSize="13"
                                      Padding="8"
-                                     ToolTip="Enter hex color value (e.g. #FF0000 for red)"
+                                     ToolTip="{DynamicResource Settings_AccentColor_Tooltip}"
                                      TextChanged="FormHexInput_TextChanged"/>
-                            <TextBlock Text="Changes the accent color used throughout the application"
+                            <TextBlock Text="{DynamicResource Settings_AccentColor_Help}"
                                        Style="{StaticResource HelpText}"/>
                         </StackPanel>
                     </Border>
@@ -247,23 +258,23 @@
                     <!-- General Options Card -->
                     <Border Style="{StaticResource SettingCard}">
                         <StackPanel>
-                            <TextBlock Text="General" Style="{StaticResource SectionHeader}"/>
+                            <TextBlock Text="{DynamicResource Settings_General_Section}" Style="{StaticResource SectionHeader}"/>
                             
                             <CheckBox x:Name="UpdateCheckBox"
-                                      Content="Check for updates on launch"
-                                      ToolTip="Automatically check for new versions when starting Yoable"/>
+                                      Content="{DynamicResource Settings_CheckUpdates}"
+                                      ToolTip="{DynamicResource Settings_CheckUpdates_Tooltip}"/>
                         </StackPanel>
                     </Border>
 
                     <!-- Project Settings Card -->
                     <Border Style="{StaticResource SettingCard}">
                         <StackPanel>
-                            <TextBlock Text="Project" Style="{StaticResource SectionHeader}"/>
+                            <TextBlock Text="{DynamicResource Settings_Project_Section}" Style="{StaticResource SectionHeader}"/>
                             
                             <CheckBox x:Name="AutoSaveCheckBox"
-                                      Content="Enable Auto-Save"
+                                      Content="{DynamicResource Settings_AutoSave}"
                                       IsChecked="True"/>
-                            <TextBlock Text="Automatically save your project every 2 minutes when changes are detected"
+                            <TextBlock Text="{DynamicResource Settings_AutoSave_Help}"
                                        Style="{StaticResource HelpText}"/>
                         </StackPanel>
                     </Border>
@@ -271,24 +282,24 @@
                     <!-- Label Settings Card -->
                     <Border Style="{StaticResource SettingCard}">
                         <StackPanel>
-                            <TextBlock Text="Labels" Style="{StaticResource SectionHeader}"/>
+                            <TextBlock Text="{DynamicResource Settings_Labels_Section}" Style="{StaticResource SectionHeader}"/>
 
-                            <TextBlock Text="Label Color" Style="{StaticResource SettingLabel}"/>
+                            <TextBlock Text="{DynamicResource Settings_LabelColor}" Style="{StaticResource SettingLabel}"/>
                             <ComboBox x:Name="LabelColorPicker" 
                                       Margin="0,0,0,12"
                                       FontSize="13"
                                       Padding="8">
-                                <ComboBoxItem Content="Red" Tag="#FFFF0000"/>
-                                <ComboBoxItem Content="Green" Tag="#FF00FF00"/>
-                                <ComboBoxItem Content="Blue" Tag="#FF0000FF"/>
-                                <ComboBoxItem Content="Yellow" Tag="#FFFFFF00"/>
-                                <ComboBoxItem Content="White" Tag="#FFFFFFFF"/>
-                                <ComboBoxItem Content="Black" Tag="#FF000000"/>
-                                <ComboBoxItem Content="Purple" Tag="#FF800080"/>
-                                <ComboBoxItem Content="Orange" Tag="#FFFF8C00"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_Red}" Tag="#FFFF0000"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_Green}" Tag="#FF00FF00"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_Blue}" Tag="#FF0000FF"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_Yellow}" Tag="#FFFFFF00"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_White}" Tag="#FFFFFFFF"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_Black}" Tag="#FF000000"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_Purple}" Tag="#FF800080"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_Orange}" Tag="#FFFF8C00"/>
                             </ComboBox>
 
-                            <TextBlock Text="Label Thickness" Style="{StaticResource SettingLabel}"/>
+                            <TextBlock Text="{DynamicResource Settings_LabelThickness}" Style="{StaticResource SettingLabel}"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -313,28 +324,28 @@
                     <!-- Crosshair Settings Card -->
                     <Border Style="{StaticResource SettingCard}">
                         <StackPanel>
-                            <TextBlock Text="Crosshair" Style="{StaticResource SectionHeader}"/>
+                            <TextBlock Text="{DynamicResource Settings_Crosshair_Section}" Style="{StaticResource SectionHeader}"/>
 
                             <CheckBox x:Name="CrosshairEnabledCheckbox"
-                                      Content="Enable Crosshair"
+                                      Content="{DynamicResource Settings_EnableCrosshair}"
                                       Margin="0,0,0,12"/>
 
-                            <TextBlock Text="Crosshair Color" Style="{StaticResource SettingLabel}"/>
+                            <TextBlock Text="{DynamicResource Settings_CrosshairColor}" Style="{StaticResource SettingLabel}"/>
                             <ComboBox x:Name="CrosshairColorPicker" 
                                       Margin="0,0,0,12"
                                       FontSize="13"
                                       Padding="8">
-                                <ComboBoxItem Content="Red" Tag="#FFFF0000"/>
-                                <ComboBoxItem Content="Green" Tag="#FF00FF00"/>
-                                <ComboBoxItem Content="Blue" Tag="#FF0000FF"/>
-                                <ComboBoxItem Content="Yellow" Tag="#FFFFFF00"/>
-                                <ComboBoxItem Content="White" Tag="#FFFFFFFF"/>
-                                <ComboBoxItem Content="Black" Tag="#FF000000"/>
-                                <ComboBoxItem Content="Purple" Tag="#FF800080"/>
-                                <ComboBoxItem Content="Orange" Tag="#FFFF8C00"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_Red}" Tag="#FFFF0000"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_Green}" Tag="#FF00FF00"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_Blue}" Tag="#FF0000FF"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_Yellow}" Tag="#FFFFFF00"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_White}" Tag="#FFFFFFFF"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_Black}" Tag="#FF000000"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_Purple}" Tag="#FF800080"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Color_Orange}" Tag="#FFFF8C00"/>
                             </ComboBox>
 
-                            <TextBlock Text="Crosshair Size" Style="{StaticResource SettingLabel}"/>
+                            <TextBlock Text="{DynamicResource Settings_CrosshairSize}" Style="{StaticResource SettingLabel}"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -362,18 +373,18 @@
                     <!-- Detection Settings Card -->
                     <Border Style="{StaticResource SettingCard}">
                         <StackPanel>
-                            <TextBlock Text="Detection" Style="{StaticResource SectionHeader}"/>
+                            <TextBlock Text="{DynamicResource Settings_Detection_Section}" Style="{StaticResource SectionHeader}"/>
 
-                            <TextBlock Text="Processing Device" Style="{StaticResource SettingLabel}"/>
+                            <TextBlock Text="{DynamicResource Settings_ProcessingDevice}" Style="{StaticResource SettingLabel}"/>
                             <ComboBox x:Name="ProcessingDeviceComboBox" 
                                       Margin="0,0,0,12"
                                       FontSize="13"
                                       Padding="8">
-                                <ComboBoxItem Content="CPU"/>
-                                <ComboBoxItem Content="GPU (CUDA)"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Device_CPU}"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_Device_GPU}"/>
                             </ComboBox>
 
-                            <TextBlock Text="Confidence Threshold" Style="{StaticResource SettingLabel}"/>
+                            <TextBlock Text="{DynamicResource Settings_ConfidenceThreshold}" Style="{StaticResource SettingLabel}"/>
                             <Grid>
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -392,7 +403,7 @@
                                            FontSize="12"
                                            FontWeight="SemiBold"/>
                             </Grid>
-                            <TextBlock Text="Minimum confidence required to display AI detections"
+                            <TextBlock Text="{DynamicResource Settings_ConfidenceThreshold_Help}"
                                        Style="{StaticResource HelpText}"/>
                         </StackPanel>
                     </Border>
@@ -400,15 +411,24 @@
                     <!-- Ensemble Settings Card -->
                     <Border Style="{StaticResource SettingCard}">
                         <StackPanel>
-                            <TextBlock Text="Ensemble Mode" Style="{StaticResource SectionHeader}"/>
+                            <TextBlock Text="{DynamicResource Settings_EnsembleMode_Section}" Style="{StaticResource SectionHeader}"/>
 
                             <TextBlock x:Name="ModelCountText" 
-                                       Text="No models loaded" 
+                                       Text="{DynamicResource Settings_NoModelsLoaded}" 
                                        Foreground="Gray"
                                        FontStyle="Italic"
                                        Margin="0,0,0,8"/>
 
-                            <TextBlock Text="Minimum Consensus Required" Style="{StaticResource SettingLabel}"/>
+                            <!-- 檢測模式選擇 -->
+                            <TextBlock Text="{DynamicResource Settings_DetectionMode}" Style="{StaticResource SettingLabel}"/>
+                            <ComboBox x:Name="DetectionModeComboBox" 
+                                      Margin="0,4,0,12"
+                                      SelectionChanged="DetectionModeComboBox_SelectionChanged">
+                                <ComboBoxItem Content="{DynamicResource Settings_DetectionMode_Voting}" Tag="0"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_DetectionMode_Union}" Tag="1"/>
+                            </ComboBox>
+
+                            <TextBlock Text="{DynamicResource Settings_MinConsensus}" Style="{StaticResource SettingLabel}"/>
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -428,7 +448,7 @@
                                            FontWeight="SemiBold"/>
                             </Grid>
 
-                            <TextBlock Text="Consensus IoU Threshold" Style="{StaticResource SettingLabel}"/>
+                            <TextBlock Text="{DynamicResource Settings_ConsensusIoU}" Style="{StaticResource SettingLabel}"/>
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -448,7 +468,7 @@
                                            FontWeight="SemiBold"/>
                             </Grid>
 
-                            <TextBlock Text="Final Ensemble IoU Threshold" Style="{StaticResource SettingLabel}"/>
+                            <TextBlock Text="{DynamicResource Settings_EnsembleIoU}" Style="{StaticResource SettingLabel}"/>
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -469,7 +489,7 @@
                             </Grid>
 
                             <CheckBox x:Name="UseWeightedAverageCheckBox"
-                                      Content="Use Weighted Average for Box Merging"
+                                      Content="{DynamicResource Settings_UseWeightedAverage}"
                                       IsChecked="True"/>
                         </StackPanel>
                     </Border>
@@ -491,7 +511,7 @@
                                        VerticalAlignment="Top"
                                        Margin="0,0,10,0"/>
                             <TextBlock Grid.Column="1"
-                                       Text="Ensemble mode activates when 2 or more YOLO models are loaded. Models vote on detections for improved accuracy."
+                                       Text="{DynamicResource Settings_EnsembleInfo}"
                                        Foreground="#00BCD4"
                                        FontSize="12"
                                        TextWrapping="Wrap"
@@ -500,14 +520,138 @@
                     </Border>
                 </StackPanel>
 
+                <!-- UI Settings Page -->
+                <StackPanel x:Name="UISettingsPanel" Visibility="Collapsed">
+                    <!-- Language Settings Card -->
+                    <Border Style="{StaticResource SettingCard}">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource UI_Language}" Style="{StaticResource SectionHeader}"/>
+
+                            <TextBlock Text="{DynamicResource Settings_DisplayLanguage}" Style="{StaticResource SettingLabel}"/>
+                            <ComboBox x:Name="LanguageComboBox" 
+                                      Margin="0,0,0,12"
+                                      FontSize="13"
+                                      Padding="8"
+                                      SelectionChanged="LanguageComboBox_SelectionChanged">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock>
+                                            <Run Text="{Binding NativeName}"/>
+                                            <Run Text=" (" Foreground="Gray"/>
+                                            <Run Text="{Binding Name}" Foreground="Gray"/>
+                                            <Run Text=")" Foreground="Gray"/>
+                                        </TextBlock>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                            <TextBlock Text="{DynamicResource Settings_Language_Description}"
+                                       Style="{StaticResource HelpText}"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Shortcuts Settings Page -->
+                <StackPanel x:Name="ShortcutsSettingsPanel" Visibility="Collapsed">
+                    <!-- Shortcuts Header -->
+                    <Border Style="{StaticResource SettingCard}">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Settings_KeyboardShortcuts}" Style="{StaticResource SectionHeader}"/>
+                            
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="*"/>
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
+
+                                <!-- Column 1: Project & Navigation -->
+                                <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                                    <TextBlock Text="{DynamicResource Settings_ProjectShortcuts}" FontWeight="Bold" Margin="0,0,0,8" Opacity="0.7" FontSize="12"/>
+                                    <TextBlock Text="{DynamicResource Settings_Hotkey_SaveProject}" Style="{StaticResource SettingLabel}"/>
+                                    <local:HotkeyInputControl x:Name="SaveProjectHotkeyControl" Margin="0,0,0,16"/>
+
+                                    <TextBlock Text="{DynamicResource Settings_ImageNavigationShortcuts}" FontWeight="Bold" Margin="0,8,0,8" Opacity="0.7" FontSize="12"/>
+                                    <TextBlock Text="{DynamicResource Settings_Hotkey_PreviousImage}" Style="{StaticResource SettingLabel}"/>
+                                    <local:HotkeyInputControl x:Name="PreviousImageHotkeyControl" Margin="0,0,0,12"/>
+                                    
+                                    <TextBlock Text="{DynamicResource Settings_Hotkey_NextImage}" Style="{StaticResource SettingLabel}"/>
+                                    <local:HotkeyInputControl x:Name="NextImageHotkeyControl" Margin="0,0,0,12"/>
+                                </StackPanel>
+
+                                <!-- Column 2: Label Movement -->
+                                <StackPanel Grid.Column="1" Margin="12,0,0,0">
+                                    <TextBlock Text="{DynamicResource Settings_LabelMovementShortcuts}" FontWeight="Bold" Margin="0,0,0,8" Opacity="0.7" FontSize="12"/>
+                                    
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="*"/>
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+
+                                        <StackPanel Grid.Row="0" Grid.ColumnSpan="2">
+                                            <TextBlock Text="{DynamicResource Settings_Hotkey_MoveLabelUp}" Style="{StaticResource SettingLabel}"/>
+                                            <local:HotkeyInputControl x:Name="MoveLabelUpHotkeyControl" Margin="0,0,0,12"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="1" Grid.ColumnSpan="2">
+                                            <TextBlock Text="{DynamicResource Settings_Hotkey_MoveLabelDown}" Style="{StaticResource SettingLabel}"/>
+                                            <local:HotkeyInputControl x:Name="MoveLabelDownHotkeyControl" Margin="0,0,0,12"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="2" Grid.Column="0" Margin="0,0,6,0">
+                                            <TextBlock Text="{DynamicResource Settings_Hotkey_MoveLabelLeft}" Style="{StaticResource SettingLabel}"/>
+                                            <local:HotkeyInputControl x:Name="MoveLabelLeftHotkeyControl" Margin="0,0,0,12"/>
+                                        </StackPanel>
+
+                                        <StackPanel Grid.Row="2" Grid.Column="1" Margin="6,0,0,0">
+                                            <TextBlock Text="{DynamicResource Settings_Hotkey_MoveLabelRight}" Style="{StaticResource SettingLabel}"/>
+                                            <local:HotkeyInputControl x:Name="MoveLabelRightHotkeyControl" Margin="0,0,0,12"/>
+                                        </StackPanel>
+                                    </Grid>
+                                </StackPanel>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Help Text -->
+                    <Border Background="#2200BCD4"
+                            BorderBrush="#4400BCD4"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="16">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" 
+                                       Text="&#xE946;" 
+                                       FontSize="16" 
+                                       Foreground="#00BCD4"
+                                       Margin="0,0,12,0"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Settings_Hotkey_Description}"
+                                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                       FontSize="12"
+                                       TextWrapping="Wrap"
+                                       VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
                 <!-- Performance Settings Page -->
                 <StackPanel x:Name="PerformanceSettingsPanel" Visibility="Collapsed">
                     <!-- Loading & Processing Card -->
                     <Border Style="{StaticResource SettingCard}">
                         <StackPanel>
-                            <TextBlock Text="Loading &amp; Processing" Style="{StaticResource SectionHeader}"/>
+                            <TextBlock Text="{DynamicResource Settings_LoadingProcessing_Section}" Style="{StaticResource SectionHeader}"/>
 
-                            <TextBlock Text="UI Batch Size" Style="{StaticResource SettingLabel}"/>
+                            <TextBlock Text="{DynamicResource Settings_UIBatchSize}" Style="{StaticResource SettingLabel}"/>
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -526,11 +670,11 @@
                                            FontSize="12"
                                            FontWeight="SemiBold"/>
                             </Grid>
-                            <TextBlock Text="Number of images to load at once when populating the UI"
+                            <TextBlock Text="{DynamicResource Settings_UIBatchSize_Help}"
                                        Style="{StaticResource HelpText}"
                                        Margin="0,0,0,12"/>
 
-                            <TextBlock Text="File Processing Batch Size" Style="{StaticResource SettingLabel}"/>
+                            <TextBlock Text="{DynamicResource Settings_ProcessingBatchSize}" Style="{StaticResource SettingLabel}"/>
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -549,11 +693,11 @@
                                            FontSize="12"
                                            FontWeight="SemiBold"/>
                             </Grid>
-                            <TextBlock Text="Number of files to process in each batch during operations"
+                            <TextBlock Text="{DynamicResource Settings_ProcessingBatchSize_Help}"
                                        Style="{StaticResource HelpText}"
                                        Margin="0,0,0,12"/>
 
-                            <TextBlock Text="Label Loading Batch Size" Style="{StaticResource SettingLabel}"/>
+                            <TextBlock Text="{DynamicResource Settings_LabelLoadBatchSize}" Style="{StaticResource SettingLabel}"/>
                             <Grid Margin="0,0,0,12">
                                 <Grid.ColumnDefinitions>
                                     <ColumnDefinition Width="*"/>
@@ -572,14 +716,14 @@
                                            FontSize="12"
                                            FontWeight="SemiBold"/>
                             </Grid>
-                            <TextBlock Text="Number of label files to process in parallel batches (higher = faster for large datasets)"
+                            <TextBlock Text="{DynamicResource Settings_LabelLoadBatchSize_Help}"
                                        Style="{StaticResource HelpText}"
                                        Margin="0,0,0,12"/>
 
                             <CheckBox x:Name="EnableParallelCheckBox" 
-                                      Content="Enable parallel processing" 
+                                      Content="{DynamicResource Settings_EnableParallel}" 
                                       IsChecked="True"/>
-                            <TextBlock Text="Use multiple CPU cores for faster processing (recommended)"
+                            <TextBlock Text="{DynamicResource Settings_EnableParallel_Help}"
                                        Style="{StaticResource HelpText}"/>
                         </StackPanel>
                     </Border>
@@ -601,7 +745,7 @@
                                        VerticalAlignment="Top"
                                        Margin="0,0,10,0"/>
                             <TextBlock Grid.Column="1"
-                                       Text="Lower batch sizes use less memory but may be slower. Increase if you have plenty of RAM."
+                                       Text="{DynamicResource Settings_PerformanceTip}"
                                        Foreground="#CC7A00"
                                        FontSize="12"
                                        TextWrapping="Wrap"
@@ -620,13 +764,13 @@
                 Padding="24,16">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <Button x:Name="SaveButton" 
-                        Content="Save" 
+                        Content="{DynamicResource Common_Save}" 
                         Click="SaveButton_Click"
                         Style="{StaticResource ModernButton}"
                         MinWidth="100"
                         Margin="0,0,8,0"/>
                 <Button x:Name="CancelButton" 
-                        Content="Cancel" 
+                        Content="{DynamicResource Common_Cancel}" 
                         Click="CancelButton_Click"
                         Style="{StaticResource SecondaryButton}"
                         MinWidth="80"/>

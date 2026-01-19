@@ -71,6 +71,9 @@
     <Setting Name="UseWeightedAverage" Type="System.Boolean" Scope="User">
       <Value Profile="(Default)">True</Value>
     </Setting>
+    <Setting Name="EnsembleDetectionMode" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
     <Setting Name="RecentProjects" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
     </Setting>
@@ -94,6 +97,30 @@
     </Setting>
     <Setting Name="LastModelDirectory" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="Language" Type="System.String" Scope="User">
+      <Value Profile="(Default)">zh-TW</Value>
+    </Setting>
+    <Setting Name="Hotkey_SaveProject" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Ctrl + S</Value>
+    </Setting>
+    <Setting Name="Hotkey_PreviousImage" Type="System.String" Scope="User">
+      <Value Profile="(Default)">A</Value>
+    </Setting>
+    <Setting Name="Hotkey_NextImage" Type="System.String" Scope="User">
+      <Value Profile="(Default)">D</Value>
+    </Setting>
+    <Setting Name="Hotkey_MoveLabelUp" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Up</Value>
+    </Setting>
+    <Setting Name="Hotkey_MoveLabelDown" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Down</Value>
+    </Setting>
+    <Setting Name="Hotkey_MoveLabelLeft" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Left</Value>
+    </Setting>
+    <Setting Name="Hotkey_MoveLabelRight" Type="System.String" Scope="User">
+      <Value Profile="(Default)">Right</Value>
     </Setting>
   </Settings>
 </SettingsFile>

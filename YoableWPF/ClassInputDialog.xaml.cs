@@ -8,17 +8,24 @@ namespace YoableWPF
     {
         public string ClassName { get; private set; }
         public string ClassColor { get; private set; }
+        public bool ShouldMerge { get; private set; }
+        public LabelClass MergeTargetClass { get; private set; }
         private bool isEditMode = false;
+        private LabelClass currentClass;
+        private List<LabelClass> availableClasses;
 
-        public ClassInputDialog(LabelClass existingClass = null)
+        public ClassInputDialog(LabelClass existingClass = null, List<LabelClass> availableClasses = null)
         {
             InitializeComponent();
+            this.availableClasses = availableClasses ?? new List<LabelClass>();
+            this.currentClass = existingClass;
             
             if (existingClass != null)
             {
                 // Edit mode
                 isEditMode = true;
-                Title = "Edit Class";
+                Title = "編輯類別";
+                OKButton.Content = "確定";
                 ClassNameTextBox.Text = existingClass.Name;
                 
                 // Set the color picker to the existing color
@@ -32,6 +39,19 @@ namespace YoableWPF
                     // Fallback to default if color parsing fails
                     ClassColorPicker.SelectedColor = Color.FromRgb(0xE5, 0x73, 0x73);
                 }
+
+                // Show merge option in edit mode
+                MergeOptionBorder.Visibility = Visibility.Visible;
+                
+                // Populate merge target combo box (exclude current class)
+                MergeTargetComboBox.ItemsSource = this.availableClasses
+                    .Where(c => c.ClassId != existingClass.ClassId)
+                    .ToList();
+            }
+            else
+            {
+                Title = "新增類別";
+                OKButton.Content = "新增類別";
             }
             
             ClassNameTextBox.Focus();
@@ -42,6 +62,21 @@ namespace YoableWPF
             
             // Initial preview update
             UpdatePreview();
+        }
+
+        private void MergeCheckBox_Checked(object sender, RoutedEventArgs e)
+        {
+            MergeTargetComboBox.IsEnabled = true;
+            if (MergeTargetComboBox.Items.Count > 0 && MergeTargetComboBox.SelectedItem == null)
+            {
+                MergeTargetComboBox.SelectedIndex = 0;
+            }
+        }
+
+        private void MergeCheckBox_Unchecked(object sender, RoutedEventArgs e)
+        {
+            MergeTargetComboBox.IsEnabled = false;
+            MergeTargetComboBox.SelectedItem = null;
         }
 
         private void ColorPicker_SelectedColorChanged(object sender, RoutedPropertyChangedEventArgs<Color?> e)
@@ -79,12 +114,29 @@ namespace YoableWPF
             if (string.IsNullOrWhiteSpace(ClassName))
             {
                 System.Windows.MessageBox.Show(
-                    "Please enter a class name.",
-                    "Validation Error",
+                    "請輸入類別名稱。",
+                    "驗證錯誤",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 ClassNameTextBox.Focus();
                 return;
+            }
+
+            // Check merge option
+            ShouldMerge = MergeCheckBox.IsChecked == true;
+            if (ShouldMerge)
+            {
+                if (MergeTargetComboBox.SelectedItem == null)
+                {
+                    System.Windows.MessageBox.Show(
+                        "請選擇要合併到的目標類別。",
+                        "驗證錯誤",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    MergeTargetComboBox.Focus();
+                    return;
+                }
+                MergeTargetClass = MergeTargetComboBox.SelectedItem as LabelClass;
             }
             
             // Get selected color as hex

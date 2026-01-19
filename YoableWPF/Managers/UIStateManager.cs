@@ -286,6 +286,80 @@ namespace YoableWPF.Managers
             }
         }
 
+        /// <summary>
+        /// Filters images by selected class IDs. Shows images that contain at least one label with a selected class.
+        /// </summary>
+        /// <param name="selectedClassIds">Set of class IDs to filter by. If null, shows all images.</param>
+        public void FilterImagesByClasses(HashSet<int> selectedClassIds)
+        {
+            // Store all images if not already stored
+            if (allImages == null || allImages.Count == 0)
+            {
+                allImages = new List<ImageListItem>();
+                foreach (ImageListItem item in mainWindow.ImageListBox.Items)
+                {
+                    allImages.Add(item);
+                }
+            }
+
+            var selectedItem = mainWindow.ImageListBox.SelectedItem as ImageListItem;
+
+            mainWindow.ImageListBox.SelectionChanged -= mainWindow.ImageListBox_SelectionChanged;
+            mainWindow.ImageListBox.Items.Clear();
+
+            if (selectedClassIds == null || selectedClassIds.Count == 0)
+            {
+                // Show all images if no filter or all classes selected
+                foreach (var item in allImages)
+                {
+                    mainWindow.ImageListBox.Items.Add(item);
+                }
+            }
+            else
+            {
+                // Filter images that contain at least one label with a selected class
+                foreach (var item in allImages)
+                {
+                    // Check if this image has labels with any of the selected classes
+                    if (mainWindow.labelManager.LabelStorage.TryGetValue(item.FileName, out var labels))
+                    {
+                        bool hasSelectedClass = labels.Any(label => selectedClassIds.Contains(label.ClassId));
+                        if (hasSelectedClass)
+                        {
+                            mainWindow.ImageListBox.Items.Add(item);
+                        }
+                    }
+                    else
+                    {
+                        // If image has no labels, don't show it when filtering by class
+                        // (unless we want to show images with no labels, but that doesn't make sense for class filtering)
+                    }
+                }
+            }
+
+            // Restore selection if possible
+            if (selectedItem != null)
+            {
+                for (int i = 0; i < mainWindow.ImageListBox.Items.Count; i++)
+                {
+                    if (mainWindow.ImageListBox.Items[i] is ImageListItem item &&
+                        item.FileName == selectedItem.FileName)
+                    {
+                        mainWindow.ImageListBox.SelectedIndex = i;
+                        mainWindow.ImageListBox.ScrollIntoView(mainWindow.ImageListBox.SelectedItem);
+                        break;
+                    }
+                }
+            }
+            else if (mainWindow.ImageListBox.Items.Count > 0)
+            {
+                mainWindow.ImageListBox.SelectedIndex = 0;
+            }
+
+            mainWindow.ImageListBox.SelectionChanged += mainWindow.ImageListBox_SelectionChanged;
+            UpdateStatusCounts();
+        }
+
         public void UpdateFilterButtonStyles(
             Button allButton,
             Button reviewButton,
@@ -296,11 +370,11 @@ namespace YoableWPF.Managers
             // Define colors once
             var transparent = System.Windows.Media.Brushes.Transparent;
             var white = System.Windows.Media.Brushes.White;
-            var baseHigh = (System.Windows.Media.Brush)System.Windows.Application.Current.MainWindow
+            var baseHigh = (System.Windows.Media.Brush)mainWindow
                 .FindResource("SystemControlForegroundBaseHighBrush");
-            var baseLow = (System.Windows.Media.Brush)System.Windows.Application.Current.MainWindow
+            var baseLow = (System.Windows.Media.Brush)mainWindow
                 .FindResource("SystemControlBackgroundBaseLowBrush");
-            var baseLowFore = (System.Windows.Media.Brush)System.Windows.Application.Current.MainWindow
+            var baseLowFore = (System.Windows.Media.Brush)mainWindow
                 .FindResource("SystemControlForegroundBaseLowBrush");
 
             var orangeInactive = new System.Windows.Media.SolidColorBrush(
