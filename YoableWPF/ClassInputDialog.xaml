@@ -4,7 +4,7 @@
         xmlns:ui="http://schemas.modernwpf.com/2019"
         xmlns:xctk="http://schemas.xceed.com/wpf/xaml/toolkit"
         ui:WindowHelper.UseModernWindowStyle="True"
-        Title="Add New Class" Height="460" Width="420"
+        Title="Add New Class" Height="500" Width="420"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize">
     <Grid Margin="20">

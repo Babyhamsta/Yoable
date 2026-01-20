@@ -257,21 +257,10 @@ namespace YoableWPF.Managers
 
                     var parts = line.AsSpan().Trim();
 
-                    // Fast path: count spaces to validate format
-                    int spaceCount = 0;
-                    for (int i = 0; i < parts.Length; i++)
-                    {
-                        if (parts[i] == ' ')
-                            spaceCount++;
-                    }
-
-                    if (spaceCount != 4)
-                        continue;
-
                     try
                     {
-                        // Split on spaces manually for better performance
-                        var tokens = parts.ToString().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+                        // Split on whitespace (handles spaces, tabs, multiple spaces, etc.)
+                        var tokens = parts.ToString().Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries);
                         if (tokens.Length != 5)
                             continue;
 

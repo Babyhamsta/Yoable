@@ -137,6 +137,10 @@ public class YoutubeDownloader
             int frameCount = (int)capture.Get(VideoCaptureProperties.FrameCount);
             double fps = capture.Get(VideoCaptureProperties.Fps);
 
+            // Validate desiredFps to prevent division by zero
+            if (desiredFps <= 0)
+                desiredFps = 5; // Default to 5 FPS
+
             desiredFps = Math.Min(desiredFps, fps);
 
             // Calculate which frames we need
@@ -154,7 +158,12 @@ public class YoutubeDownloader
 
             // Pre-calculate scale and crop values (they're the same for every frame)
             Mat firstFrame = new Mat();
-            capture.Read(firstFrame);
+            if (!capture.Read(firstFrame) || firstFrame.Empty() || firstFrame.Width <= 0 || firstFrame.Height <= 0)
+            {
+                firstFrame.Dispose();
+                throw new Exception("Could not read valid first frame from video");
+            }
+
             double scale = Math.Max((double)FrameSize / firstFrame.Width, (double)FrameSize / firstFrame.Height);
             var newSize = new Size(
                 (int)(firstFrame.Width * scale),
