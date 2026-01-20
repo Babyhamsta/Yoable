@@ -31,6 +31,7 @@ namespace YoableWPF.Managers
             applicationDirectory = Path.GetDirectoryName(executablePath);
             dispatcher = Application.Current.Dispatcher;
             httpClient.DefaultRequestHeaders.Add("User-Agent", "YoableWPF-Updater");
+            httpClient.Timeout = TimeSpan.FromSeconds(15);
 
             CheckShowChangelog();
         }
@@ -106,8 +107,15 @@ namespace YoableWPF.Managers
 
         private async Task<GithubRelease> GetLatestReleaseAsync()
         {
-            var response = await httpClient.GetStringAsync(GithubApiUrl);
-            return JsonSerializer.Deserialize<GithubRelease>(response);
+            using var response = await httpClient.GetAsync(GithubApiUrl);
+            if (!response.IsSuccessStatusCode)
+            {
+                Debug.WriteLine($"Update check failed: {response.StatusCode}");
+                return null;
+            }
+
+            var json = await response.Content.ReadAsStringAsync();
+            return JsonSerializer.Deserialize<GithubRelease>(json);
         }
 
         private bool IsNewVersionAvailable(string newVersion)
@@ -220,6 +228,7 @@ namespace YoableWPF.Managers
             using (var stream = await response.Content.ReadAsStreamAsync())
             using (var fileStream = new FileStream(destinationPath, FileMode.Create))
             {
+                response.EnsureSuccessStatusCode();
                 var buffer = new byte[8192];
                 var totalBytes = response.Content.Headers.ContentLength ?? -1L;
                 var totalBytesRead = 0L;

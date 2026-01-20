@@ -33,6 +33,8 @@ namespace YoableWPF
         private YoutubeDownloader youtubeDownloader;
         private HotkeyManager hotkeyManager;
 
+        public OverlayManager OverlayManager => overlayManager;
+
         public MainWindow()
         {
             InitializeComponent();
@@ -443,10 +445,12 @@ namespace YoableWPF
 
                 // Clear all data
                 ImageListBox.Items.Clear();
-                LabelListBox.Items.Clear();
+                LabelListBox.ItemsSource = null;
                 drawingCanvas.Labels.Clear();
                 drawingCanvas.Image = null;
                 drawingCanvas.InvalidateVisual();
+                uiStateManager.ClearCache();
+                uiStateManager.RefreshAllImagesList();
 
                 // Update project UI
                 UpdateProjectUI();
@@ -796,13 +800,14 @@ namespace YoableWPF
                 // Load labels for this image if they exist
                 if (labelManager.LabelStorage.ContainsKey(selected.FileName))
                 {
-                    drawingCanvas.Labels = new System.Collections.Generic.List<LabelData>(labelManager.LabelStorage[selected.FileName]);
+                    var labels = labelManager.GetLabels(selected.FileName);
+                    drawingCanvas.Labels = new System.Collections.Generic.List<LabelData>(labels);
 
                     // Fix any labels that reference non-existent classes
                     FixOrphanedLabels(drawingCanvas.Labels);
 
                     // Update status when viewing an image with AI or imported labels
-                    if (labelManager.LabelStorage[selected.FileName].Any(l => l.Name.StartsWith("AI") || l.Name.StartsWith("Imported")))
+                    if (labels.Any(l => l.Name.StartsWith("AI") || l.Name.StartsWith("Imported")))
                     {
                         // Only update to Verified if it was previously VerificationNeeded
                         var currentStatus = imageManager.GetImageStatus(selected.FileName);
@@ -831,30 +836,16 @@ namespace YoableWPF
 
         private void LabelListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
-            // FIXED: Handle StackPanel items from UIStateManager.RefreshLabelList
-            if (LabelListBox.SelectedItem is StackPanel stackPanel)
+            if (LabelListBox.SelectedItem is LabelListItemView selectedItem)
             {
-                // Extract the label name from the TextBlock in the StackPanel
-                var textBlock = stackPanel.Children.OfType<TextBlock>().FirstOrDefault();
-                if (textBlock != null)
+                var selectedLabel = selectedItem.Label;
+                if (selectedLabel != null)
                 {
-                    // The text format is "[ClassName] LabelName"
-                    string fullText = textBlock.Text;
-                    int closeBracketIndex = fullText.IndexOf(']');
-                    if (closeBracketIndex >= 0 && closeBracketIndex < fullText.Length - 1)
-                    {
-                        string labelName = fullText.Substring(closeBracketIndex + 2); // Skip "] "
-                        var selectedLabel = drawingCanvas.Labels.FirstOrDefault(label => label.Name == labelName);
-
-                        if (selectedLabel != null)
-                        {
-                            drawingCanvas.SelectedLabel = selectedLabel;
-                            drawingCanvas.SelectedLabels.Clear();
-                            drawingCanvas.SelectedLabels.Add(selectedLabel);
-                            drawingCanvas.InvalidateVisual();
-                            Keyboard.Focus(drawingCanvas); // Ensure canvas captures key events
-                        }
-                    }
+                    drawingCanvas.SelectedLabel = selectedLabel;
+                    drawingCanvas.SelectedLabels.Clear();
+                    drawingCanvas.SelectedLabels.Add(selectedLabel);
+                    drawingCanvas.InvalidateVisual();
+                    Keyboard.Focus(drawingCanvas); // Ensure canvas captures key events
                 }
             }
             else
@@ -864,6 +855,31 @@ namespace YoableWPF
                 drawingCanvas.SelectedLabels.Clear();
                 drawingCanvas.InvalidateVisual();
             }
+        }
+
+        internal void ShowDuplicateImagesWarning(IEnumerable<string> duplicates)
+        {
+            var duplicateList = duplicates?
+                .Where(d => !string.IsNullOrWhiteSpace(d))
+                .Distinct()
+                .ToList() ?? new List<string>();
+
+            if (duplicateList.Count == 0)
+                return;
+
+            string message = $"Skipped {duplicateList.Count} duplicate image(s) because image file names must be unique within a project.\n\n";
+            message += string.Join("\n", duplicateList.Take(5));
+
+            if (duplicateList.Count > 5)
+            {
+                message += $"\n... and {duplicateList.Count - 5} more";
+            }
+
+            MessageBox.Show(
+                message,
+                "Duplicate Image Names",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
         }
 
         /// <summary>
@@ -1067,7 +1083,7 @@ namespace YoableWPF
 
         private async void ImportImage_Click(object sender, RoutedEventArgs e)
         {
-            OpenFileDialog openFileDialog = new() { Filter = "Image Files|*.jpg;*.png" };
+            OpenFileDialog openFileDialog = new() { Filter = "Image Files|*.jpg;*.jpeg;*.png" };
             if (openFileDialog.ShowDialog() == true)
             {
                 // Use the same batch loading infrastructure for consistency
@@ -1084,6 +1100,10 @@ namespace YoableWPF
                     uiStateManager.UpdateStatusCounts();
                     uiStateManager.RefreshAllImagesList();
                     MarkProjectDirty();
+                }
+                else
+                {
+                    ShowDuplicateImagesWarning(imageManager.ConsumeDuplicateImageFiles());
                 }
             }
         }
@@ -1173,20 +1193,37 @@ namespace YoableWPF
 
                 await Task.Run(() =>
                 {
-                    // Parallel processing for maximum speed
-                    Parallel.ForEach(allFiles,
-                        new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
-                        fileName =>
+                    bool enableParallel = Properties.Settings.Default.EnableParallelProcessing;
+
+                    if (enableParallel)
+                    {
+                        // Parallel processing for maximum speed
+                        Parallel.ForEach(allFiles,
+                            new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount },
+                            fileName =>
+                            {
+                                if (cancellationToken.Token.IsCancellationRequested)
+                                    return;
+
+                                ImageStatus newStatus = DetermineImageStatus(fileName);
+
+                                // Update caches
+                                imageManager.UpdateImageStatusValue(fileName, newStatus);
+                                statusUpdates[fileName] = newStatus;
+                            });
+                    }
+                    else
+                    {
+                        foreach (var fileName in allFiles)
                         {
                             if (cancellationToken.Token.IsCancellationRequested)
-                                return;
+                                break;
 
                             ImageStatus newStatus = DetermineImageStatus(fileName);
-
-                            // Update caches
                             imageManager.UpdateImageStatusValue(fileName, newStatus);
                             statusUpdates[fileName] = newStatus;
-                        });
+                        }
+                    }
                 }, cancellationToken.Token);
 
                 // Update UI in one batch
@@ -1218,11 +1255,12 @@ namespace YoableWPF
             labelManager.ClearAll();
             drawingCanvas.Labels.Clear(); // Clear labels inside DrawingCanvas
             ImageListBox.Items.Clear();
-            LabelListBox.Items.Clear();
+            LabelListBox.ItemsSource = null;
             drawingCanvas.Image = null; // Clear the image in DrawingCanvas
             drawingCanvas.InvalidateVisual(); // Force a redraw
             uiStateManager.UpdateStatusCounts();
             uiStateManager.RefreshAllImagesList(); // Clear the filter cache
+            uiStateManager.ClearCache();
 
             MarkProjectDirty();
         }
@@ -1299,7 +1337,7 @@ namespace YoableWPF
                         if (drawingCanvas != null && drawingCanvas.Image != null &&
                             drawingCanvas.Image.ToString().Contains(fileName))
                         {
-                            drawingCanvas.Labels.AddRange(labelManager.LabelStorage[fileName]);
+                            drawingCanvas.Labels = labelManager.GetLabels(fileName);
                             uiStateManager.RefreshLabelList();
                             drawingCanvas.InvalidateVisual();
                         }
@@ -1373,14 +1411,18 @@ namespace YoableWPF
                 var progress = CreateProgressReporter();
 
                 // Load images asynchronously
-                var files = await imageManager.LoadImagesFromDirectoryAsync(
+                await imageManager.LoadImagesFromDirectoryAsync(
                     directoryPath,
                     progress,
                     tokenSource.Token,
                     Properties.Settings.Default.EnableParallelProcessing);
 
                 // Update UI in batches for better performance with large sets
-                await UpdateImageListInBatchesAsync(files, tokenSource.Token);
+                var loadedFiles = imageManager.ImagePathMap.Values.Select(img => img.Path).ToArray();
+                await UpdateImageListInBatchesAsync(loadedFiles, tokenSource.Token);
+
+                // Warn about duplicate file names that were skipped
+                ShowDuplicateImagesWarning(imageManager.ConsumeDuplicateImageFiles());
 
                 if (ImageListBox.Items.Count > 0)
                 {
@@ -1411,6 +1453,10 @@ namespace YoableWPF
         private async Task UpdateImageListInBatchesAsync(string[] files, CancellationToken cancellationToken)
         {
             int batchSize = Properties.Settings.Default.UIBatchSize; // Use setting
+            if (batchSize <= 0)
+            {
+                batchSize = 100;
+            }
 
             await Dispatcher.InvokeAsync(() => ImageListBox.Items.Clear());
 
@@ -1530,7 +1576,7 @@ namespace YoableWPF
 
                 if (!string.IsNullOrEmpty(imageManager.CurrentImagePath) && labelManager.LabelStorage.ContainsKey(imageManager.CurrentImagePath))
                 {
-                    drawingCanvas.Labels = labelManager.LabelStorage[imageManager.CurrentImagePath];
+                    drawingCanvas.Labels = labelManager.GetLabels(imageManager.CurrentImagePath);
                     uiStateManager.RefreshLabelList();
 
                     // Restore selection if it was lost
@@ -1869,10 +1915,9 @@ namespace YoableWPF
                 drawingCanvas.SelectedLabels.Clear();
 
                 // Ensure the selected label is updated in DrawingCanvas
-                string selectedLabelName = LabelListBox.SelectedItem as string;
-                if (!string.IsNullOrEmpty(selectedLabelName))
+                if (LabelListBox.SelectedItem is LabelListItemView selectedItem)
                 {
-                    drawingCanvas.SelectedLabel = drawingCanvas.Labels.FirstOrDefault(label => label.Name == selectedLabelName);
+                    drawingCanvas.SelectedLabel = selectedItem.Label;
 
                     // Add the single selected label to SelectedLabels for consistency
                     if (drawingCanvas.SelectedLabel != null)
@@ -1951,7 +1996,6 @@ namespace YoableWPF
                             foreach (var label in labelsToDelete)
                             {
                                 drawingCanvas.Labels.Remove(label);
-                                LabelListBox.Items.Remove(label.Name);
                             }
                             drawingCanvas.SelectedLabels.Clear();
                             drawingCanvas.SelectedLabel = null;
@@ -1959,7 +2003,6 @@ namespace YoableWPF
                         else if (drawingCanvas.SelectedLabel != null)
                         {
                             drawingCanvas.Labels.Remove(drawingCanvas.SelectedLabel);
-                            LabelListBox.Items.Remove(drawingCanvas.SelectedLabel.Name);
                             drawingCanvas.SelectedLabel = null;
                         }
                         OnLabelsChanged();
@@ -2245,14 +2288,14 @@ namespace YoableWPF
             if (currentClass != null)
             {
                 CurrentClassNameText.Text = currentClass.Name;
-                
-                var color = (Color)ColorConverter.ConvertFromString(currentClass.ColorHex);
-                CurrentClassColorIndicator.Background = new SolidColorBrush(color);
+
+                var color = currentClass.ColorBrush.Color;
+                CurrentClassColorIndicator.Background = currentClass.ColorBrush;
                 
                 // Semi-transparent background
                 CurrentClassBorder.Background = new SolidColorBrush(
                     Color.FromArgb(0x44, color.R, color.G, color.B));
-                CurrentClassBorder.BorderBrush = new SolidColorBrush(color);
+                CurrentClassBorder.BorderBrush = currentClass.ColorBrush;
             }
         }
 
@@ -2340,13 +2383,19 @@ namespace YoableWPF
                         // Update all labels in all images
                         foreach (var imagePath in labelManager.LabelStorage.Keys.ToList())
                         {
-                            var labels = labelManager.LabelStorage[imagePath];
+                            var labels = labelManager.GetLabels(imagePath);
+                            bool modified = false;
                             foreach (var label in labels)
                             {
                                 if (label.ClassId == sourceClassId)
                                 {
                                     label.ClassId = targetClassId;
+                                    modified = true;
                                 }
+                            }
+                            if (modified)
+                            {
+                                labelManager.SaveLabels(imagePath, labels);
                             }
                         }
 
@@ -2354,7 +2403,7 @@ namespace YoableWPF
                         if (!string.IsNullOrEmpty(imageManager.CurrentImagePath) && 
                             labelManager.LabelStorage.ContainsKey(imageManager.CurrentImagePath))
                         {
-                            drawingCanvas.Labels = labelManager.LabelStorage[imageManager.CurrentImagePath];
+                            drawingCanvas.Labels = labelManager.GetLabels(imageManager.CurrentImagePath);
                             uiStateManager.RefreshLabelList();
                             drawingCanvas.InvalidateVisual();
                         }
@@ -2448,12 +2497,17 @@ namespace YoableWPF
                     // Remove all labels with this class
                     foreach (var kvp in labelManager.LabelStorage.ToList())
                     {
-                        kvp.Value.RemoveAll(l => l.ClassId == classToRemove.ClassId);
+                        var labels = labelManager.GetLabels(kvp.Key);
+                        labels.RemoveAll(l => l.ClassId == classToRemove.ClassId);
                         
                         // Remove entry if no labels remain
-                        if (kvp.Value.Count == 0)
+                        if (labels.Count == 0)
                         {
-                            labelManager.LabelStorage.TryRemove(kvp.Key, out _);
+                            labelManager.RemoveLabels(kvp.Key);
+                        }
+                        else
+                        {
+                            labelManager.SaveLabels(kvp.Key, labels);
                         }
                     }
                     
@@ -2465,9 +2519,16 @@ namespace YoableWPF
                     // Migrate labels to target class
                     foreach (var kvp in labelManager.LabelStorage)
                     {
-                        foreach (var label in kvp.Value.Where(l => l.ClassId == classToRemove.ClassId))
+                        var labels = labelManager.GetLabels(kvp.Key);
+                        bool modified = false;
+                        foreach (var label in labels.Where(l => l.ClassId == classToRemove.ClassId))
                         {
                             label.ClassId = targetClassId;
+                            modified = true;
+                        }
+                        if (modified)
+                        {
+                            labelManager.SaveLabels(kvp.Key, labels);
                         }
                     }
                 }

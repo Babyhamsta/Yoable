@@ -818,6 +818,19 @@
                                 <Style TargetType="ListBoxItem" 
                                        BasedOn="{StaticResource ImageListItemStyle}"/>
                             </ListBox.ItemContainerStyle>
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="4"
+                                                Height="20"
+                                                Background="{Binding ClassBrush}"
+                                                Margin="0,0,8,0"
+                                                CornerRadius="2"/>
+                                        <TextBlock Text="{Binding DisplayText}"
+                                                   VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
                         </ListBox>
                     </Grid>
                 </Border>

@@ -166,7 +166,6 @@ namespace YoableWPF
                 Labels.AddRange(previousState);
 
                 // Update UI
-                RefreshLabelListBox();
                 SelectedLabel = null;
                 SelectedLabels.Clear();
                 InvalidateVisual();
@@ -190,7 +189,6 @@ namespace YoableWPF
                 Labels.AddRange(nextState);
 
                 // Update UI
-                RefreshLabelListBox();
                 SelectedLabel = null;
                 SelectedLabels.Clear();
                 InvalidateVisual();
@@ -262,7 +260,6 @@ namespace YoableWPF
             }
 
             // Update UI
-            RefreshLabelListBox();
             InvalidateVisual();
 
             // Notify that labels changed
@@ -275,16 +272,18 @@ namespace YoableWPF
             }
         }
 
-        // Refresh label list box
-        private void RefreshLabelListBox()
+        private void UpdateLabelListSelection()
         {
-            if (LabelListBox != null)
+            if (LabelListBox?.ItemsSource is IEnumerable<LabelListItemView> items)
             {
-                LabelListBox.Items.Clear();
-                foreach (var label in Labels)
+                if (SelectedLabel == null || SelectedLabels.Count != 1)
                 {
-                    LabelListBox.Items.Add(label.Name);
+                    LabelListBox.SelectedItem = null;
+                    return;
                 }
+
+                var match = items.FirstOrDefault(item => item.Label == SelectedLabel);
+                LabelListBox.SelectedItem = match;
             }
         }
 
@@ -329,7 +328,10 @@ namespace YoableWPF
             SelectedLabels.Clear();
             undoStack.Clear();
             redoStack.Clear();
-            LabelListBox?.Items.Clear();
+            if (LabelListBox != null)
+            {
+                LabelListBox.ItemsSource = null;
+            }
             InvalidateVisual();
         }
 
@@ -349,9 +351,7 @@ namespace YoableWPF
             {
                 // Get color for this label's class
                 var labelClass = availableClasses.FirstOrDefault(c => c.ClassId == label.ClassId);
-                string colorHex = labelClass?.ColorHex ?? "#E57373"; // Fallback
-
-                var color = (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(colorHex);
+                var color = labelClass?.ColorBrush.Color ?? Colors.LightCoral; // Fallback
                 
                 // Check if this label is selected
                 bool isSelected = SelectedLabels.Contains(label) || label == SelectedLabel;
@@ -383,9 +383,9 @@ namespace YoableWPF
             // Draw the current rectangle being drawn with current class color
             if (IsDrawing)
             {
-                string currentColorHex = GetCurrentClassColor();
-                var currentBrush = new SolidColorBrush(
-                    (System.Windows.Media.Color)System.Windows.Media.ColorConverter.ConvertFromString(currentColorHex));
+                var currentClass = availableClasses.FirstOrDefault(c => c.ClassId == CurrentClassId);
+                var currentColor = currentClass?.ColorBrush.Color ?? Colors.LightCoral;
+                var currentBrush = new SolidColorBrush(currentColor);
                 var currentPen = new Pen(currentBrush, thickness);
                 dc.DrawRectangle(null, currentPen, CurrentRect);
             }
@@ -769,21 +769,7 @@ namespace YoableWPF
             }
 
             // Update ListBox selection to match
-            if (!ctrlPressed && SelectedLabel != null)
-            {
-                // For single selection, update the ListBox
-                LabelListBox.SelectedItem = SelectedLabel.Name;
-            }
-            else if (ctrlPressed && SelectedLabels.Count == 1 && SelectedLabel != null)
-            {
-                // If only one label is selected after Ctrl+click, update ListBox
-                LabelListBox.SelectedItem = SelectedLabel.Name;
-            }
-            else if (SelectedLabels.Count == 0 || SelectedLabels.Count > 1)
-            {
-                // Clear ListBox selection for no selection or multi-selection
-                LabelListBox.SelectedItem = null;
-            }
+            UpdateLabelListSelection();
 
             if (!handled)
             {
@@ -931,7 +917,7 @@ namespace YoableWPF
             {
                 SelectedLabel = null;
                 SelectedLabels.Clear();
-                LabelListBox.SelectedItem = null;
+                UpdateLabelListSelection();
             }
 
             InvalidateVisual();

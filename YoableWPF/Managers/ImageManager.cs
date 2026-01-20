@@ -15,6 +15,7 @@ namespace YoableWPF.Managers
         // Use thread-safe collections for parallel processing
         private ConcurrentDictionary<string, ImageInfo> imagePathMap = new();
         private ConcurrentDictionary<string, ImageStatus> imageStatuses = new();
+        private ConcurrentQueue<string> duplicateImageFiles = new();
         private string currentImagePath = "";
 
         // Add settings for performance
@@ -30,19 +31,38 @@ namespace YoableWPF.Managers
         public ConcurrentDictionary<string, ImageInfo> ImagePathMap => imagePathMap;
         public ConcurrentDictionary<string, ImageStatus> ImageStatuses => imageStatuses;
 
+        private static readonly string[] SupportedExtensions = { ".jpg", ".jpeg", ".png" };
+
+        private static bool IsSupportedImage(string filePath)
+        {
+            var ext = Path.GetExtension(filePath);
+            return !string.IsNullOrEmpty(ext) &&
+                   SupportedExtensions.Any(e => ext.Equals(e, StringComparison.OrdinalIgnoreCase));
+        }
+
+        public List<string> ConsumeDuplicateImageFiles()
+        {
+            var duplicates = new List<string>();
+            while (duplicateImageFiles.TryDequeue(out var item))
+            {
+                duplicates.Add(item);
+            }
+            return duplicates;
+        }
+
         // Original synchronous method for backward compatibility
         public string[] LoadImagesFromDirectory(string directoryPath)
         {
             if (!Directory.Exists(directoryPath)) return new string[0];
 
             string[] files = Directory.GetFiles(directoryPath, "*.*")
-                                      .Where(f => f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
-                                                 f.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                                      .Where(IsSupportedImage)
                                       .ToArray();
 
             // Clear collections just like original
             imagePathMap.Clear();
             imageStatuses.Clear();
+            while (duplicateImageFiles.TryDequeue(out _)) { }
 
             foreach (string file in files)
             {
@@ -63,8 +83,7 @@ namespace YoableWPF.Managers
 
             // Get all image files
             var files = Directory.GetFiles(directoryPath, "*.*")
-                                .Where(f => f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
-                                           f.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                                .Where(IsSupportedImage)
                                 .ToArray();
 
             await LoadImagesFromPathsAsync(files, progress, cancellationToken, enableParallelProcessing);
@@ -84,6 +103,7 @@ namespace YoableWPF.Managers
             // Clear collections
             imagePathMap.Clear();
             imageStatuses.Clear();
+            while (duplicateImageFiles.TryDequeue(out _)) { }
 
             int totalFiles = fileArray.Length;
             int processedFiles = 0;
@@ -141,7 +161,15 @@ namespace YoableWPF.Managers
                         BitmapCacheOption.None);
 
                     var dimensions = new Size(decoder.Frames[0].PixelWidth, decoder.Frames[0].PixelHeight);
-                    imagePathMap.TryAdd(fileName, new ImageInfo(filePath, dimensions));
+                    if (!imagePathMap.TryAdd(fileName, new ImageInfo(filePath, dimensions)))
+                    {
+                        if (imagePathMap.TryGetValue(fileName, out var existing) &&
+                            !string.Equals(existing.Path, filePath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            duplicateImageFiles.Enqueue($"{fileName} -> {filePath}");
+                        }
+                        return false;
+                    }
                     imageStatuses.TryAdd(fileName, ImageStatus.NoLabel);
                 }
 
@@ -171,7 +199,15 @@ namespace YoableWPF.Managers
                         BitmapCacheOption.None);
 
                     var dimensions = new Size(decoder.Frames[0].PixelWidth, decoder.Frames[0].PixelHeight);
-                    imagePathMap.TryAdd(fileName, new ImageInfo(filePath, dimensions));
+                    if (!imagePathMap.TryAdd(fileName, new ImageInfo(filePath, dimensions)))
+                    {
+                        if (imagePathMap.TryGetValue(fileName, out var existing) &&
+                            !string.Equals(existing.Path, filePath, StringComparison.OrdinalIgnoreCase))
+                        {
+                            duplicateImageFiles.Enqueue($"{fileName} -> {filePath}");
+                        }
+                        return false;
+                    }
                     imageStatuses.TryAdd(fileName, ImageStatus.NoLabel);
                 }
 
@@ -208,6 +244,7 @@ namespace YoableWPF.Managers
             imagePathMap.Clear();
             imageStatuses.Clear();
             currentImagePath = "";
+            while (duplicateImageFiles.TryDequeue(out _)) { }
         }
 
         public List<string> GetAllImagePaths()

@@ -305,8 +305,11 @@ namespace YoableWPF.Managers
 
                 progress?.Report((60, 100, "Writing project file..."));
 
-                // Write to file
-                await File.WriteAllTextAsync(CurrentProject.ProjectPath, json);
+                // Write to temp file then replace for atomic save
+                string tempPath = Path.Combine(CurrentProject.ProjectFolder,
+                    Path.GetFileName(CurrentProject.ProjectPath) + ".tmp");
+                await File.WriteAllTextAsync(tempPath, json);
+                File.Move(tempPath, CurrentProject.ProjectPath, true);
 
                 progress?.Report((100, 100, "Project saved successfully"));
 
@@ -568,118 +571,13 @@ namespace YoableWPF.Managers
         /// <summary>
         /// Exports project data asynchronously - only blocks UI thread for minimal UI access
         /// </summary>
-        private async Task ExportProjectDataAsync()
+        private void ExportProjectDataCore(int? selectedIndex, string sortMode)
         {
-            if (CurrentProject == null || mainWindow == null)
-                return;
-
-            // Quickly capture UI state on UI thread
-            int selectedIndex = -1;
-            string sortMode = "ByName";
-
-            await mainWindow.Dispatcher.InvokeAsync(() =>
-            {
-                selectedIndex = mainWindow.ImageListBox.SelectedIndex;
-                sortMode = mainWindow.SortComboBox?.SelectedIndex == 1 ? "ByStatus" : "ByName";
-            });
-
-            // Do all heavy processing on background thread
-            await Task.Run(() =>
-            {
-                // Clear existing data
-                CurrentProject.Images.Clear();
-                CurrentProject.ImageStatuses.Clear();
-                CurrentProject.AppCreatedLabels.Clear();
-                CurrentProject.LoadedModelPaths ??= new List<string>();
-                CurrentProject.ModelClassMappings ??= new Dictionary<string, Dictionary<int, int>>();
-                CurrentProject.LoadedModelPaths.Clear();
-                CurrentProject.ModelClassMappings.Clear();
-
-                // Export images
-                foreach (var kvp in mainWindow.imageManager.ImagePathMap)
-                {
-                    string fileName = kvp.Key;
-                    string fullPath = kvp.Value.Path;
-
-                    CurrentProject.Images.Add(new ImageReference
-                    {
-                        FileName = fileName,
-                        FullPath = fullPath
-                    });
-                }
-
-                // Export image statuses
-                foreach (var kvp in mainWindow.imageManager.ImageStatuses)
-                {
-                    CurrentProject.ImageStatuses[kvp.Key] = kvp.Value;
-                }
-
-                // Export labels to project's labels folder
-                string labelsFolder = Path.Combine(CurrentProject.ProjectFolder, LABELS_FOLDER);
-                if (!Directory.Exists(labelsFolder))
-                    Directory.CreateDirectory(labelsFolder);
-
-                foreach (var kvp in mainWindow.labelManager.LabelStorage)
-                {
-                    string fileName = kvp.Key;
-                    var labels = kvp.Value;
-
-                    if (labels.Count == 0)
-                        continue;
-
-                    // Get the corresponding image to export labels
-                    if (mainWindow.imageManager.ImagePathMap.TryGetValue(fileName, out var imageInfo))
-                    {
-                        string labelFileName = Path.GetFileNameWithoutExtension(fileName) + ".txt";
-                        string labelPath = Path.Combine(labelsFolder, labelFileName);
-
-                        // Export labels using LabelManager
-                        mainWindow.labelManager.ExportLabelsToYolo(labelPath, imageInfo.OriginalDimensions, labels);
-
-                        // Store relative path in project
-                        string relativePath = Path.Combine(LABELS_FOLDER, labelFileName);
-                        CurrentProject.AppCreatedLabels[fileName] = relativePath;
-                    }
-                }
-
-                // Export model paths and class mappings
-                if (mainWindow.yoloAI != null)
-                {
-                    CurrentProject.LoadedModelPaths = new List<string>();
-                    foreach (var model in mainWindow.yoloAI.GetLoadedModels())
-                    {
-                        CurrentProject.LoadedModelPaths.Add(model.ModelPath);
-
-                        if (model.ClassMapping != null && model.ClassMapping.Count > 0)
-                        {
-                            CurrentProject.ModelClassMappings[model.ModelPath] = new Dictionary<int, int>(model.ClassMapping);
-                        }
-                    }
-                }
-
-                // Save UI state (captured earlier)
-                if (selectedIndex >= 0)
-                {
-                    CurrentProject.LastSelectedImageIndex = selectedIndex;
-                }
-                CurrentProject.CurrentSortMode = sortMode;
-
-                Debug.WriteLine($"Export complete: {CurrentProject.Images.Count} images, {CurrentProject.AppCreatedLabels.Count} label files, {CurrentProject.LoadedModelPaths.Count} models, {CurrentProject.ModelClassMappings.Count} model mappings");
-            });
-        }
-
-        /// <summary>
-        /// Synchronous version for backward compatibility (used in CloseProject)
-        /// </summary>
-        public void ExportProjectData()
-        {
-            if (CurrentProject == null || mainWindow == null)
-                return;
-
             // Clear existing data
             CurrentProject.Images.Clear();
             CurrentProject.ImageStatuses.Clear();
             CurrentProject.AppCreatedLabels.Clear();
+            CurrentProject.ImportedLabelPaths.Clear();
             CurrentProject.LoadedModelPaths ??= new List<string>();
             CurrentProject.ModelClassMappings ??= new Dictionary<string, Dictionary<int, int>>();
             CurrentProject.LoadedModelPaths.Clear();
@@ -732,28 +630,14 @@ namespace YoableWPF.Managers
                 }
             }
 
-            // Save current UI state
-            if (mainWindow.ImageListBox.SelectedIndex >= 0)
-            {
-                CurrentProject.LastSelectedImageIndex = mainWindow.ImageListBox.SelectedIndex;
-            }
-
-            // Save sort mode
-            if (mainWindow.SortComboBox != null)
-            {
-                CurrentProject.CurrentSortMode = mainWindow.SortComboBox.SelectedIndex == 1 ? "ByStatus" : "ByName";
-            }
-
             // Export model paths and class mappings
             if (mainWindow.yoloAI != null)
             {
-                // Save loaded model paths
                 CurrentProject.LoadedModelPaths = new List<string>();
                 foreach (var model in mainWindow.yoloAI.GetLoadedModels())
                 {
                     CurrentProject.LoadedModelPaths.Add(model.ModelPath);
-                    
-                    // Save mapping using model path as key
+
                     if (model.ClassMapping != null && model.ClassMapping.Count > 0)
                     {
                         CurrentProject.ModelClassMappings[model.ModelPath] = new Dictionary<int, int>(model.ClassMapping);
@@ -761,7 +645,52 @@ namespace YoableWPF.Managers
                 }
             }
 
+            // Save UI state (captured earlier)
+            if (selectedIndex.HasValue && selectedIndex.Value >= 0)
+            {
+                CurrentProject.LastSelectedImageIndex = selectedIndex.Value;
+            }
+
+            if (!string.IsNullOrWhiteSpace(sortMode))
+            {
+                CurrentProject.CurrentSortMode = sortMode;
+            }
+
             Debug.WriteLine($"Export complete: {CurrentProject.Images.Count} images, {CurrentProject.AppCreatedLabels.Count} label files, {CurrentProject.LoadedModelPaths.Count} models, {CurrentProject.ModelClassMappings.Count} model mappings");
+        }
+
+        private async Task ExportProjectDataAsync()
+        {
+            if (CurrentProject == null || mainWindow == null)
+                return;
+
+            // Quickly capture UI state on UI thread
+            int selectedIndex = -1;
+            string sortMode = "ByName";
+
+            await mainWindow.Dispatcher.InvokeAsync(() =>
+            {
+                selectedIndex = mainWindow.ImageListBox.SelectedIndex;
+                sortMode = mainWindow.SortComboBox?.SelectedIndex == 1 ? "ByStatus" : "ByName";
+            });
+
+            // Do all heavy processing on background thread
+            await Task.Run(() => ExportProjectDataCore(selectedIndex, sortMode));
+        }
+
+        /// <summary>
+        /// Synchronous version for backward compatibility (used in CloseProject)
+        /// </summary>
+        public void ExportProjectData()
+        {
+            if (CurrentProject == null || mainWindow == null)
+                return;
+            int selectedIndex = mainWindow.ImageListBox.SelectedIndex;
+            string sortMode = mainWindow.SortComboBox != null && mainWindow.SortComboBox.SelectedIndex == 1
+                ? "ByStatus"
+                : "ByName";
+
+            ExportProjectDataCore(selectedIndex >= 0 ? selectedIndex : null, sortMode);
         }
 
         /// <summary>
@@ -826,6 +755,14 @@ namespace YoableWPF.Managers
                         imageProgress,
                         cancellationToken,
                         enableParallel);
+
+                    // Warn about duplicate file names that were skipped
+                    var duplicates = mainWindow.imageManager.ConsumeDuplicateImageFiles();
+                    if (duplicates.Count > 0)
+                    {
+                        await mainWindow.Dispatcher.InvokeAsync(() =>
+                            mainWindow.ShowDuplicateImagesWarning(duplicates));
+                    }
                 }
                 else
                 {

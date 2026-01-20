@@ -12,6 +12,9 @@ namespace YoableWPF.Managers
         private readonly MainWindow mainWindow;
         private List<ImageListItem> allImages = new List<ImageListItem>();
         private Dictionary<string, ImageListItem> imageListItemCache = new Dictionary<string, ImageListItem>();
+        private readonly Brush needsReviewDefaultForeground;
+        private readonly Brush unverifiedDefaultForeground;
+        private readonly Brush verifiedDefaultForeground;
 
         private static SolidColorBrush CreateFrozenBrush(byte a, byte r, byte g, byte b)
         {
@@ -30,10 +33,14 @@ namespace YoableWPF.Managers
         private static readonly SolidColorBrush RedActive = CreateFrozenBrush(0xFF, 0xE5, 0x73, 0x73);
         private static readonly SolidColorBrush GreenInactive = CreateFrozenBrush(0x44, 0x81, 0xC7, 0x84);
         private static readonly SolidColorBrush GreenActive = CreateFrozenBrush(0xFF, 0x81, 0xC7, 0x84);
+        private static readonly SolidColorBrush DefaultLabelBrush = CreateFrozenBrush(0xFF, 0xE5, 0x73, 0x73);
 
         public UIStateManager(MainWindow mainWindow)
         {
             this.mainWindow = mainWindow;
+            needsReviewDefaultForeground = mainWindow.NeedsReviewCount.Foreground;
+            unverifiedDefaultForeground = mainWindow.UnverifiedCount.Foreground;
+            verifiedDefaultForeground = mainWindow.VerifiedCount.Foreground;
         }
 
         // Cache management methods
@@ -69,38 +76,49 @@ namespace YoableWPF.Managers
         // Direct port of UpdateStatusCounts
         public void UpdateStatusCounts()
         {
-            var needsReview = mainWindow.ImageListBox.Items.Cast<ImageListItem>()
-                .Count(x => x.Status == ImageStatus.VerificationNeeded);
-            var unverified = mainWindow.ImageListBox.Items.Cast<ImageListItem>()
-                .Count(x => x.Status == ImageStatus.NoLabel);
-            var verified = mainWindow.ImageListBox.Items.Cast<ImageListItem>()
-                .Count(x => x.Status == ImageStatus.Verified);
+            int needsReview = 0;
+            int unverified = 0;
+            int verified = 0;
+
+            foreach (var item in mainWindow.ImageListBox.Items.Cast<ImageListItem>())
+            {
+                switch (item.Status)
+                {
+                    case ImageStatus.VerificationNeeded:
+                        needsReview++;
+                        break;
+                    case ImageStatus.NoLabel:
+                        unverified++;
+                        break;
+                    case ImageStatus.Verified:
+                        verified++;
+                        break;
+                }
+            }
 
             // Update the text blocks with counts
             mainWindow.NeedsReviewCount.Text = needsReview.ToString();
             mainWindow.NeedsReviewCount.Foreground = needsReview > 0
                 ? NeedsReviewBrush
-                : mainWindow.NeedsReviewCount.Foreground;
+                : needsReviewDefaultForeground;
 
             mainWindow.UnverifiedCount.Text = unverified.ToString();
             mainWindow.UnverifiedCount.Foreground = unverified > 0
                 ? UnverifiedBrush
-                : mainWindow.UnverifiedCount.Foreground;
+                : unverifiedDefaultForeground;
 
             mainWindow.VerifiedCount.Text = verified.ToString();
             mainWindow.VerifiedCount.Foreground = verified > 0
                 ? VerifiedBrush
-                : mainWindow.VerifiedCount.Foreground;
+                : verifiedDefaultForeground;
         }
 
         // Updated RefreshLabelList with class color indicators
         public void RefreshLabelList()
         {
-            // Clear the label list
-            mainWindow.LabelListBox.Items.Clear();
-            
             var projectClasses = mainWindow.ProjectClasses;
-            
+            var items = new List<LabelListItemView>();
+
             foreach (var label in mainWindow.drawingCanvas.Labels)
             {
                 // Get class info - fallback to default class if not found
@@ -114,34 +132,12 @@ namespace YoableWPF.Managers
                 
                 // Final fallback if even default doesn't exist
                 string className = labelClass?.Name ?? "default";
-                string colorHex = labelClass?.ColorHex ?? "#E57373";
-                
-                // Create styled item with class color bar
-                var stackPanel = new System.Windows.Controls.StackPanel 
-                { 
-                    Orientation = System.Windows.Controls.Orientation.Horizontal 
-                };
-                
-                // Color indicator bar
-                stackPanel.Children.Add(new System.Windows.Controls.Border
-                {
-                    Width = 4,
-                    Height = 20,
-                    Background = new SolidColorBrush(
-                        (Color)ColorConverter.ConvertFromString(colorHex)),
-                    Margin = new Thickness(0, 0, 8, 0),
-                    CornerRadius = new System.Windows.CornerRadius(2)
-                });
-                
-                // Label text
-                stackPanel.Children.Add(new System.Windows.Controls.TextBlock
-                {
-                    Text = $"[{className}] {label.Name}",
-                    VerticalAlignment = VerticalAlignment.Center
-                });
-                
-                mainWindow.LabelListBox.Items.Add(stackPanel);
+                var classBrush = labelClass?.ColorBrush ?? DefaultLabelBrush;
+
+                items.Add(new LabelListItemView(label, className, classBrush));
             }
+
+            mainWindow.LabelListBox.ItemsSource = items;
         }
 
         // Helper for sorting - direct port

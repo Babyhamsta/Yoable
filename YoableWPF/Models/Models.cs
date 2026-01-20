@@ -56,6 +56,7 @@ namespace YoableWPF
     {
         private string _name;
         private string _colorHex;
+        private SolidColorBrush _colorBrush;
         
         public int ClassId { get; set; }
         
@@ -81,6 +82,7 @@ namespace YoableWPF
                 if (_colorHex != value)
                 {
                     _colorHex = value;
+                    _colorBrush = CreateFrozenBrush(_colorHex);
                     OnPropertyChanged(nameof(ColorHex));
                     OnPropertyChanged(nameof(ColorBrush));
                 }
@@ -92,14 +94,13 @@ namespace YoableWPF
         public string DisplayText => ClassId == -1 ? Name : $"{Name} (ID: {ClassId})";
         
         [JsonIgnore]
-        public SolidColorBrush ColorBrush => new SolidColorBrush(
-            (Color)ColorConverter.ConvertFromString(ColorHex));
+        public SolidColorBrush ColorBrush => _colorBrush ??= CreateFrozenBrush(_colorHex);
         
         // Parameterless constructor for JSON deserialization
         public LabelClass()
         {
             _name = "default";
-            _colorHex = "#E57373";
+            ColorHex = "#E57373";
             ClassId = 0;
         }
         
@@ -108,6 +109,23 @@ namespace YoableWPF
             Name = name;
             ColorHex = colorHex;
             ClassId = classId;
+        }
+
+        private static SolidColorBrush CreateFrozenBrush(string colorHex)
+        {
+            try
+            {
+                var color = (Color)ColorConverter.ConvertFromString(colorHex);
+                var brush = new SolidColorBrush(color);
+                brush.Freeze();
+                return brush;
+            }
+            catch
+            {
+                var fallback = new SolidColorBrush(Color.FromRgb(0xE5, 0x73, 0x73));
+                fallback.Freeze();
+                return fallback;
+            }
         }
         
         public event PropertyChangedEventHandler PropertyChanged;

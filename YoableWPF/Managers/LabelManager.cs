@@ -63,36 +63,57 @@ namespace YoableWPF.Managers
         public int FixAllOrphanedLabels()
         {
             int fixedCount = 0;
-            
-            foreach (var kvp in labelStorage)
+
+            foreach (var kvp in labelStorage.ToArray())
             {
+                bool wasFixed = false;
+                var updatedLabels = new List<LabelData>(kvp.Value.Count);
+
                 foreach (var label in kvp.Value)
                 {
-                    if (ValidateAndFixClassId(label))
+                    var copy = new LabelData(label);
+                    if (ValidateAndFixClassId(copy))
                     {
                         fixedCount++;
+                        wasFixed = true;
                     }
+                    updatedLabels.Add(copy);
+                }
+
+                if (wasFixed)
+                {
+                    SaveLabels(kvp.Key, updatedLabels);
                 }
             }
-            
+
             return fixedCount;
         }
 
         // Direct port of label management methods
         public List<LabelData> GetLabels(string fileName)
         {
-            if (!labelStorage.ContainsKey(fileName))
+            if (!labelStorage.TryGetValue(fileName, out var labels))
                 return new List<LabelData>();
-            
-            var labels = labelStorage[fileName];
-            
+
+            // Work on a copy to avoid mutating storage from callers
+            var labelCopies = labels.Select(label => new LabelData(label)).ToList();
+
             // Validate and fix any orphaned ClassIds before returning
-            foreach (var label in labels)
+            bool wasFixed = false;
+            foreach (var label in labelCopies)
             {
-                ValidateAndFixClassId(label);
+                if (ValidateAndFixClassId(label))
+                {
+                    wasFixed = true;
+                }
             }
-            
-            return new List<LabelData>(labels);
+
+            if (wasFixed)
+            {
+                SaveLabels(fileName, labelCopies);
+            }
+
+            return labelCopies;
         }
 
         public void SaveLabels(string fileName, List<LabelData> labels)
@@ -105,6 +126,11 @@ namespace YoableWPF.Managers
         public void ClearAll()
         {
             labelStorage.Clear();
+        }
+
+        public bool RemoveLabels(string fileName)
+        {
+            return labelStorage.TryRemove(fileName, out _);
         }
 
         // Helper method to parse floats with either comma or period as decimal separator
@@ -260,9 +286,6 @@ namespace YoableWPF.Managers
                 int imgHeight = (int)imageInfo.OriginalDimensions.Height;
 
                 // Initialize label list for this image if needed
-                if (!labelStorage.ContainsKey(matchingImageFile))
-                    labelStorage.TryAdd(matchingImageFile, new List<LabelData>());
-
                 // Pre-allocate list with estimated capacity (most label files have < 50 labels)
                 var newLabels = new List<LabelData>(50);
 
@@ -326,7 +349,9 @@ namespace YoableWPF.Managers
                         double x = xCenter - (width / 2);
                         double y = yCenter - (height / 2);
 
-                        var existingCount = labelStorage[matchingImageFile].Count;
+                        var existingCount = labelStorage.TryGetValue(matchingImageFile, out var existingLabels)
+                            ? existingLabels.Count
+                            : 0;
                         var label = new LabelData($"Imported Label {existingCount + newLabels.Count + 1}",
                             new Rect(x, y, width, height),
                             classId);
@@ -345,11 +370,13 @@ namespace YoableWPF.Managers
                 {
                     labelStorage.AddOrUpdate(
                         matchingImageFile,
-                        newLabels,
+                        new List<LabelData>(newLabels),
                         (k, existing) =>
                         {
-                            existing.AddRange(newLabels);
-                            return existing;
+                            var merged = new List<LabelData>(existing.Count + newLabels.Count);
+                            merged.AddRange(existing);
+                            merged.AddRange(newLabels);
+                            return merged;
                         });
                 }
             }
@@ -389,11 +416,9 @@ namespace YoableWPF.Managers
                     int imgWidth = tempImage.Width;
                     int imgHeight = tempImage.Height;
 
-                    if (!labelStorage.ContainsKey(fileName))
-                        labelStorage.TryAdd(fileName, new List<LabelData>());
-
                     using StreamReader reader = new StreamReader(labelFile);
                     string? line;
+                    var newLabels = new List<LabelData>();
                     while ((line = reader.ReadLine()) != null)
                     {
                         string[] parts = line.Trim().Split(' ');
@@ -423,9 +448,9 @@ namespace YoableWPF.Managers
                             double x = xCenter - (width / 2);
                             double y = yCenter - (height / 2);
 
-                            var labelCount = labelStorage[fileName].Count + 1;
+                            var labelCount = newLabels.Count + 1;
                             var label = new LabelData($"Imported Label {labelCount}", new Rect(x, y, width, height), classId);
-                            labelStorage[fileName].Add(label);
+                            newLabels.Add(label);
 
                             labelsAdded++;
                         }
@@ -434,6 +459,20 @@ namespace YoableWPF.Managers
                             // Skip lines that can't be parsed
                             continue;
                         }
+                    }
+
+                    if (newLabels.Count > 0)
+                    {
+                        labelStorage.AddOrUpdate(
+                            fileName,
+                            new List<LabelData>(newLabels),
+                            (k, existing) =>
+                            {
+                                var merged = new List<LabelData>(existing.Count + newLabels.Count);
+                                merged.AddRange(existing);
+                                merged.AddRange(newLabels);
+                                return merged;
+                            });
                     }
                 }
             }
@@ -469,10 +508,7 @@ namespace YoableWPF.Managers
                 return;
             }
 
-            using StreamWriter writer = new(filePath)
-            {
-                AutoFlush = true
-            };
+            using StreamWriter writer = new(filePath);
 
             foreach (var label in labelsToExport)
             {
@@ -558,10 +594,9 @@ namespace YoableWPF.Managers
         // For AI labels - merge with existing labels
         public void AddAILabels(string fileName, List<(Rectangle box, int classId)> detectedBoxes)
         {
-            if (!labelStorage.ContainsKey(fileName))
-                labelStorage.TryAdd(fileName, new List<LabelData>());
-
-            var existingLabels = labelStorage[fileName].ToList();
+            var existingLabels = labelStorage.TryGetValue(fileName, out var labels)
+                ? labels.Select(label => new LabelData(label)).ToList()
+                : new List<LabelData>();
             float mergeIoUThreshold = Properties.Settings.Default.EnsembleIoUThreshold;
 
             foreach (var detection in detectedBoxes)
@@ -616,8 +651,8 @@ namespace YoableWPF.Managers
             // Update storage
             labelStorage.AddOrUpdate(
                 fileName,
-                existingLabels,
-                (k, existing) => existingLabels);
+                new List<LabelData>(existingLabels),
+                (k, existing) => new List<LabelData>(existingLabels));
         }
     }
 }

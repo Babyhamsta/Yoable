@@ -133,8 +133,8 @@ namespace YoableWPF
                 // Create MainWindow first
                 mainWindow = new MainWindow();
 
-                // Create overlay manager for progress feedback
-                overlayManager = new OverlayManager(mainWindow);
+                // Use main window's overlay manager for progress feedback
+                overlayManager = mainWindow.OverlayManager;
 
                 // Create cancellation token for the loading process
                 loadCancellationToken = new CancellationTokenSource();
