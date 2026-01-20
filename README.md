@@ -46,6 +46,25 @@ For non-WPF version you can build the legacy source or use v1.2.0 from releases 
 - **Manual Labeling**: Use the drawing tools to create bounding boxes.
 - **AI Auto-Labeling**: Click **"Auto Label Images"** to apply AI detections.
 
+#### Auto Suggest (Label Propagation)
+Yoable can suggest labels by propagating existing labels to similar images or adjacent frames. Suggestions appear as **dashed boxes** on the canvas and as **Suggested** entries in the label list.
+
+**How it works (modes):**
+- **Image Similarity**: Finds visually similar images and scales the source boxes to the target image size.
+- **Object Similarity**: Searches for a template match of each labeled object inside candidate images.
+- **Tracking**: Propagates labels forward/backward from the current image across nearby frames.
+
+**How to run:**
+1. Go to **AI → Auto Suggest Labels**.
+2. Choose **Scope** (Current Image or All Images).
+3. Select which modes to run (Image Similarity / Object Similarity / Tracking).
+4. Click **Run**.
+
+**Review workflow:**
+- Suggested labels show in the list with **Accept / Reject** buttons.
+- Use **Accept All / Reject All** at the top of the label panel for bulk actions.
+- Enable **Auto Accept** in settings to write suggestions directly as labels.
+
 #### Managing Labels
 - Labels appear in the **label list**.
 - Click on a label to edit it.
@@ -82,6 +101,29 @@ For non-WPF version you can build the legacy source or use v1.2.0 from releases 
 - Images containing labels with the selected classes will be displayed
 - Select all classes or clear all to show all images
 - Class filters work in combination with status filters (All, Review, No Label, Verified)
+
+#### Suggestion (Propagation) Settings
+You can fine‑tune suggestions in **Settings → AI → Propagation**:
+
+- **Enable Suggestions**: Master toggle for the feature.
+- **Auto Accept**: If enabled, suggestions are written as labels immediately.
+- **Image Similarity / Object Similarity / Tracking**: Enable or disable each mode.
+- **Image Similarity Threshold**: Higher = fewer, more similar matches.
+- **Object Similarity Threshold**: Higher = stricter template matches.
+- **Tracking Confidence Threshold**: Higher = stricter tracking matches.
+- **Similarity Mode**: **Hash** (fast) or **Histogram** (more robust to lighting).
+- **Restrict to Similar Images**: Only search object similarity in the most similar images.
+- **Max Suggestions per Image**: Cap suggestions per image to prevent overload.
+- **Minimum Box Size**: Skip tiny boxes that are likely noise.
+- **Tracking Frame Window**: How many frames forward/back to search.
+- **Object Candidate Limit**: Max candidate images to check for object similarity.
+- **Search Stride**: Bigger = faster but less precise (template matching).
+- **Skip Already Labeled**: Avoid suggesting on images that already have labels.
+
+**Tips:**
+- Start with **Current Image + Tracking** for videos or frame sequences.
+- Use **Hash mode** and a smaller **Candidate Limit** to speed up full‑project runs.
+- Increase **Search Stride** if object matching is too slow.
 
 ### 🗺️ Model Class Mapping
 
