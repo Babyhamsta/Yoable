@@ -233,7 +233,6 @@ namespace YoableWPF
             AutoSaveCheckBox.IsChecked = Properties.Settings.Default.EnableAutoSave;
 
             // Label Settings
-            SelectComboBoxItemByTag(LabelColorPicker, Properties.Settings.Default.LabelColor);
             LabelThicknessSlider.Value = Properties.Settings.Default.LabelThickness;
 
             // Crosshair Settings
@@ -371,7 +370,6 @@ namespace YoableWPF
             ThemeManager.Current.AccentColor = (Color)ColorConverter.ConvertFromString(FormHexAccent.Text);
 
             // Label Settings
-            Properties.Settings.Default.LabelColor = ((ComboBoxItem)LabelColorPicker.SelectedItem).Tag.ToString();
             Properties.Settings.Default.LabelThickness = LabelThicknessSlider.Value;
 
             // Crosshair settings

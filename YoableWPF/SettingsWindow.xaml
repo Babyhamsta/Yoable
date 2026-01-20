@@ -234,27 +234,6 @@
             <StackPanel>
                 <!-- General Settings Page -->
                 <StackPanel x:Name="GeneralSettingsPanel" Visibility="Visible">
-                    <!-- Appearance Card -->
-                    <Border Style="{StaticResource SettingCard}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource Settings_Appearance}" Style="{StaticResource SectionHeader}"/>
-
-                            <CheckBox x:Name="DarkModeCheckBox" 
-                                      Content="{DynamicResource Settings_DarkMode}"
-                                      Margin="0,0,0,12"
-                                      Click="DarkMode_Click"/>
-
-                            <TextBlock Text="{DynamicResource Settings_AccentColor}" Style="{StaticResource SettingLabel}"/>
-                            <TextBox x:Name="FormHexAccent" 
-                                     FontSize="13"
-                                     Padding="8"
-                                     ToolTip="{DynamicResource Settings_AccentColor_Tooltip}"
-                                     TextChanged="FormHexInput_TextChanged"/>
-                            <TextBlock Text="{DynamicResource Settings_AccentColor_Help}"
-                                       Style="{StaticResource HelpText}"/>
-                        </StackPanel>
-                    </Border>
-
                     <!-- General Options Card -->
                     <Border Style="{StaticResource SettingCard}">
                         <StackPanel>
@@ -276,94 +255,6 @@
                                       IsChecked="True"/>
                             <TextBlock Text="{DynamicResource Settings_AutoSave_Help}"
                                        Style="{StaticResource HelpText}"/>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Label Settings Card -->
-                    <Border Style="{StaticResource SettingCard}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource Settings_Labels_Section}" Style="{StaticResource SectionHeader}"/>
-
-                            <TextBlock Text="{DynamicResource Settings_LabelColor}" Style="{StaticResource SettingLabel}"/>
-                            <ComboBox x:Name="LabelColorPicker" 
-                                      Margin="0,0,0,12"
-                                      FontSize="13"
-                                      Padding="8">
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_Red}" Tag="#FFFF0000"/>
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_Green}" Tag="#FF00FF00"/>
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_Blue}" Tag="#FF0000FF"/>
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_Yellow}" Tag="#FFFFFF00"/>
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_White}" Tag="#FFFFFFFF"/>
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_Black}" Tag="#FF000000"/>
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_Purple}" Tag="#FF800080"/>
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_Orange}" Tag="#FFFF8C00"/>
-                            </ComboBox>
-
-                            <TextBlock Text="{DynamicResource Settings_LabelThickness}" Style="{StaticResource SettingLabel}"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="50"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider x:Name="LabelThicknessSlider" 
-                                        Minimum="1" 
-                                        Maximum="10" 
-                                        Value="2"
-                                        TickFrequency="1"
-                                        TickPlacement="BottomRight"/>
-                                <TextBlock Grid.Column="1" 
-                                           Text="{Binding Value, ElementName=LabelThicknessSlider, StringFormat={}{0:0}px}"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Right"
-                                           FontSize="12"
-                                           FontWeight="SemiBold"/>
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Crosshair Settings Card -->
-                    <Border Style="{StaticResource SettingCard}">
-                        <StackPanel>
-                            <TextBlock Text="{DynamicResource Settings_Crosshair_Section}" Style="{StaticResource SectionHeader}"/>
-
-                            <CheckBox x:Name="CrosshairEnabledCheckbox"
-                                      Content="{DynamicResource Settings_EnableCrosshair}"
-                                      Margin="0,0,0,12"/>
-
-                            <TextBlock Text="{DynamicResource Settings_CrosshairColor}" Style="{StaticResource SettingLabel}"/>
-                            <ComboBox x:Name="CrosshairColorPicker" 
-                                      Margin="0,0,0,12"
-                                      FontSize="13"
-                                      Padding="8">
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_Red}" Tag="#FFFF0000"/>
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_Green}" Tag="#FF00FF00"/>
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_Blue}" Tag="#FF0000FF"/>
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_Yellow}" Tag="#FFFFFF00"/>
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_White}" Tag="#FFFFFFFF"/>
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_Black}" Tag="#FF000000"/>
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_Purple}" Tag="#FF800080"/>
-                                <ComboBoxItem Content="{DynamicResource Settings_Color_Orange}" Tag="#FFFF8C00"/>
-                            </ComboBox>
-
-                            <TextBlock Text="{DynamicResource Settings_CrosshairSize}" Style="{StaticResource SettingLabel}"/>
-                            <Grid>
-                                <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
-                                    <ColumnDefinition Width="50"/>
-                                </Grid.ColumnDefinitions>
-                                <Slider x:Name="CrosshairSizeSlider" 
-                                        Minimum="1" 
-                                        Maximum="10" 
-                                        Value="1"
-                                        TickFrequency="1"
-                                        TickPlacement="BottomRight"/>
-                                <TextBlock Grid.Column="1" 
-                                           Text="{Binding Value, ElementName=CrosshairSizeSlider, StringFormat={}{0:0}px}"
-                                           VerticalAlignment="Center"
-                                           HorizontalAlignment="Right"
-                                           FontSize="12"
-                                           FontWeight="SemiBold"/>
-                            </Grid>
                         </StackPanel>
                     </Border>
                 </StackPanel>
@@ -528,7 +419,7 @@
                             <TextBlock Text="{DynamicResource UI_Language}" Style="{StaticResource SectionHeader}"/>
 
                             <TextBlock Text="{DynamicResource Settings_DisplayLanguage}" Style="{StaticResource SettingLabel}"/>
-                            <ComboBox x:Name="LanguageComboBox" 
+                            <ComboBox x:Name="LanguageComboBox"
                                       Margin="0,0,0,12"
                                       FontSize="13"
                                       Padding="8"
@@ -546,6 +437,141 @@
                             </ComboBox>
                             <TextBlock Text="{DynamicResource Settings_Language_Description}"
                                        Style="{StaticResource HelpText}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Appearance Card -->
+                    <Border Style="{StaticResource SettingCard}">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Settings_Appearance_Section}" Style="{StaticResource SectionHeader}"/>
+
+                            <CheckBox x:Name="DarkModeCheckBox"
+                                      Content="{DynamicResource Settings_DarkMode}"
+                                      Click="DarkMode_Click"
+                                      Margin="0,0,0,16"/>
+
+                            <TextBlock Text="{DynamicResource Settings_AccentColor}" Style="{StaticResource SettingLabel}"/>
+                            <TextBox x:Name="FormHexAccent"
+                                     ui:ControlHelper.PlaceholderText="#RRGGBB"
+                                     MaxLength="7"
+                                     TextChanged="FormHexInput_TextChanged"
+                                     Margin="0,0,0,8"/>
+                            <TextBlock Text="{DynamicResource Settings_AccentColor_Help}"
+                                       Style="{StaticResource HelpText}"/>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Label Settings Card -->
+                    <Border Style="{StaticResource SettingCard}">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Settings_LabelSettings_Section}" Style="{StaticResource SectionHeader}"/>
+
+                            <TextBlock Text="{DynamicResource Settings_LabelThickness}" Style="{StaticResource SettingLabel}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="40"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="LabelThicknessSlider"
+                                        Minimum="1"
+                                        Maximum="15"
+                                        Value="2"
+                                        TickFrequency="0.1"
+                                        TickPlacement="BottomRight"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Value, ElementName=LabelThicknessSlider, StringFormat={}{0:0.0}}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Crosshair Settings Card -->
+                    <Border Style="{StaticResource SettingCard}">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Settings_CrosshairSettings_Section}" Style="{StaticResource SectionHeader}"/>
+
+                            <CheckBox x:Name="CrosshairEnabledCheckbox"
+                                      Content="{DynamicResource Settings_EnableCrosshair}"
+                                      Margin="0,0,0,16"/>
+
+                            <TextBlock Text="{DynamicResource Settings_CrosshairColor}" Style="{StaticResource SettingLabel}"/>
+                            <ComboBox x:Name="CrosshairColorPicker"
+                                      Margin="0,0,0,12"
+                                      FontSize="13"
+                                      Padding="8"
+                                      SelectedIndex="7">
+                                <ComboBoxItem Tag="#FF0000">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="16" Height="16" Background="#FF0000" CornerRadius="2" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{DynamicResource Settings_Color_Red}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+                                <ComboBoxItem Tag="#00FF00">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="16" Height="16" Background="#00FF00" CornerRadius="2" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{DynamicResource Settings_Color_Green}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+                                <ComboBoxItem Tag="#0000FF">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="16" Height="16" Background="#0000FF" CornerRadius="2" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{DynamicResource Settings_Color_Blue}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+                                <ComboBoxItem Tag="#FFFF00">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="16" Height="16" Background="#FFFF00" CornerRadius="2" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{DynamicResource Settings_Color_Yellow}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+                                <ComboBoxItem Tag="#FF00FF">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="16" Height="16" Background="#FF00FF" CornerRadius="2" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{DynamicResource Settings_Color_Magenta}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+                                <ComboBoxItem Tag="#00FFFF">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="16" Height="16" Background="#00FFFF" CornerRadius="2" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{DynamicResource Settings_Color_Cyan}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+                                <ComboBoxItem Tag="#FFFFFF">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="16" Height="16" Background="#FFFFFF" BorderBrush="Gray" BorderThickness="1" CornerRadius="2" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{DynamicResource Settings_Color_White}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+                                <ComboBoxItem Tag="#000000">
+                                    <StackPanel Orientation="Horizontal">
+                                        <Border Width="16" Height="16" Background="#000000" BorderBrush="Gray" BorderThickness="1" CornerRadius="2" Margin="0,0,8,0"/>
+                                        <TextBlock Text="{DynamicResource Settings_Color_Black}" VerticalAlignment="Center"/>
+                                    </StackPanel>
+                                </ComboBoxItem>
+                            </ComboBox>
+
+                            <TextBlock Text="{DynamicResource Settings_CrosshairSize}" Style="{StaticResource SettingLabel}"/>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="40"/>
+                                </Grid.ColumnDefinitions>
+                                <Slider x:Name="CrosshairSizeSlider"
+                                        Minimum="1"
+                                        Maximum="15"
+                                        Value="2"
+                                        TickFrequency="0.1"
+                                        TickPlacement="BottomRight"/>
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Value, ElementName=CrosshairSizeSlider, StringFormat={}{0:0.0}}"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           FontSize="12"
+                                           FontWeight="SemiBold"/>
+                            </Grid>
                         </StackPanel>
                     </Border>
                 </StackPanel>

@@ -68,6 +68,8 @@
     <system:String x:Key="Settings_Color_Green">Green</system:String>
     <system:String x:Key="Settings_Color_Blue">Blue</system:String>
     <system:String x:Key="Settings_Color_Yellow">Yellow</system:String>
+    <system:String x:Key="Settings_Color_Magenta">Magenta</system:String>
+    <system:String x:Key="Settings_Color_Cyan">Cyan</system:String>
     <system:String x:Key="Settings_Color_White">White</system:String>
     <system:String x:Key="Settings_Color_Black">Black</system:String>
     <system:String x:Key="Settings_Color_Purple">Purple</system:String>
