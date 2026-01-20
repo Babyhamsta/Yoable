@@ -49,6 +49,10 @@ namespace YoableWPF.Models
         // Key: filename, Value: full path to external label file
         public Dictionary<string, string> ImportedLabelPaths { get; set; } = new Dictionary<string, string>();
 
+        // Suggested labels (propagation/retrieval results)
+        // Key: filename, Value: list of suggested labels
+        public Dictionary<string, List<SuggestedLabel>> SuggestedLabels { get; set; } = new Dictionary<string, List<SuggestedLabel>>();
+
         // UI State
         public Dictionary<string, ImageStatus> ImageStatuses { get; set; } = new Dictionary<string, ImageStatus>();
         public int LastSelectedImageIndex { get; set; } = -1;

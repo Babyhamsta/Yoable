@@ -8,8 +8,8 @@
     Title="{DynamicResource MainWindow_Title}"
     WindowStyle="None"
     ResizeMode="CanResize"
-    Height="700" 
-    Width="1100"
+    Height="780" 
+    Width="1320"
     WindowStartupLocation="CenterScreen"
     KeyDown="Window_KeyDown"
     PreviewMouseWheel="Window_PreviewMouseWheel"
@@ -131,9 +131,9 @@
 
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="280"/>
+            <ColumnDefinition Width="320"/>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="240"/>
+            <ColumnDefinition Width="320"/>
         </Grid.ColumnDefinitions>
 
         <Grid.RowDefinitions>
@@ -276,7 +276,7 @@
                 <Border Grid.Row="1" 
                         Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"
                         CornerRadius="6"
-                        Padding="12"
+                        Padding="12,12,20,12"
                         Margin="0,0,0,8">
                     <Grid>
                         <Grid.RowDefinitions>
@@ -287,31 +287,24 @@
                         </Grid.RowDefinitions>
 
                         <!-- Sort Controls -->
-                        <Grid Grid.Row="0">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0" 
-                                        Orientation="Horizontal" 
+                        <StackPanel Grid.Row="0">
+                            <StackPanel Orientation="Horizontal"
                                         VerticalAlignment="Center"
-                                        Margin="0,0,8,0">
-                                <TextBlock FontFamily="Segoe MDL2 Assets" 
-                                           Text="&#xE8CB;" 
+                                        Margin="0,0,0,6">
+                                <TextBlock FontFamily="Segoe MDL2 Assets"
+                                           Text="&#xE8CB;"
                                            FontSize="12"
                                            Foreground="#FFFF9800"
                                            VerticalAlignment="Center"
                                            Margin="0,0,6,0"/>
-                                <TextBlock Text="{DynamicResource Main_Sort}" 
-                                           FontSize="11" 
+                                <TextBlock Text="{DynamicResource Main_Sort}"
+                                           FontSize="11"
                                            FontWeight="SemiBold"
                                            VerticalAlignment="Center"
                                            Opacity="0.8"/>
                             </StackPanel>
 
-                            <ComboBox Grid.Column="1"
-                                      x:Name="SortComboBox" 
+                            <ComboBox x:Name="SortComboBox"
                                       SelectedIndex="0"
                                       SelectionChanged="SortComboBox_SelectionChanged"
                                       FontSize="11"
@@ -319,119 +312,135 @@
                                 <ComboBoxItem Content="{DynamicResource Main_SortByName}"/>
                                 <ComboBoxItem Content="{DynamicResource Main_SortByStatus}"/>
                             </ComboBox>
-                        </Grid>
+                        </StackPanel>
 
                         <!-- Separator -->
                         <Rectangle Grid.Row="1" 
                                    Height="1" 
                                    Fill="{DynamicResource SystemControlForegroundBaseLowBrush}"
                                    Opacity="0.2"
-                                   Margin="0,4"/>
+                                   Margin="0,8"/>
 
                         <!-- Filter Controls -->
-                        <Grid Grid.Row="2">
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="Auto"/>
-                                <ColumnDefinition Width="*"/>
-                            </Grid.ColumnDefinitions>
-
-                            <StackPanel Grid.Column="0" 
-                                        Orientation="Horizontal"
+                        <StackPanel Grid.Row="2">
+                            <StackPanel Orientation="Horizontal"
                                         VerticalAlignment="Center"
-                                        Margin="0,0,8,0">
-                                <TextBlock FontFamily="Segoe MDL2 Assets" 
-                                           Text="&#xE71C;" 
+                                        Margin="0,0,0,6">
+                                <TextBlock FontFamily="Segoe MDL2 Assets"
+                                           Text="&#xE71C;"
                                            FontSize="12"
                                            Foreground="#FF3F51B5"
                                            VerticalAlignment="Center"
                                            Margin="0,0,6,0"/>
-                                <TextBlock Text="{DynamicResource Main_Filter}" 
-                                           FontSize="11" 
+                                <TextBlock Text="{DynamicResource Main_Filter}"
+                                           FontSize="11"
                                            FontWeight="SemiBold"
                                            VerticalAlignment="Center"
                                            Opacity="0.8"/>
                             </StackPanel>
 
-                            <Grid Grid.Column="1">
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto"/>
+                                    <RowDefinition Height="Auto"/>
+                                </Grid.RowDefinitions>
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
                                     <ColumnDefinition Width="*"/>
                                 </Grid.ColumnDefinitions>
 
-                                <Button Grid.Column="0"
+                                <Button Grid.Row="0" Grid.Column="0"
                                         x:Name="FilterAllButton"
                                         Content="{DynamicResource Main_FilterAll}"
                                         Click="FilterAll_Click"
                                         FontSize="10"
                                         FontWeight="SemiBold"
-                                        Padding="4,6"
-                                        Margin="0,0,1,0"
+                                        Padding="6,6"
+                                        Margin="0,0,6,6"
                                         HorizontalAlignment="Stretch"
                                         Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
                                         Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
                                         BorderThickness="1"
                                         BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
-                                <Button Grid.Column="1"
+                                <Button Grid.Row="0" Grid.Column="1"
                                         x:Name="FilterReviewButton"
                                         Content="{DynamicResource Main_FilterReview}"
                                         Click="FilterReview_Click"
                                         FontSize="10"
                                         FontWeight="SemiBold"
-                                        Padding="4,6"
-                                        Margin="0,0,1,0"
+                                        Padding="6,6"
+                                        Margin="0,0,6,6"
                                         HorizontalAlignment="Stretch"
                                         Background="#44FFB74D"
                                         Foreground="#FFB74D"
                                         BorderThickness="0"/>
-                                <Button Grid.Column="2"
+                                <Button Grid.Row="0" Grid.Column="2"
+                                        x:Name="FilterSuggestedButton"
+                                        Content="{DynamicResource Main_FilterSuggested}"
+                                        Click="FilterSuggested_Click"
+                                        FontSize="10"
+                                        FontWeight="SemiBold"
+                                        Padding="6,6"
+                                        Margin="0,0,0,6"
+                                        HorizontalAlignment="Stretch"
+                                        Background="#4464B5F6"
+                                        Foreground="#64B5F6"
+                                        BorderThickness="0"/>
+                                <Button Grid.Row="1" Grid.Column="0"
                                         x:Name="FilterNoLabelButton"
                                         Content="{DynamicResource Main_FilterNone}"
                                         Click="FilterNoLabel_Click"
                                         FontSize="10"
                                         FontWeight="SemiBold"
-                                        Padding="4,6"
-                                        Margin="0,0,1,0"
+                                        Padding="6,6"
+                                        Margin="0,0,6,0"
                                         HorizontalAlignment="Stretch"
                                         Background="#44E57373"
                                         Foreground="#E57373"
                                         BorderThickness="0"/>
-                                <Button Grid.Column="3"
+                                <Button Grid.Row="1" Grid.Column="1"
                                         x:Name="FilterVerifiedButton"
                                         Content="{DynamicResource Main_FilterDone}"
                                         Click="FilterVerified_Click"
                                         FontSize="10"
                                         FontWeight="SemiBold"
-                                        Padding="4,6"
+                                        Padding="6,6"
                                         Margin="0"
                                         HorizontalAlignment="Stretch"
                                         Background="#4481C784"
                                         Foreground="#81C784"
                                         BorderThickness="0"/>
                             </Grid>
-                        </Grid>
+                        </StackPanel>
 
                         <!-- Class Filter Expander -->
                         <Expander Grid.Row="3" 
                                   x:Name="ClassFilterExpander"
                                   Header="{DynamicResource Main_FilterByClass}"
-                                  Margin="0,8,0,0"
+                                  Margin="0,10,0,0"
                                   IsExpanded="False">
                             <Expander.HeaderTemplate>
                                 <DataTemplate>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock FontFamily="Segoe MDL2 Assets" 
-                                                   Text="&#xE8C8;" 
-                                                   FontSize="12"
-                                                   Foreground="#FF9C27B0"
-                                                   VerticalAlignment="Center"
-                                                   Margin="0,0,6,0"/>
-                                        <TextBlock Text="{Binding}" 
-                                                   FontSize="11" 
-                                                   FontWeight="SemiBold"
-                                                   VerticalAlignment="Center"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*"/>
+                                            <ColumnDefinition Width="Auto"/>
+                                        </Grid.ColumnDefinitions>
+                                        <StackPanel Grid.Column="0" Orientation="Horizontal">
+                                            <TextBlock FontFamily="Segoe MDL2 Assets" 
+                                                       Text="&#xE8C8;" 
+                                                       FontSize="12"
+                                                       Foreground="#FF9C27B0"
+                                                       VerticalAlignment="Center"
+                                                       Margin="0,0,6,0"/>
+                                            <TextBlock Text="{Binding}" 
+                                                       FontSize="11" 
+                                                       FontWeight="SemiBold"
+                                                       Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
+                                                       VerticalAlignment="Center"/>
+                                        </StackPanel>
+                                    </Grid>
                                 </DataTemplate>
                             </Expander.HeaderTemplate>
                             <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0">
@@ -481,6 +490,9 @@
                                                     <DataTrigger Binding="{Binding Status}" Value="NoLabel">
                                                         <Setter Property="Background" Value="#FFE57373"/>
                                                     </DataTrigger>
+                                                    <DataTrigger Binding="{Binding Status}" Value="Suggested">
+                                                        <Setter Property="Background" Value="#FF64B5F6"/>
+                                                    </DataTrigger>
                                                     <DataTrigger Binding="{Binding Status}" Value="VerificationNeeded">
                                                         <Setter Property="Background" Value="#FFFFB74D"/>
                                                     </DataTrigger>
@@ -497,6 +509,9 @@
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding Status}" Value="NoLabel">
                                                             <Setter Property="Text" Value="{DynamicResource Main_StatusNoLabel}"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Status}" Value="Suggested">
+                                                            <Setter Property="Text" Value="{DynamicResource Main_StatusSuggested}"/>
                                                         </DataTrigger>
                                                         <DataTrigger Binding="{Binding Status}" Value="VerificationNeeded">
                                                             <Setter Property="Text" Value="{DynamicResource Main_StatusReview}"/>
@@ -522,6 +537,7 @@
                         Margin="0,12,0,0">
                     <Grid>
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
@@ -555,8 +571,36 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- No Label Status -->
+                        <!-- Suggested Status -->
                         <Border Grid.Column="1" 
+                                Style="{StaticResource StatusCard}"
+                                Background="#4464B5F6"
+                                CornerRadius="0"
+                                Margin="0,0,1,0">
+                            <StackPanel HorizontalAlignment="Center">
+                                <TextBlock FontFamily="Segoe MDL2 Assets" 
+                                           Text="&#xEA80;" 
+                                           FontSize="20"
+                                           Foreground="#64B5F6"
+                                           HorizontalAlignment="Center"
+                                           Margin="0,0,0,4"/>
+                                <TextBlock x:Name="SuggestedCount" 
+                                           FontSize="18" 
+                                           FontWeight="Bold"
+                                           Foreground="#64B5F6"
+                                           HorizontalAlignment="Center"
+                                           Text="0"/>
+                                <TextBlock Text="{DynamicResource Main_StatusSuggested}" 
+                                           FontSize="9" 
+                                           FontWeight="SemiBold"
+                                           Foreground="#1565C0"
+                                           HorizontalAlignment="Center"
+                                           Opacity="0.8"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- No Label Status -->
+                        <Border Grid.Column="2" 
                                 Style="{StaticResource StatusCard}"
                                 Background="#44E57373"
                                 CornerRadius="0"
@@ -584,7 +628,7 @@
                         </Border>
 
                         <!-- Verified Status -->
-                        <Border Grid.Column="2" 
+                        <Border Grid.Column="3" 
                                 Style="{StaticResource StatusCard}"
                                 Background="#4481C784"
                                 CornerRadius="0,6,6,0"
@@ -784,6 +828,7 @@
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
                             <RowDefinition Height="*"/>
                         </Grid.RowDefinitions>
                         
@@ -793,24 +838,63 @@
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
-                            <TextBlock Grid.Column="0" Text="{DynamicResource Main_ImageLabels}" 
-                                       FontSize="13" FontWeight="SemiBold" 
+                            <TextBlock Grid.Column="0" Text="{DynamicResource Main_ImageLabels}"
+                                       FontSize="13" FontWeight="SemiBold"
                                        VerticalAlignment="Center"/>
-                            <Button Grid.Column="1" 
+                            <Button Grid.Column="1"
                                     x:Name="ClearImageClassesButton"
-                                    Content="{DynamicResource Main_ClearImageClasses}"
                                     Click="ClearImageClasses_Click"
-                                    Padding="8,6"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="4,2"
                                     Margin="8,0,0,0"
                                     VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBlock FontFamily="Segoe MDL2 Assets"
+                                               Text="&#xE74D;"
+                                               FontSize="12"
+                                               Foreground="#E57373"
+                                               Margin="0,0,4,0"/>
+                                    <TextBlock Text="{DynamicResource Main_ClearImageClasses}"
+                                               FontSize="11"
+                                               FontWeight="SemiBold"
+                                               Foreground="#E57373"/>
+                                </StackPanel>
                                 <Button.ToolTip>
                                     <ToolTip Content="{DynamicResource Main_ClearImageClasses}"/>
                                 </Button.ToolTip>
                             </Button>
                         </Grid>
                         
+                        <!-- Suggestions Summary -->
+                        <Border Grid.Row="1"
+                                x:Name="SuggestionSummaryPanel"
+                                Background="#2233A1FD"
+                                CornerRadius="4"
+                                Padding="10"
+                                Margin="12,0,12,8"
+                                Visibility="Collapsed">
+                            <StackPanel>
+                                <TextBlock x:Name="SuggestionCountText"
+                                           Text="{DynamicResource Main_SuggestionsCount}"
+                                           Foreground="#64B5F6"
+                                           FontWeight="SemiBold"/>
+                                <WrapPanel Margin="0,6,0,0">
+                                    <Button Content="{DynamicResource Main_AcceptAllSuggestions}"
+                                            Padding="8,4"
+                                            Margin="0,0,8,0"
+                                            MinWidth="120"
+                                            Click="AcceptAllSuggestions_Click"/>
+                                    <Button Content="{DynamicResource Main_RejectAllSuggestions}"
+                                            Padding="8,4"
+                                            MinWidth="120"
+                                            Click="RejectAllSuggestions_Click"/>
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Labels ListBox -->
-                        <ListBox Grid.Row="1" x:Name="LabelListBox" 
+                        <ListBox Grid.Row="2" x:Name="LabelListBox"
                                  Style="{StaticResource ModernListBox}"
                                  SelectionMode="Single" 
                                  SelectionChanged="LabelListBox_SelectionChanged">
@@ -820,15 +904,58 @@
                             </ListBox.ItemContainerStyle>
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <StackPanel Orientation="Horizontal">
-                                        <Border Width="4"
-                                                Height="20"
-                                                Background="{Binding ClassBrush}"
-                                                Margin="0,0,8,0"
-                                                CornerRadius="2"/>
-                                        <TextBlock Text="{Binding DisplayText}"
-                                                   VerticalAlignment="Center"/>
-                                    </StackPanel>
+                                    <Grid>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                            <RowDefinition Height="Auto"/>
+                                        </Grid.RowDefinitions>
+                                        <StackPanel Orientation="Horizontal" Grid.Row="0">
+                                            <Border Width="4"
+                                                    Height="20"
+                                                    Background="{Binding ClassBrush}"
+                                                    Margin="0,0,8,0"
+                                                    CornerRadius="2"/>
+                                            <TextBlock Text="{Binding DisplayText}"
+                                                       VerticalAlignment="Center"
+                                                       TextTrimming="CharacterEllipsis"/>
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal"
+                                                    Grid.Row="1"
+                                                    x:Name="SuggestionMeta"
+                                                    Visibility="Collapsed">
+                                            <TextBlock Text="{Binding SourceText}"
+                                                       FontSize="11"
+                                                       Foreground="Gray"
+                                                       Margin="0,2,8,0"/>
+                                            <TextBlock Text="{Binding ScoreText}"
+                                                       FontSize="11"
+                                                       Foreground="Gray"/>
+                                        </StackPanel>
+                                        <StackPanel Grid.Row="2"
+                                                    Orientation="Horizontal"
+                                                    x:Name="SuggestionActions"
+                                                    Visibility="Collapsed"
+                                                    Margin="0,6,0,0">
+                                            <Button Content="{DynamicResource Main_Accept}"
+                                                    Padding="6,2"
+                                                    Margin="0,0,8,0"
+                                                    MinWidth="70"
+                                                    Tag="{Binding}"
+                                                    Click="AcceptSuggestion_Click"/>
+                                            <Button Content="{DynamicResource Main_Reject}"
+                                                    Padding="6,2"
+                                                    MinWidth="70"
+                                                    Tag="{Binding}"
+                                                    Click="RejectSuggestion_Click"/>
+                                        </StackPanel>
+                                    </Grid>
+                                    <DataTemplate.Triggers>
+                                        <DataTrigger Binding="{Binding IsSuggestion}" Value="True">
+                                            <Setter TargetName="SuggestionActions" Property="Visibility" Value="Visible"/>
+                                            <Setter TargetName="SuggestionMeta" Property="Visibility" Value="Visible"/>
+                                        </DataTrigger>
+                                    </DataTemplate.Triggers>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>

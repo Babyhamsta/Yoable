@@ -94,6 +94,30 @@
     <system:String x:Key="Settings_EnsembleIoU">Final Ensemble IoU Threshold</system:String>
     <system:String x:Key="Settings_UseWeightedAverage">Use Weighted Average for Box Merging</system:String>
     <system:String x:Key="Settings_EnsembleInfo">Ensemble mode activates when 2 or more YOLO models are loaded. Models vote on detections for improved accuracy.</system:String>
+
+    <!-- Settings Window - Propagation -->
+    <system:String x:Key="Settings_Propagation_Section">Label Propagation</system:String>
+    <system:String x:Key="Settings_Propagation_Enable">Enable label propagation</system:String>
+    <system:String x:Key="Settings_Propagation_AutoAccept">Auto-accept suggestions</system:String>
+    <system:String x:Key="Settings_Propagation_Modes">Propagation Modes</system:String>
+    <system:String x:Key="Settings_Propagation_ImageSimilarity">Image similarity (near-duplicates)</system:String>
+    <system:String x:Key="Settings_Propagation_ObjectSimilarity">Object similarity (find similar objects)</system:String>
+    <system:String x:Key="Settings_Propagation_Tracking">Tracking (adjacent frames)</system:String>
+    <system:String x:Key="Settings_ImageSimilarityThreshold">Image similarity threshold</system:String>
+    <system:String x:Key="Settings_ObjectSimilarityThreshold">Object similarity threshold</system:String>
+    <system:String x:Key="Settings_TrackingThreshold">Tracking confidence threshold</system:String>
+    <system:String x:Key="Settings_Propagation_Advanced">Advanced</system:String>
+    <system:String x:Key="Settings_Propagation_MaxSuggestions">Max suggestions per image</system:String>
+    <system:String x:Key="Settings_Propagation_MinBoxSize">Min suggestion box size</system:String>
+    <system:String x:Key="Settings_Propagation_TrackingWindow">Tracking frame window</system:String>
+    <system:String x:Key="Settings_Propagation_ImageSimilarityMode">Image similarity mode</system:String>
+    <system:String x:Key="Settings_Propagation_Mode_Fast">Fast (hash)</system:String>
+    <system:String x:Key="Settings_Propagation_Mode_Histogram">Accurate (histogram)</system:String>
+    <system:String x:Key="Settings_Propagation_RestrictCluster">Restrict to similar images</system:String>
+    <system:String x:Key="Settings_Propagation_SkipLabeled">Skip already labeled images</system:String>
+    <system:String x:Key="Settings_Propagation_SearchStride">Search stride (pixels)</system:String>
+    <system:String x:Key="Settings_Propagation_CandidateLimit">Object candidate limit</system:String>
+    <system:String x:Key="Settings_Propagation_Help">Suggestions are reviewed by default. Enable auto-accept to write labels immediately.</system:String>
     
     <!-- Settings Window - Performance Tab -->
     <system:String x:Key="Settings_LoadingProcessing_Section">Loading &amp; Processing</system:String>
@@ -130,7 +154,7 @@
     <system:String x:Key="Menu_AI">AI</system:String>
     <system:String x:Key="Menu_ManageModels">Manage Models</system:String>
     <system:String x:Key="Menu_AutoLabelImages">Auto Label Images</system:String>
-    <system:String x:Key="Menu_AutoSuggestLabels">Auto Suggest Labels</system:String>
+    <system:String x:Key="Menu_AutoSuggestLabels">Suggest Labels</system:String>
     
     <!-- Main Window - Left Panel -->
     <system:String x:Key="Main_Images">Images</system:String>
@@ -140,10 +164,12 @@
     <system:String x:Key="Main_Filter">Filter</system:String>
     <system:String x:Key="Main_FilterAll">All</system:String>
     <system:String x:Key="Main_FilterReview">Review</system:String>
+    <system:String x:Key="Main_FilterSuggested">Suggested</system:String>
     <system:String x:Key="Main_FilterNone">None</system:String>
     <system:String x:Key="Main_FilterDone">Done</system:String>
     <system:String x:Key="Main_FilterByClass">Filter by Class</system:String>
     <system:String x:Key="Main_StatusReview">REVIEW</system:String>
+    <system:String x:Key="Main_StatusSuggested">SUGGESTED</system:String>
     <system:String x:Key="Main_StatusNoLabel">NO LABEL</system:String>
     <system:String x:Key="Main_StatusVerified">VERIFIED</system:String>
     
@@ -153,7 +179,12 @@
     <system:String x:Key="Main_AddClass">Add Class</system:String>
     <system:String x:Key="Main_Remove">Remove</system:String>
     <system:String x:Key="Main_ImageLabels">Image Labels</system:String>
-    <system:String x:Key="Main_ClearImageClasses">Clear Image Classes</system:String>
+    <system:String x:Key="Main_ClearImageClasses">Clear Labels</system:String>
+    <system:String x:Key="Main_SuggestionsCount">Suggestions: {0}</system:String>
+    <system:String x:Key="Main_AcceptAllSuggestions">Accept All</system:String>
+    <system:String x:Key="Main_RejectAllSuggestions">Reject All</system:String>
+    <system:String x:Key="Main_Accept">Accept</system:String>
+    <system:String x:Key="Main_Reject">Reject</system:String>
     <system:String x:Key="Main_EditClass">Edit class</system:String>
     <system:String x:Key="Main_RemoveSelectedClass">Remove selected class</system:String>
     <system:String x:Key="Main_NoImageSelected">No image selected.</system:String>
@@ -177,6 +208,29 @@
     <system:String x:Key="Status_Active">(active)</system:String>
     <system:String x:Key="Status_AutoSaveEnabled">Auto-save enabled</system:String>
     <system:String x:Key="Status_AutoSaveDisabled">Auto-save disabled</system:String>
+
+    <!-- Propagation Dialog -->
+    <system:String x:Key="Propagation_Title">Label Propagation</system:String>
+    <system:String x:Key="Propagation_Subtitle">Generate suggestions from existing labels using similarity and tracking.</system:String>
+    <system:String x:Key="Propagation_Modes">Modes</system:String>
+    <system:String x:Key="Propagation_Mode_ImageSimilarity">Image similarity (near-duplicates)</system:String>
+    <system:String x:Key="Propagation_Mode_ObjectSimilarity">Object similarity (find similar objects)</system:String>
+    <system:String x:Key="Propagation_Mode_Tracking">Tracking (adjacent frames)</system:String>
+    <system:String x:Key="Propagation_Scope">Scope</system:String>
+    <system:String x:Key="Propagation_Scope_Current">Current image</system:String>
+    <system:String x:Key="Propagation_Scope_All">Entire project</system:String>
+    <system:String x:Key="Propagation_AutoAccept">Auto-accept suggestions</system:String>
+    <system:String x:Key="Propagation_AutoAccept_Help">When enabled, suggestions are immediately converted to labels.</system:String>
+    <system:String x:Key="Propagation_Run">Run Propagation</system:String>
+    <system:String x:Key="Propagation_NoModesSelected">Select at least one propagation mode.</system:String>
+    <system:String x:Key="Propagation_Running">Running propagation...</system:String>
+    <system:String x:Key="Propagation_Running_Image">Running image similarity...</system:String>
+    <system:String x:Key="Propagation_Running_Object">Running object similarity...</system:String>
+    <system:String x:Key="Propagation_Running_Tracking">Running tracking...</system:String>
+    <system:String x:Key="Propagation_Complete">Propagation complete.\nSuggestions: {0}\nLabels: {1}\nImages affected: {2}</system:String>
+    <system:String x:Key="Propagation_Disabled">Propagation is disabled in settings.</system:String>
+    <system:String x:Key="Propagation_NoSources">No labeled images found to use as sources.</system:String>
+    <system:String x:Key="Propagation_Canceled">Propagation canceled.</system:String>
     
     <!-- Model Class Mapping Dialog -->
     <system:String x:Key="Mapping_Title">Configure Model Class Mapping</system:String>

@@ -9,9 +9,10 @@ namespace YoableWPF
 
     public enum ImageStatus
     {
-        NoLabel,
-        VerificationNeeded,
-        Verified
+        NoLabel = 0,
+        VerificationNeeded = 1,
+        Verified = 2,
+        Suggested = 3
     }
 
     public class ImageListItem : INotifyPropertyChanged

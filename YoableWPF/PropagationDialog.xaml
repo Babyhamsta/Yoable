@@ -1,0 +1,80 @@
+<Window x:Class="YoableWPF.PropagationDialog"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:ui="http://schemas.modernwpf.com/2019"
+        ui:WindowHelper.UseModernWindowStyle="True"
+        Title="{DynamicResource Propagation_Title}"
+        Width="520"
+        Height="420"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="CanResize"
+        MinWidth="460"
+        MinHeight="360">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header -->
+        <Border Grid.Row="0"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                BorderThickness="0,0,0,1"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                Padding="20,16">
+            <StackPanel>
+                <TextBlock Text="{DynamicResource Propagation_Title}"
+                           FontSize="18"
+                           FontWeight="SemiBold"/>
+                <TextBlock Text="{DynamicResource Propagation_Subtitle}"
+                           FontSize="12"
+                           Foreground="Gray"
+                           TextWrapping="Wrap"
+                           Margin="0,6,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Content -->
+        <ScrollViewer Grid.Row="1" Padding="20" VerticalScrollBarVisibility="Auto">
+            <StackPanel>
+                <TextBlock Text="{DynamicResource Propagation_Modes}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <CheckBox x:Name="ImageSimilarityCheckBox"
+                          Content="{DynamicResource Propagation_Mode_ImageSimilarity}"
+                          Margin="0,0,0,6"/>
+                <CheckBox x:Name="ObjectSimilarityCheckBox"
+                          Content="{DynamicResource Propagation_Mode_ObjectSimilarity}"
+                          Margin="0,0,0,6"/>
+                <CheckBox x:Name="TrackingCheckBox"
+                          Content="{DynamicResource Propagation_Mode_Tracking}"
+                          Margin="0,0,0,16"/>
+
+                <TextBlock Text="{DynamicResource Propagation_Scope}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                <StackPanel>
+                    <RadioButton x:Name="ScopeCurrentRadio"
+                                 Content="{DynamicResource Propagation_Scope_Current}"
+                                 IsChecked="True"
+                                 Margin="0,0,0,6"/>
+                    <RadioButton x:Name="ScopeAllRadio"
+                                 Content="{DynamicResource Propagation_Scope_All}"/>
+                </StackPanel>
+
+                <CheckBox x:Name="AutoAcceptCheckBox"
+                          Content="{DynamicResource Propagation_AutoAccept}"
+                          Margin="0,16,0,0"/>
+                <TextBlock Text="{DynamicResource Propagation_AutoAccept_Help}"
+                           Foreground="Gray"
+                           FontSize="11"
+                           TextWrapping="Wrap"
+                           Margin="0,6,0,0"/>
+            </StackPanel>
+        </ScrollViewer>
+
+        <!-- Actions -->
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,0,20,16">
+            <Button Content="{DynamicResource Common_Cancel}" Width="100" Margin="0,0,8,0" Click="Cancel_Click"/>
+            <Button Content="{DynamicResource Propagation_Run}" Width="140" Click="Run_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

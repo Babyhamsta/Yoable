@@ -5,6 +5,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -22,6 +24,7 @@ namespace YoableWPF
         public LabelManager labelManager;
         public ProjectManager projectManager;
         private UIStateManager uiStateManager;
+        private PropagationManager propagationManager;
 
         // Class management
         private List<LabelClass> projectClasses = new List<LabelClass>();
@@ -66,6 +69,7 @@ namespace YoableWPF
             imageManager = new ImageManager();
             labelManager = new LabelManager();
             uiStateManager = new UIStateManager(this);
+            propagationManager = new PropagationManager(labelManager, imageManager);
 
             // Apply batch size settings from user preferences
             imageManager.BatchSize = Properties.Settings.Default.ProcessingBatchSize;
@@ -240,6 +244,7 @@ namespace YoableWPF
                     ProjectNameText.Text = projectName;
                     UpdateProjectUI();
                     projectManager.StartAutoSave();
+                    propagationManager.SetProjectFolder(projectManager.CurrentProject?.ProjectFolder);
                 }
             }
         }
@@ -321,6 +326,8 @@ namespace YoableWPF
 
                 // Start auto-save
                 projectManager.StartAutoSave();
+
+                propagationManager.SetProjectFolder(projectManager.CurrentProject?.ProjectFolder);
 
                 // Hide overlay and enable window
                 overlayManager.HideOverlay();
@@ -415,6 +422,7 @@ namespace YoableWPF
                     {
                         ProjectNameText.Text = projectManager.CurrentProject.ProjectName;
                         UpdateProjectUI();
+                        propagationManager.SetProjectFolder(projectManager.CurrentProject?.ProjectFolder);
                     }
                 }
                 finally
@@ -447,6 +455,7 @@ namespace YoableWPF
                 ImageListBox.Items.Clear();
                 LabelListBox.ItemsSource = null;
                 drawingCanvas.Labels.Clear();
+                drawingCanvas.SuggestedLabels.Clear();
                 drawingCanvas.Image = null;
                 drawingCanvas.InvalidateVisual();
                 uiStateManager.ClearCache();
@@ -457,6 +466,8 @@ namespace YoableWPF
 
                 // Update status counts
                 uiStateManager.UpdateStatusCounts();
+                UpdateSuggestionSummaryUI();
+                propagationManager.SetProjectFolder(null);
             }
         }
 
@@ -811,7 +822,8 @@ namespace YoableWPF
                     {
                         // Only update to Verified if it was previously VerificationNeeded
                         var currentStatus = imageManager.GetImageStatus(selected.FileName);
-                        if (currentStatus == ImageStatus.VerificationNeeded)
+                        if (currentStatus == ImageStatus.VerificationNeeded &&
+                            (!labelManager.SuggestionStorage.TryGetValue(selected.FileName, out var suggestions) || suggestions.Count == 0))
                         {
                             imageManager.UpdateImageStatusValue(selected.FileName, ImageStatus.Verified);
 
@@ -825,9 +837,13 @@ namespace YoableWPF
                     drawingCanvas.Labels.Clear();
                 }
 
+                drawingCanvas.SuggestedLabels = labelManager.GetSuggestions(selected.FileName);
+                drawingCanvas.SelectedSuggestion = null;
+
                 // Update UI
                 uiStateManager.UpdateStatusCounts();
                 uiStateManager.RefreshLabelList();
+                UpdateSuggestionSummaryUI();
 
                 // CRITICAL FIX: Force canvas redraw after loading labels
                 drawingCanvas.InvalidateVisual();
@@ -838,9 +854,20 @@ namespace YoableWPF
         {
             if (LabelListBox.SelectedItem is LabelListItemView selectedItem)
             {
+                if (selectedItem.IsSuggestion && selectedItem.Suggestion != null)
+                {
+                    drawingCanvas.SelectedSuggestion = selectedItem.Suggestion;
+                    drawingCanvas.SelectedLabel = null;
+                    drawingCanvas.SelectedLabels.Clear();
+                    drawingCanvas.InvalidateVisual();
+                    Keyboard.Focus(drawingCanvas);
+                    return;
+                }
+
                 var selectedLabel = selectedItem.Label;
                 if (selectedLabel != null)
                 {
+                    drawingCanvas.SelectedSuggestion = null;
                     drawingCanvas.SelectedLabel = selectedLabel;
                     drawingCanvas.SelectedLabels.Clear();
                     drawingCanvas.SelectedLabels.Add(selectedLabel);
@@ -853,8 +880,107 @@ namespace YoableWPF
                 // No label selected, so immediately deselect in canvas
                 drawingCanvas.SelectedLabel = null;
                 drawingCanvas.SelectedLabels.Clear();
+                drawingCanvas.SelectedSuggestion = null;
                 drawingCanvas.InvalidateVisual();
             }
+        }
+
+        private void AcceptSuggestion_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag is LabelListItemView item && item.Suggestion != null)
+            {
+                string currentFile = GetCurrentFileName();
+                if (string.IsNullOrEmpty(currentFile))
+                    return;
+
+                labelManager.AcceptSuggestion(currentFile, item.Suggestion.Id);
+                RefreshSuggestionsForCurrentImage(currentFile);
+                MarkProjectDirty();
+            }
+        }
+
+        private void RejectSuggestion_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button button && button.Tag is LabelListItemView item && item.Suggestion != null)
+            {
+                string currentFile = GetCurrentFileName();
+                if (string.IsNullOrEmpty(currentFile))
+                    return;
+
+                labelManager.RejectSuggestion(currentFile, item.Suggestion.Id);
+                RefreshSuggestionsForCurrentImage(currentFile);
+                MarkProjectDirty();
+            }
+        }
+
+        private void AcceptAllSuggestions_Click(object sender, RoutedEventArgs e)
+        {
+            string currentFile = GetCurrentFileName();
+            if (string.IsNullOrEmpty(currentFile))
+                return;
+
+            labelManager.AcceptAllSuggestions(currentFile);
+            RefreshSuggestionsForCurrentImage(currentFile);
+            MarkProjectDirty();
+        }
+
+        private void RejectAllSuggestions_Click(object sender, RoutedEventArgs e)
+        {
+            string currentFile = GetCurrentFileName();
+            if (string.IsNullOrEmpty(currentFile))
+                return;
+
+            labelManager.RejectAllSuggestions(currentFile);
+            RefreshSuggestionsForCurrentImage(currentFile);
+            MarkProjectDirty();
+        }
+
+        private void UpdateSuggestionSummaryUI()
+        {
+            string currentFile = GetCurrentFileName();
+            if (string.IsNullOrEmpty(currentFile))
+            {
+                SuggestionSummaryPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            var suggestions = labelManager.GetSuggestions(currentFile);
+            if (suggestions.Count == 0)
+            {
+                SuggestionSummaryPanel.Visibility = Visibility.Collapsed;
+                return;
+            }
+
+            SuggestionSummaryPanel.Visibility = Visibility.Visible;
+            SuggestionCountText.Text = string.Format(
+                LanguageManager.Instance.GetString("Main_SuggestionsCount") ?? "Suggestions: {0}",
+                suggestions.Count);
+        }
+
+        private void RefreshSuggestionsForCurrentImage(string currentFile)
+        {
+            drawingCanvas.Labels = labelManager.GetLabels(currentFile);
+            drawingCanvas.SuggestedLabels = labelManager.GetSuggestions(currentFile);
+            drawingCanvas.SelectedSuggestion = null;
+            uiStateManager.RefreshLabelList();
+            UpdateImageStatus(currentFile);
+            uiStateManager.UpdateStatusCounts();
+            UpdateSuggestionSummaryUI();
+            drawingCanvas.InvalidateVisual();
+        }
+
+        private string GetCurrentFileName()
+        {
+            string currentFileName = imageManager.CurrentImagePath;
+            if (string.IsNullOrEmpty(currentFileName))
+                return string.Empty;
+
+            if (currentFileName.Contains("\\") || currentFileName.Contains("/"))
+            {
+                currentFileName = Path.GetFileName(currentFileName);
+            }
+
+            return currentFileName;
         }
 
         internal void ShowDuplicateImagesWarning(IEnumerable<string> duplicates)
@@ -911,6 +1037,7 @@ namespace YoableWPF
             
             // Refresh the label list UI
             uiStateManager.RefreshLabelList();
+            UpdateSuggestionSummaryUI();
             
             // Force canvas to redraw to show updated labels
             drawingCanvas.InvalidateVisual();
@@ -1254,6 +1381,7 @@ namespace YoableWPF
             imageManager.ClearAll();
             labelManager.ClearAll();
             drawingCanvas.Labels.Clear(); // Clear labels inside DrawingCanvas
+            drawingCanvas.SuggestedLabels.Clear();
             ImageListBox.Items.Clear();
             LabelListBox.ItemsSource = null;
             drawingCanvas.Image = null; // Clear the image in DrawingCanvas
@@ -1261,6 +1389,7 @@ namespace YoableWPF
             uiStateManager.UpdateStatusCounts();
             uiStateManager.RefreshAllImagesList(); // Clear the filter cache
             uiStateManager.ClearCache();
+            UpdateSuggestionSummaryUI();
 
             MarkProjectDirty();
         }
@@ -1377,7 +1506,241 @@ namespace YoableWPF
 
         private void AutoSuggestLabels_Click(object sender, RoutedEventArgs e)
         {
-            MessageBox.Show("Auto Suggest Labels - Not Implemented Yet");
+            if (projectManager == null || !projectManager.IsProjectOpen)
+            {
+                MessageBox.Show(
+                    LanguageManager.Instance.GetString("Status_NoProject") ?? "No project is currently open.",
+                    LanguageManager.Instance.GetString("Main_Error") ?? "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            var dialog = new PropagationDialog { Owner = this };
+            if (dialog.ShowDialog() != true)
+                return;
+
+            _ = RunPropagationAsync(dialog);
+        }
+
+        private async Task RunPropagationAsync(PropagationDialog dialog)
+        {
+            if (!Properties.Settings.Default.EnablePropagation)
+            {
+                MessageBox.Show(
+                    LanguageManager.Instance.GetString("Propagation_Disabled") ?? "Propagation is disabled in settings.",
+                    LanguageManager.Instance.GetString("Main_Error") ?? "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            string currentFile = GetCurrentFileName();
+            if (dialog.Scope == PropagationScope.CurrentImage && string.IsNullOrEmpty(currentFile))
+            {
+                MessageBox.Show(
+                    LanguageManager.Instance.GetString("Main_NoImageSelected") ?? "No image selected.",
+                    LanguageManager.Instance.GetString("Main_Error") ?? "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            var allFiles = imageManager.ImagePathMap.Keys.ToList();
+            var sourceFiles = new List<string>();
+
+            if (dialog.Scope == PropagationScope.CurrentImage)
+            {
+                sourceFiles.Add(currentFile);
+            }
+            else
+            {
+                sourceFiles = labelManager.LabelStorage
+                    .Where(kvp => kvp.Value != null && kvp.Value.Count > 0)
+                    .Select(kvp => kvp.Key)
+                    .ToList();
+            }
+
+            if (sourceFiles.Count == 0)
+            {
+                MessageBox.Show(
+                    LanguageManager.Instance.GetString("Propagation_NoSources") ?? "No labeled images found to use as sources.",
+                    LanguageManager.Instance.GetString("Main_Error") ?? "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            var tokenSource = new CancellationTokenSource();
+            overlayManager.ShowOverlayWithProgress(
+                LanguageManager.Instance.GetString("Propagation_Running") ?? "Running propagation...",
+                tokenSource);
+
+            bool runImageSimilarity = dialog.RunImageSimilarity;
+            bool runObjectSimilarity = dialog.RunObjectSimilarity;
+            bool runTracking = dialog.RunTracking;
+            bool autoAccept = dialog.AutoAccept;
+
+            var summary = new PropagationSummary();
+            var progressTimer = Stopwatch.StartNew();
+            string lastPhase = null;
+            string runningMessage = LanguageManager.Instance.GetString("Propagation_Running") ?? "Running propagation...";
+            string imageMessage = LanguageManager.Instance.GetString("Propagation_Running_Image") ?? "Running image similarity...";
+            string objectMessage = LanguageManager.Instance.GetString("Propagation_Running_Object") ?? "Running object similarity...";
+            string trackingMessage = LanguageManager.Instance.GetString("Propagation_Running_Tracking") ?? "Running tracking...";
+            var progressReporter = new Progress<(string phase, int current, int total)>(progress =>
+            {
+                if (progress.total <= 0)
+                    return;
+
+                bool phaseChanged = !string.Equals(lastPhase, progress.phase, StringComparison.Ordinal);
+                bool isComplete = progress.current >= progress.total;
+                if (!phaseChanged && !isComplete && progressTimer.ElapsedMilliseconds < 250)
+                    return;
+
+                lastPhase = progress.phase;
+                progressTimer.Restart();
+
+                string baseMessage = progress.phase switch
+                {
+                    PropagationManager.PhaseImageSimilarity => imageMessage,
+                    PropagationManager.PhaseObjectRanking => objectMessage,
+                    PropagationManager.PhaseObjectMatching => objectMessage,
+                    PropagationManager.PhaseTracking => trackingMessage,
+                    _ => runningMessage
+                };
+
+                string message = $"{baseMessage} {progress.current:n0}/{progress.total:n0}";
+                overlayManager.UpdateMessage(message);
+                int percent = (int)Math.Max(0, Math.Min(100, (progress.current * 100.0) / progress.total));
+                overlayManager.UpdateProgress(percent);
+            });
+
+            var orderedFiles = ImageListBox.Items.Cast<ImageListItem>().Select(i => i.FileName).ToList();
+
+            try
+            {
+                await Task.Run(() =>
+                {
+                    double imageSimilarityThreshold = Properties.Settings.Default.ImageSimilarityThreshold;
+                    double objectSimilarityThreshold = Properties.Settings.Default.ObjectSimilarityThreshold;
+                    double trackingThreshold = Properties.Settings.Default.TrackingConfidenceThreshold;
+                    bool skipLabeled = Properties.Settings.Default.PropagationSkipLabeled;
+                    bool restrictToSimilar = Properties.Settings.Default.PropagationUseClusterFilter;
+                    int maxSuggestionsPerImage = Properties.Settings.Default.PropagationMaxSuggestionsPerImage;
+                    int minBoxSize = Properties.Settings.Default.PropagationMinBoxSize;
+                    int trackingWindow = Properties.Settings.Default.PropagationTrackingFrameWindow;
+                    int candidateLimit = Properties.Settings.Default.PropagationObjectCandidateLimit;
+                    int searchStride = Properties.Settings.Default.PropagationSearchStride;
+                    double mergeIoUThreshold = Properties.Settings.Default.EnsembleIoUThreshold;
+
+                    if (runImageSimilarity)
+                    {
+                        overlayManager.UpdateMessage(imageMessage);
+                        var result = propagationManager.RunImageSimilarity(
+                            sourceFiles,
+                            allFiles,
+                            imageSimilarityThreshold,
+                            autoAccept,
+                            skipLabeled,
+                            maxSuggestionsPerImage,
+                            mergeIoUThreshold,
+                        progressReporter,
+                        tokenSource.Token);
+                        summary.SuggestionsAdded += result.SuggestionsAdded;
+                        summary.LabelsAdded += result.LabelsAdded;
+                        summary.ImagesAffected += result.ImagesAffected;
+                    }
+
+                    if (runObjectSimilarity)
+                    {
+                        overlayManager.UpdateMessage(objectMessage);
+                        var result = propagationManager.RunObjectSimilarity(
+                            sourceFiles,
+                            allFiles,
+                            objectSimilarityThreshold,
+                            autoAccept,
+                            skipLabeled,
+                            restrictToSimilar,
+                            imageSimilarityThreshold,
+                            maxSuggestionsPerImage,
+                            minBoxSize,
+                            candidateLimit,
+                            searchStride,
+                            mergeIoUThreshold,
+                        progressReporter,
+                        tokenSource.Token);
+                        summary.SuggestionsAdded += result.SuggestionsAdded;
+                        summary.LabelsAdded += result.LabelsAdded;
+                        summary.ImagesAffected += result.ImagesAffected;
+                    }
+
+                    if (runTracking && !string.IsNullOrEmpty(currentFile))
+                    {
+                        overlayManager.UpdateMessage(trackingMessage);
+                        var result = propagationManager.RunTracking(
+                            currentFile,
+                            orderedFiles,
+                            trackingWindow,
+                            trackingThreshold,
+                            autoAccept,
+                            skipLabeled,
+                            maxSuggestionsPerImage,
+                            minBoxSize,
+                            searchStride,
+                            mergeIoUThreshold,
+                        progressReporter,
+                        tokenSource.Token);
+                        summary.SuggestionsAdded += result.SuggestionsAdded;
+                        summary.LabelsAdded += result.LabelsAdded;
+                        summary.ImagesAffected += result.ImagesAffected;
+                    }
+                }, tokenSource.Token);
+            }
+            catch (Exception ex)
+            {
+                overlayManager.HideOverlay();
+                MessageBox.Show(
+                    $"{LanguageManager.Instance.GetString("Main_Error") ?? "Error"}\n{ex.Message}",
+                    LanguageManager.Instance.GetString("Main_Error") ?? "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return;
+            }
+
+            overlayManager.UpdateProgress(100);
+            overlayManager.HideOverlay();
+
+            if (tokenSource.IsCancellationRequested)
+            {
+                MessageBox.Show(
+                    LanguageManager.Instance.GetString("Propagation_Canceled") ?? "Propagation canceled.",
+                    LanguageManager.Instance.GetString("Main_Information") ?? "Information",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+            await UpdateAllImageStatusesAsync();
+
+            if (!string.IsNullOrEmpty(currentFile))
+            {
+                drawingCanvas.SuggestedLabels = labelManager.GetSuggestions(currentFile);
+            }
+
+            uiStateManager.RefreshLabelList();
+            uiStateManager.UpdateStatusCounts();
+            UpdateSuggestionSummaryUI();
+            drawingCanvas.InvalidateVisual();
+
+            string message = string.Format(
+                LanguageManager.Instance.GetString("Propagation_Complete") ?? "Propagation complete.\nSuggestions: {0}\nLabels: {1}\nImages affected: {2}",
+                summary.SuggestionsAdded,
+                summary.LabelsAdded,
+                summary.ImagesAffected);
+            MessageBox.Show(message, LanguageManager.Instance.GetString("Propagation_Title") ?? "Propagation",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+
+            MarkProjectDirty();
         }
 
         private void DarkTheme_Click(object sender, RoutedEventArgs e)
@@ -1655,6 +2018,9 @@ namespace YoableWPF
 
         private ImageStatus DetermineImageStatus(string fileName)
         {
+            if (labelManager.SuggestionStorage.TryGetValue(fileName, out var suggestions) && suggestions.Count > 0)
+                return ImageStatus.Suggested;
+
             if (!labelManager.LabelStorage.TryGetValue(fileName, out var labels) || labels.Count == 0)
                 return ImageStatus.NoLabel;
 
@@ -2088,7 +2454,7 @@ namespace YoableWPF
         private void FilterAll_Click(object sender, RoutedEventArgs e)
         {
             uiStateManager.UpdateFilterButtonStyles(
-                FilterAllButton, FilterReviewButton, FilterNoLabelButton, FilterVerifiedButton,
+                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton, FilterVerifiedButton,
                 activeButton: FilterAllButton);
             uiStateManager.FilterImagesByStatus(null);
         }
@@ -2096,15 +2462,23 @@ namespace YoableWPF
         private void FilterReview_Click(object sender, RoutedEventArgs e)
         {
             uiStateManager.UpdateFilterButtonStyles(
-                FilterAllButton, FilterReviewButton, FilterNoLabelButton, FilterVerifiedButton,
+                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton, FilterVerifiedButton,
                 activeButton: FilterReviewButton);
             uiStateManager.FilterImagesByStatus(ImageStatus.VerificationNeeded);
+        }
+
+        private void FilterSuggested_Click(object sender, RoutedEventArgs e)
+        {
+            uiStateManager.UpdateFilterButtonStyles(
+                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton, FilterVerifiedButton,
+                activeButton: FilterSuggestedButton);
+            uiStateManager.FilterImagesByStatus(ImageStatus.Suggested);
         }
 
         private void FilterNoLabel_Click(object sender, RoutedEventArgs e)
         {
             uiStateManager.UpdateFilterButtonStyles(
-                FilterAllButton, FilterReviewButton, FilterNoLabelButton, FilterVerifiedButton,
+                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton, FilterVerifiedButton,
                 activeButton: FilterNoLabelButton);
             uiStateManager.FilterImagesByStatus(ImageStatus.NoLabel);
         }
@@ -2112,7 +2486,7 @@ namespace YoableWPF
         private void FilterVerified_Click(object sender, RoutedEventArgs e)
         {
             uiStateManager.UpdateFilterButtonStyles(
-                FilterAllButton, FilterReviewButton, FilterNoLabelButton, FilterVerifiedButton,
+                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton, FilterVerifiedButton,
                 activeButton: FilterVerifiedButton);
             uiStateManager.FilterImagesByStatus(ImageStatus.Verified);
         }

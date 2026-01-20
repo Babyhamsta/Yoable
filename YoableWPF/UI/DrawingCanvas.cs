@@ -39,7 +39,9 @@ namespace YoableWPF
         public ImageSource Image { get; set; }
         private Size originalImageDimensions;
         public List<LabelData> Labels { get; set; } = new();
+        public List<SuggestedLabel> SuggestedLabels { get; set; } = new();
         public LabelData SelectedLabel { get; set; }
+        public SuggestedLabel SelectedSuggestion { get; set; }
         // Class management
         public int CurrentClassId { get; set; } = 0;
         public event EventHandler<int> CurrentClassChanged;
@@ -324,7 +326,9 @@ namespace YoableWPF
             originalImageDimensions = originalDimensions;
 
             Labels.Clear();
+            SuggestedLabels.Clear();
             SelectedLabel = null;
+            SelectedSuggestion = null;
             SelectedLabels.Clear();
             undoStack.Clear();
             redoStack.Clear();
@@ -344,9 +348,33 @@ namespace YoableWPF
                 dc.DrawImage(Image, new Rect(0, 0, ActualWidth, ActualHeight));
             }
 
-            // Draw existing labels with their class colors
+            // Draw suggested labels (dashed outline)
             double thickness = Properties.Settings.Default.LabelThickness;
-            
+            foreach (var suggestion in SuggestedLabels)
+            {
+                var labelClass = availableClasses.FirstOrDefault(c => c.ClassId == suggestion.ClassId);
+                var color = labelClass?.ColorBrush.Color ?? Colors.DeepSkyBlue;
+                color.A = 200;
+
+                bool isSelected = SelectedSuggestion != null && SelectedSuggestion.Id == suggestion.Id;
+                if (isSelected)
+                {
+                    color.R = (byte)Math.Min(255, color.R + 40);
+                    color.G = (byte)Math.Min(255, color.G + 40);
+                    color.B = (byte)Math.Min(255, color.B + 40);
+                }
+
+                var brush = new SolidColorBrush(color);
+                var pen = new Pen(brush, isSelected ? thickness + 1 : thickness)
+                {
+                    DashStyle = DashStyles.Dash
+                };
+
+                Rect scaledRect = ScaleRectToCanvas(suggestion.ToRect());
+                dc.DrawRectangle(null, pen, scaledRect);
+            }
+
+            // Draw existing labels with their class colors
             foreach (var label in Labels)
             {
                 // Get color for this label's class

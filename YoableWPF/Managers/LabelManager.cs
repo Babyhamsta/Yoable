@@ -16,8 +16,10 @@ namespace YoableWPF.Managers
     {
         // Use thread-safe dictionary for concurrent label loading
         private ConcurrentDictionary<string, List<LabelData>> labelStorage = new();
+        private ConcurrentDictionary<string, List<SuggestedLabel>> suggestionStorage = new();
 
         public ConcurrentDictionary<string, List<LabelData>> LabelStorage => labelStorage;
+        public ConcurrentDictionary<string, List<SuggestedLabel>> SuggestionStorage => suggestionStorage;
 
         // Configurable batch size for label loading
         public int LabelLoadBatchSize { get; set; } = 500; // Default: process 500 files at a time
@@ -126,11 +128,209 @@ namespace YoableWPF.Managers
         public void ClearAll()
         {
             labelStorage.Clear();
+            suggestionStorage.Clear();
         }
 
         public bool RemoveLabels(string fileName)
         {
+            suggestionStorage.TryRemove(fileName, out _);
             return labelStorage.TryRemove(fileName, out _);
+        }
+
+        public List<SuggestedLabel> GetSuggestions(string fileName)
+        {
+            if (!suggestionStorage.TryGetValue(fileName, out var suggestions))
+                return new List<SuggestedLabel>();
+
+            return suggestions.Select(s => new SuggestedLabel
+            {
+                Id = s.Id,
+                X = s.X,
+                Y = s.Y,
+                Width = s.Width,
+                Height = s.Height,
+                ClassId = s.ClassId,
+                Score = s.Score,
+                Source = s.Source,
+                SourceImage = s.SourceImage,
+                SourceLabelId = s.SourceLabelId
+            }).ToList();
+        }
+
+        public void SetSuggestions(Dictionary<string, List<SuggestedLabel>> suggestions)
+        {
+            suggestionStorage.Clear();
+            if (suggestions == null) return;
+
+            foreach (var kvp in suggestions)
+            {
+                suggestionStorage[kvp.Key] = kvp.Value
+                    .Select(s => new SuggestedLabel
+                    {
+                        Id = s.Id,
+                        X = s.X,
+                        Y = s.Y,
+                        Width = s.Width,
+                        Height = s.Height,
+                        ClassId = s.ClassId,
+                        Score = s.Score,
+                        Source = s.Source,
+                        SourceImage = s.SourceImage,
+                        SourceLabelId = s.SourceLabelId
+                    })
+                    .ToList();
+            }
+        }
+
+        public void AddSuggestions(string fileName, List<SuggestedLabel> suggestions, double mergeIoUThreshold)
+        {
+            if (suggestions == null || suggestions.Count == 0)
+                return;
+
+            // Prevent suggesting boxes that already exist as labels
+            labelStorage.TryGetValue(fileName, out var existingLabels);
+
+            suggestionStorage.AddOrUpdate(fileName,
+                _ => FilterSuggestions(existingLabels, new List<SuggestedLabel>(), suggestions, mergeIoUThreshold),
+                (_, existing) => FilterSuggestions(existingLabels, existing, suggestions, mergeIoUThreshold));
+        }
+
+        public int AcceptSuggestion(string fileName, string suggestionId)
+        {
+            if (!suggestionStorage.TryGetValue(fileName, out var suggestions))
+                return 0;
+
+            var suggestion = suggestions.FirstOrDefault(s => s.Id == suggestionId);
+            if (suggestion == null)
+                return 0;
+
+            suggestions.Remove(suggestion);
+            if (suggestions.Count == 0)
+            {
+                suggestionStorage.TryRemove(fileName, out _);
+            }
+
+            var rect = suggestion.ToRect();
+            var labels = labelStorage.TryGetValue(fileName, out var existing)
+                ? existing.Select(l => new LabelData(l)).ToList()
+                : new List<LabelData>();
+
+            var label = new LabelData($"Suggested Label {labels.Count + 1}", rect, suggestion.ClassId);
+            labels.Add(label);
+            SaveLabels(fileName, labels);
+            return 1;
+        }
+
+        public int AcceptAllSuggestions(string fileName)
+        {
+            if (!suggestionStorage.TryGetValue(fileName, out var suggestions) || suggestions.Count == 0)
+                return 0;
+
+            int accepted = 0;
+            var labels = labelStorage.TryGetValue(fileName, out var existing)
+                ? existing.Select(l => new LabelData(l)).ToList()
+                : new List<LabelData>();
+
+            foreach (var suggestion in suggestions)
+            {
+                var rect = suggestion.ToRect();
+                var label = new LabelData($"Suggested Label {labels.Count + 1}", rect, suggestion.ClassId);
+                labels.Add(label);
+                accepted++;
+            }
+
+            SaveLabels(fileName, labels);
+            suggestionStorage.TryRemove(fileName, out _);
+            return accepted;
+        }
+
+        public int RejectSuggestion(string fileName, string suggestionId)
+        {
+            if (!suggestionStorage.TryGetValue(fileName, out var suggestions))
+                return 0;
+
+            int removed = suggestions.RemoveAll(s => s.Id == suggestionId);
+            if (suggestions.Count == 0)
+            {
+                suggestionStorage.TryRemove(fileName, out _);
+            }
+            return removed;
+        }
+
+        public int RejectAllSuggestions(string fileName)
+        {
+            if (!suggestionStorage.TryGetValue(fileName, out var suggestions))
+                return 0;
+
+            int removed = suggestions.Count;
+            suggestionStorage.TryRemove(fileName, out _);
+            return removed;
+        }
+
+        private List<SuggestedLabel> FilterSuggestions(
+            List<LabelData> existingLabels,
+            List<SuggestedLabel> existingSuggestions,
+            List<SuggestedLabel> incoming,
+            double mergeIoUThreshold)
+        {
+            var result = existingSuggestions
+                .Select(s => new SuggestedLabel
+                {
+                    Id = s.Id,
+                    X = s.X,
+                    Y = s.Y,
+                    Width = s.Width,
+                    Height = s.Height,
+                    ClassId = s.ClassId,
+                    Score = s.Score,
+                    Source = s.Source,
+                    SourceImage = s.SourceImage,
+                    SourceLabelId = s.SourceLabelId
+                })
+                .ToList();
+
+            foreach (var suggestion in incoming)
+            {
+                if (suggestion.Width <= 0 || suggestion.Height <= 0)
+                    continue;
+
+                if (!validClassIds.Contains(suggestion.ClassId))
+                {
+                    suggestion.ClassId = defaultClassId;
+                }
+
+                if (existingLabels != null)
+                {
+                    bool overlapsLabel = existingLabels.Any(label =>
+                        ComputeIoU(suggestion.ToRect(), label.Rect) >= mergeIoUThreshold);
+                    if (overlapsLabel)
+                        continue;
+                }
+
+                var existingMatch = result.FirstOrDefault(s =>
+                    s.ClassId == suggestion.ClassId &&
+                    ComputeIoU(s.ToRect(), suggestion.ToRect()) >= mergeIoUThreshold);
+
+                if (existingMatch != null)
+                {
+                    if (suggestion.Score > existingMatch.Score)
+                    {
+                        existingMatch.X = suggestion.X;
+                        existingMatch.Y = suggestion.Y;
+                        existingMatch.Width = suggestion.Width;
+                        existingMatch.Height = suggestion.Height;
+                        existingMatch.Score = suggestion.Score;
+                        existingMatch.Source = suggestion.Source;
+                        existingMatch.SourceImage = suggestion.SourceImage;
+                        existingMatch.SourceLabelId = suggestion.SourceLabelId;
+                    }
+                    continue;
+                }
+
+                result.Add(suggestion);
+            }
+
+            return result;
         }
 
         // Helper method to parse floats with either comma or period as decimal separator

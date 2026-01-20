@@ -310,6 +310,198 @@ namespace YoableWPF.Properties {
                 this["EnsembleDetectionMode"] = value;
             }
         }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool EnablePropagation {
+            get {
+                return ((bool)(this["EnablePropagation"]));
+            }
+            set {
+                this["EnablePropagation"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool PropagationAutoAccept {
+            get {
+                return ((bool)(this["PropagationAutoAccept"]));
+            }
+            set {
+                this["PropagationAutoAccept"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool EnableImageSimilarity {
+            get {
+                return ((bool)(this["EnableImageSimilarity"]));
+            }
+            set {
+                this["EnableImageSimilarity"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool EnableObjectSimilarity {
+            get {
+                return ((bool)(this["EnableObjectSimilarity"]));
+            }
+            set {
+                this["EnableObjectSimilarity"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool EnableTracking {
+            get {
+                return ((bool)(this["EnableTracking"]));
+            }
+            set {
+                this["EnableTracking"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.9")]
+        public float ImageSimilarityThreshold {
+            get {
+                return ((float)(this["ImageSimilarityThreshold"]));
+            }
+            set {
+                this["ImageSimilarityThreshold"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.85")]
+        public float ObjectSimilarityThreshold {
+            get {
+                return ((float)(this["ObjectSimilarityThreshold"]));
+            }
+            set {
+                this["ObjectSimilarityThreshold"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.8")]
+        public float TrackingConfidenceThreshold {
+            get {
+                return ((float)(this["TrackingConfidenceThreshold"]));
+            }
+            set {
+                this["TrackingConfidenceThreshold"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int PropagationImageSimilarityMode {
+            get {
+                return ((int)(this["PropagationImageSimilarityMode"]));
+            }
+            set {
+                this["PropagationImageSimilarityMode"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool PropagationUseClusterFilter {
+            get {
+                return ((bool)(this["PropagationUseClusterFilter"]));
+            }
+            set {
+                this["PropagationUseClusterFilter"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("20")]
+        public int PropagationMaxSuggestionsPerImage {
+            get {
+                return ((int)(this["PropagationMaxSuggestionsPerImage"]));
+            }
+            set {
+                this["PropagationMaxSuggestionsPerImage"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("8")]
+        public int PropagationMinBoxSize {
+            get {
+                return ((int)(this["PropagationMinBoxSize"]));
+            }
+            set {
+                this["PropagationMinBoxSize"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("30")]
+        public int PropagationTrackingFrameWindow {
+            get {
+                return ((int)(this["PropagationTrackingFrameWindow"]));
+            }
+            set {
+                this["PropagationTrackingFrameWindow"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("50")]
+        public int PropagationObjectCandidateLimit {
+            get {
+                return ((int)(this["PropagationObjectCandidateLimit"]));
+            }
+            set {
+                this["PropagationObjectCandidateLimit"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("4")]
+        public int PropagationSearchStride {
+            get {
+                return ((int)(this["PropagationSearchStride"]));
+            }
+            set {
+                this["PropagationSearchStride"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool PropagationSkipLabeled {
+            get {
+                return ((bool)(this["PropagationSkipLabeled"]));
+            }
+            set {
+                this["PropagationSkipLabeled"] = value;
+            }
+        }
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]

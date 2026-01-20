@@ -208,6 +208,24 @@ namespace YoableWPF
             EnsembleIoUSlider.Value = Properties.Settings.Default.EnsembleIoUThreshold;
             UseWeightedAverageCheckBox.IsChecked = Properties.Settings.Default.UseWeightedAverage;
 
+            // Load Propagation Settings
+            EnablePropagationCheckBox.IsChecked = Properties.Settings.Default.EnablePropagation;
+            PropagationAutoAcceptCheckBox.IsChecked = Properties.Settings.Default.PropagationAutoAccept;
+            ImageSimilarityCheckBox.IsChecked = Properties.Settings.Default.EnableImageSimilarity;
+            ObjectSimilarityCheckBox.IsChecked = Properties.Settings.Default.EnableObjectSimilarity;
+            TrackingCheckBox.IsChecked = Properties.Settings.Default.EnableTracking;
+            ImageSimilaritySlider.Value = Properties.Settings.Default.ImageSimilarityThreshold * 100;
+            ObjectSimilaritySlider.Value = Properties.Settings.Default.ObjectSimilarityThreshold * 100;
+            TrackingThresholdSlider.Value = Properties.Settings.Default.TrackingConfidenceThreshold * 100;
+            ImageSimilarityModeComboBox.SelectedIndex = Properties.Settings.Default.PropagationImageSimilarityMode;
+            RestrictClusterCheckBox.IsChecked = Properties.Settings.Default.PropagationUseClusterFilter;
+            SkipLabeledCheckBox.IsChecked = Properties.Settings.Default.PropagationSkipLabeled;
+            MaxSuggestionsSlider.Value = Properties.Settings.Default.PropagationMaxSuggestionsPerImage;
+            MinBoxSizeSlider.Value = Properties.Settings.Default.PropagationMinBoxSize;
+            TrackingWindowSlider.Value = Properties.Settings.Default.PropagationTrackingFrameWindow;
+            SearchStrideSlider.Value = Properties.Settings.Default.PropagationSearchStride;
+            CandidateLimitSlider.Value = Properties.Settings.Default.PropagationObjectCandidateLimit;
+
             // Show/hide relevant settings based on mode
             UpdateModeDependentSettings();
 
@@ -345,6 +363,24 @@ namespace YoableWPF
             Properties.Settings.Default.ConsensusIoUThreshold = (float)ConsensusIoUSlider.Value;
             Properties.Settings.Default.EnsembleIoUThreshold = (float)EnsembleIoUSlider.Value;
             Properties.Settings.Default.UseWeightedAverage = UseWeightedAverageCheckBox.IsChecked ?? true;
+
+            // Save Propagation Settings
+            Properties.Settings.Default.EnablePropagation = EnablePropagationCheckBox.IsChecked ?? true;
+            Properties.Settings.Default.PropagationAutoAccept = PropagationAutoAcceptCheckBox.IsChecked ?? false;
+            Properties.Settings.Default.EnableImageSimilarity = ImageSimilarityCheckBox.IsChecked ?? true;
+            Properties.Settings.Default.EnableObjectSimilarity = ObjectSimilarityCheckBox.IsChecked ?? true;
+            Properties.Settings.Default.EnableTracking = TrackingCheckBox.IsChecked ?? true;
+            Properties.Settings.Default.ImageSimilarityThreshold = (float)(ImageSimilaritySlider.Value / 100);
+            Properties.Settings.Default.ObjectSimilarityThreshold = (float)(ObjectSimilaritySlider.Value / 100);
+            Properties.Settings.Default.TrackingConfidenceThreshold = (float)(TrackingThresholdSlider.Value / 100);
+            Properties.Settings.Default.PropagationImageSimilarityMode = ImageSimilarityModeComboBox.SelectedIndex;
+            Properties.Settings.Default.PropagationUseClusterFilter = RestrictClusterCheckBox.IsChecked ?? true;
+            Properties.Settings.Default.PropagationSkipLabeled = SkipLabeledCheckBox.IsChecked ?? true;
+            Properties.Settings.Default.PropagationMaxSuggestionsPerImage = (int)MaxSuggestionsSlider.Value;
+            Properties.Settings.Default.PropagationMinBoxSize = (int)MinBoxSizeSlider.Value;
+            Properties.Settings.Default.PropagationTrackingFrameWindow = (int)TrackingWindowSlider.Value;
+            Properties.Settings.Default.PropagationSearchStride = (int)SearchStrideSlider.Value;
+            Properties.Settings.Default.PropagationObjectCandidateLimit = (int)CandidateLimitSlider.Value;
 
             // Save General Settings
             Properties.Settings.Default.DarkTheme = DarkModeCheckBox.IsChecked ?? false;

@@ -578,6 +578,8 @@ namespace YoableWPF.Managers
             CurrentProject.ImageStatuses.Clear();
             CurrentProject.AppCreatedLabels.Clear();
             CurrentProject.ImportedLabelPaths.Clear();
+            CurrentProject.SuggestedLabels ??= new Dictionary<string, List<SuggestedLabel>>();
+            CurrentProject.SuggestedLabels.Clear();
             CurrentProject.LoadedModelPaths ??= new List<string>();
             CurrentProject.ModelClassMappings ??= new Dictionary<string, Dictionary<int, int>>();
             CurrentProject.LoadedModelPaths.Clear();
@@ -628,6 +630,29 @@ namespace YoableWPF.Managers
                     string relativePath = Path.Combine(LABELS_FOLDER, labelFileName);
                     CurrentProject.AppCreatedLabels[fileName] = relativePath;
                 }
+            }
+
+            // Export suggested labels (in-project only)
+            foreach (var kvp in mainWindow.labelManager.SuggestionStorage)
+            {
+                if (kvp.Value.Count == 0)
+                    continue;
+
+                CurrentProject.SuggestedLabels[kvp.Key] = kvp.Value
+                    .Select(s => new SuggestedLabel
+                    {
+                        Id = s.Id,
+                        X = s.X,
+                        Y = s.Y,
+                        Width = s.Width,
+                        Height = s.Height,
+                        ClassId = s.ClassId,
+                        Score = s.Score,
+                        Source = s.Source,
+                        SourceImage = s.SourceImage,
+                        SourceLabelId = s.SourceLabelId
+                    })
+                    .ToList();
             }
 
             // Export model paths and class mappings
@@ -853,6 +878,13 @@ namespace YoableWPF.Managers
 
                 Debug.WriteLine($"Total labels loaded: {labelsLoaded}");
                 Debug.WriteLine($"Images in label storage: {mainWindow.labelManager.LabelStorage.Count}");
+
+                // Restore suggested labels if present
+                if (CurrentProject.SuggestedLabels != null && CurrentProject.SuggestedLabels.Count > 0)
+                {
+                    mainWindow.labelManager.SetSuggestions(CurrentProject.SuggestedLabels);
+                    Debug.WriteLine($"Suggested labels loaded: {CurrentProject.SuggestedLabels.Sum(kvp => kvp.Value?.Count ?? 0)}");
+                }
 
                 progress?.Report((90, 100, "Finalizing load..."));
 
@@ -1282,8 +1314,15 @@ namespace YoableWPF.Managers
                         var savedStatus = CurrentProject.ImageStatuses[fileName];
                         ImageStatus correctedStatus;
 
-                        if (!mainWindow.labelManager.LabelStorage.ContainsKey(fileName) ||
-                            mainWindow.labelManager.LabelStorage[fileName].Count == 0)
+                        bool hasSuggestions = mainWindow.labelManager.SuggestionStorage.TryGetValue(fileName, out var suggestions) &&
+                                             suggestions.Count > 0;
+
+                        if (hasSuggestions)
+                        {
+                            correctedStatus = ImageStatus.Suggested;
+                        }
+                        else if (!mainWindow.labelManager.LabelStorage.ContainsKey(fileName) ||
+                                 mainWindow.labelManager.LabelStorage[fileName].Count == 0)
                         {
                             correctedStatus = ImageStatus.NoLabel;
                         }

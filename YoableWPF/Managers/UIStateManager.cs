@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
@@ -15,6 +16,7 @@ namespace YoableWPF.Managers
         private readonly Brush needsReviewDefaultForeground;
         private readonly Brush unverifiedDefaultForeground;
         private readonly Brush verifiedDefaultForeground;
+        private readonly Brush suggestedDefaultForeground;
 
         private static SolidColorBrush CreateFrozenBrush(byte a, byte r, byte g, byte b)
         {
@@ -26,6 +28,7 @@ namespace YoableWPF.Managers
         private static readonly SolidColorBrush NeedsReviewBrush = CreateFrozenBrush(0xFF, 0xFF, 0xB7, 0x4D);
         private static readonly SolidColorBrush UnverifiedBrush = CreateFrozenBrush(0xFF, 0xE5, 0x73, 0x73);
         private static readonly SolidColorBrush VerifiedBrush = CreateFrozenBrush(0xFF, 0x81, 0xC7, 0x84);
+        private static readonly SolidColorBrush SuggestedBrush = CreateFrozenBrush(0xFF, 0x64, 0xB5, 0xF6);
 
         private static readonly SolidColorBrush OrangeInactive = CreateFrozenBrush(0x44, 0xFF, 0xB7, 0x4D);
         private static readonly SolidColorBrush OrangeActive = CreateFrozenBrush(0xFF, 0xFF, 0xB7, 0x4D);
@@ -33,6 +36,8 @@ namespace YoableWPF.Managers
         private static readonly SolidColorBrush RedActive = CreateFrozenBrush(0xFF, 0xE5, 0x73, 0x73);
         private static readonly SolidColorBrush GreenInactive = CreateFrozenBrush(0x44, 0x81, 0xC7, 0x84);
         private static readonly SolidColorBrush GreenActive = CreateFrozenBrush(0xFF, 0x81, 0xC7, 0x84);
+        private static readonly SolidColorBrush BlueInactive = CreateFrozenBrush(0x44, 0x64, 0xB5, 0xF6);
+        private static readonly SolidColorBrush BlueActive = CreateFrozenBrush(0xFF, 0x64, 0xB5, 0xF6);
         private static readonly SolidColorBrush DefaultLabelBrush = CreateFrozenBrush(0xFF, 0xE5, 0x73, 0x73);
 
         public UIStateManager(MainWindow mainWindow)
@@ -41,6 +46,7 @@ namespace YoableWPF.Managers
             needsReviewDefaultForeground = mainWindow.NeedsReviewCount.Foreground;
             unverifiedDefaultForeground = mainWindow.UnverifiedCount.Foreground;
             verifiedDefaultForeground = mainWindow.VerifiedCount.Foreground;
+            suggestedDefaultForeground = mainWindow.SuggestedCount.Foreground;
         }
 
         // Cache management methods
@@ -79,6 +85,7 @@ namespace YoableWPF.Managers
             int needsReview = 0;
             int unverified = 0;
             int verified = 0;
+            int suggested = 0;
 
             foreach (var item in mainWindow.ImageListBox.Items.Cast<ImageListItem>())
             {
@@ -86,6 +93,9 @@ namespace YoableWPF.Managers
                 {
                     case ImageStatus.VerificationNeeded:
                         needsReview++;
+                        break;
+                    case ImageStatus.Suggested:
+                        suggested++;
                         break;
                     case ImageStatus.NoLabel:
                         unverified++;
@@ -101,6 +111,11 @@ namespace YoableWPF.Managers
             mainWindow.NeedsReviewCount.Foreground = needsReview > 0
                 ? NeedsReviewBrush
                 : needsReviewDefaultForeground;
+
+            mainWindow.SuggestedCount.Text = suggested.ToString();
+            mainWindow.SuggestedCount.Foreground = suggested > 0
+                ? SuggestedBrush
+                : suggestedDefaultForeground;
 
             mainWindow.UnverifiedCount.Text = unverified.ToString();
             mainWindow.UnverifiedCount.Foreground = unverified > 0
@@ -135,6 +150,26 @@ namespace YoableWPF.Managers
                 var classBrush = labelClass?.ColorBrush ?? DefaultLabelBrush;
 
                 items.Add(new LabelListItemView(label, className, classBrush));
+            }
+
+            var currentFile = Path.GetFileName(mainWindow.imageManager.CurrentImagePath ?? string.Empty);
+            if (!string.IsNullOrEmpty(currentFile))
+            {
+                var suggestions = mainWindow.labelManager.GetSuggestions(currentFile);
+                foreach (var suggestion in suggestions)
+                {
+                    var labelClass = projectClasses?.FirstOrDefault(c => c.ClassId == suggestion.ClassId);
+                    if (labelClass == null)
+                    {
+                        labelClass = projectClasses?.FirstOrDefault(c => c.ClassId == 0);
+                    }
+
+                    string className = labelClass?.Name ?? "default";
+                    var classBrush = labelClass?.ColorBrush ?? DefaultLabelBrush;
+                    string sourceText = suggestion.Source.ToString();
+
+                    items.Add(new LabelListItemView(suggestion, className, classBrush, sourceText));
+                }
             }
 
             mainWindow.LabelListBox.ItemsSource = items;
@@ -179,13 +214,14 @@ namespace YoableWPF.Managers
             var items = mainWindow.ImageListBox.Items.Cast<ImageListItem>().ToList();
             var selectedItem = mainWindow.ImageListBox.SelectedItem as ImageListItem;
 
-            // Custom sort order: VerificationNeeded first, then NoLabel, then Verified
+            // Custom sort order: Suggested first, then VerificationNeeded, then NoLabel, then Verified
             var sorted = items.OrderBy(x => {
                 switch (x.Status)
                 {
-                    case ImageStatus.VerificationNeeded: return 0;
-                    case ImageStatus.NoLabel: return 1;
-                    case ImageStatus.Verified: return 2;
+                    case ImageStatus.Suggested: return 0;
+                    case ImageStatus.VerificationNeeded: return 1;
+                    case ImageStatus.NoLabel: return 2;
+                    case ImageStatus.Verified: return 3;
                     default: return 3;
                 }
             }).ThenBy(x => x.FileName).ToList();
@@ -359,6 +395,7 @@ namespace YoableWPF.Managers
         public void UpdateFilterButtonStyles(
             Button allButton,
             Button reviewButton,
+            Button suggestedButton,
             Button noLabelButton,
             Button verifiedButton,
             Button activeButton = null)
@@ -376,6 +413,7 @@ namespace YoableWPF.Managers
             var orangeFore = OrangeActive;
             var redFore = RedActive;
             var greenFore = GreenActive;
+            var blueFore = BlueActive;
 
             // Set all button styles based on active button
             allButton.Background = activeButton == allButton ? baseLow : transparent;
@@ -385,6 +423,9 @@ namespace YoableWPF.Managers
 
             reviewButton.Background = activeButton == reviewButton ? OrangeActive : OrangeInactive;
             reviewButton.Foreground = activeButton == reviewButton ? white : orangeFore;
+
+            suggestedButton.Background = activeButton == suggestedButton ? BlueActive : BlueInactive;
+            suggestedButton.Foreground = activeButton == suggestedButton ? white : blueFore;
 
             noLabelButton.Background = activeButton == noLabelButton ? RedActive : RedInactive;
             noLabelButton.Foreground = activeButton == noLabelButton ? white : redFore;
