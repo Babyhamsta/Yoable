@@ -482,7 +482,9 @@ namespace YoableWPF.Managers
                 float height = (float)label.Rect.Height / (float)imageHeight;
 
                 // Always export with period as decimal separator for maximum compatibility
-                writer.WriteLine($"{label.ClassId} {x_center:F6} {y_center:F6} {width:F6} {height:F6}");
+                writer.WriteLine(string.Format(CultureInfo.InvariantCulture,
+                    "{0} {1:F6} {2:F6} {3:F6} {4:F6}",
+                    label.ClassId, x_center, y_center, width, height));
             }
         }
 
