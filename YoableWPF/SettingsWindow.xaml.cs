@@ -36,27 +36,8 @@ namespace YoableWPF
         {
             try
             {
-                // LanguageManager has already loaded resources into Application.Current.Resources
-                // Need to force all DynamicResource bindings to re-evaluate
-
-                // Remove local language resource dictionary from window (if exists)
-                var languageDictToRemove = this.Resources.MergedDictionaries
-                    .FirstOrDefault(d => d.Source != null && d.Source.ToString().Contains("Languages/Strings."));
-
-                if (languageDictToRemove != null)
-                {
-                    this.Resources.MergedDictionaries.Remove(languageDictToRemove);
-                }
-
-                // Force all DynamicResource bindings to re-lookup resources
-                // Trigger re-evaluation by temporarily removing and re-adding resource dictionary
-                var tempDict = new ResourceDictionary();
-                this.Resources.MergedDictionaries.Add(tempDict);
-                this.Resources.MergedDictionaries.Remove(tempDict);
-
-                // Force refresh all controls using DynamicResource
-                this.InvalidateVisual();
-                this.UpdateLayout();
+                // Force all DynamicResource bindings to re-evaluate
+                LanguageManager.ReloadWindowResources(this);
 
                 // Manually update window title (because Title binding may not auto-update)
                 this.Title = LanguageManager.Instance.GetString("Settings_Title");
@@ -118,7 +99,10 @@ namespace YoableWPF
                     }
                 }
             }
-            catch { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to update text controls: {ex.Message}");
+            }
 
             // Recursively process child elements
             for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)

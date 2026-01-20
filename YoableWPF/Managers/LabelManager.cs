@@ -25,6 +25,7 @@ namespace YoableWPF.Managers
         // Track valid class IDs for orphan detection
         private HashSet<int> validClassIds = new HashSet<int> { 0 }; // Always include default class
         private int defaultClassId = 0;
+        private static readonly CultureInfo CommaCulture = CultureInfo.GetCultureInfo("de-DE"); // Comma decimal separator
 
         /// <summary>
         /// Sets the valid class IDs from the project. Call this when project classes change.
@@ -116,8 +117,7 @@ namespace YoableWPF.Managers
             }
 
             // If that fails, try with a culture that uses comma as decimal separator
-            var cultureWithComma = new CultureInfo("de-DE"); // German culture uses comma
-            if (float.TryParse(value, NumberStyles.Float, cultureWithComma, out result))
+            if (float.TryParse(value, NumberStyles.Float, CommaCulture, out result))
             {
                 return result;
             }
@@ -149,13 +149,31 @@ namespace YoableWPF.Managers
             // Get all .txt label files
             var labelFiles = Directory.GetFiles(labelsDirectory, "*.txt").ToArray();
 
-            if (labelFiles.Length == 0)
+            return await LoadYoloLabelsBatchAsync(labelFiles, imageManager, progress, cancellationToken, enableParallelProcessing);
+        }
+
+        /// <summary>
+        /// NEW: Batch label loader that accepts a list of label files (avoids temp directory copying)
+        /// </summary>
+        public async Task<(int labelsLoaded, HashSet<int> foundClassIds)> LoadYoloLabelsBatchAsync(
+            IEnumerable<string> labelFiles,
+            ImageManager imageManager,
+            IProgress<(int current, int total, string message)> progress = null,
+            CancellationToken cancellationToken = default,
+            bool enableParallelProcessing = true)
+        {
+            var files = labelFiles?
+                .Where(f => !string.IsNullOrWhiteSpace(f))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray() ?? Array.Empty<string>();
+
+            if (files.Length == 0)
                 return (0, new HashSet<int>());
 
             int totalLabelsAdded = 0;
             int processedFiles = 0;
-            int totalFiles = labelFiles.Length;
-            int batchSize = LabelLoadBatchSize;
+            int totalFiles = files.Length;
+            int batchSize = LabelLoadBatchSize > 0 ? LabelLoadBatchSize : 500;
 
             return await Task.Run(() =>
             {
@@ -163,25 +181,24 @@ namespace YoableWPF.Managers
                 var foundClassIds = new ConcurrentDictionary<int, bool>();
 
                 // Process files in batches
-                for (int i = 0; i < labelFiles.Length; i += batchSize)
+                for (int i = 0; i < files.Length; i += batchSize)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    var batch = labelFiles.Skip(i).Take(batchSize).ToArray();
+                    var batch = files.Skip(i).Take(batchSize).ToArray();
                     int batchLabelsAdded = 0;
 
                     if (enableParallelProcessing)
                     {
-                        // Process batch in parallel
-                        var results = batch.AsParallel()
-                            .WithCancellation(cancellationToken)
-                            .Select(labelFile =>
-                            {
-                                return LoadYoloLabelsOptimized(labelFile, imageManager, foundClassIds);
-                            })
-                            .ToArray();
+                        var options = new ParallelOptions { CancellationToken = cancellationToken };
 
-                        batchLabelsAdded = results.Sum();
+                        Parallel.ForEach(batch, options, () => 0,
+                            (labelFile, state, localCount) =>
+                            {
+                                localCount += LoadYoloLabelsOptimized(labelFile, imageManager, foundClassIds);
+                                return localCount;
+                            },
+                            localCount => Interlocked.Add(ref batchLabelsAdded, localCount));
                     }
                     else
                     {
@@ -422,7 +439,7 @@ namespace YoableWPF.Managers
             }
             catch (Exception ex)
             {
-                // Silent fail like original
+                Debug.WriteLine($"Error loading YOLO labels (legacy) from {labelFile}: {ex.Message}");
             }
 
             return labelsAdded;
@@ -434,6 +451,23 @@ namespace YoableWPF.Managers
             using Bitmap image = new Bitmap(imagePath);
             int imageWidth = image.Width;
             int imageHeight = image.Height;
+
+            ExportLabelsToYolo(filePath, new System.Windows.Size(imageWidth, imageHeight), labelsToExport);
+        }
+
+        /// <summary>
+        /// Export labels without reopening the image file by using cached dimensions
+        /// </summary>
+        public void ExportLabelsToYolo(string filePath, System.Windows.Size imageSize, List<LabelData> labelsToExport)
+        {
+            int imageWidth = (int)imageSize.Width;
+            int imageHeight = (int)imageSize.Height;
+
+            if (imageWidth <= 0 || imageHeight <= 0)
+            {
+                Debug.WriteLine($"Invalid image dimensions for label export: {imageWidth}x{imageHeight}");
+                return;
+            }
 
             using StreamWriter writer = new(filePath)
             {
@@ -486,20 +520,7 @@ namespace YoableWPF.Managers
                         try
                         {
                             // Use cached dimensions instead of opening bitmap
-                            int imageWidth = (int)imageInfo.OriginalDimensions.Width;
-                            int imageHeight = (int)imageInfo.OriginalDimensions.Height;
-
-                            using StreamWriter writer = new(labelFilePath) { AutoFlush = true };
-
-                            foreach (var label in labels)
-                            {
-                                float x_center = (float)((label.Rect.X + label.Rect.Width / 2f) / imageWidth);
-                                float y_center = (float)(label.Rect.Y + label.Rect.Height / 2f) / imageHeight;
-                                float width = (float)label.Rect.Width / (float)imageWidth;
-                                float height = (float)label.Rect.Height / (float)imageHeight;
-
-                                writer.WriteLine($"{label.ClassId} {x_center:F6} {y_center:F6} {width:F6} {height:F6}");
-                            }
+                            ExportLabelsToYolo(labelFilePath, imageInfo.OriginalDimensions, labels);
 
                             Interlocked.Increment(ref processedFiles);
                             progress?.Report((processedFiles, totalFiles,
@@ -507,7 +528,7 @@ namespace YoableWPF.Managers
                         }
                         catch (Exception ex)
                         {
-                            // Silent fail on export error
+                            Debug.WriteLine($"Error exporting labels for {labelFilePath}: {ex.Message}");
                         }
                     });
             }, cancellationToken);

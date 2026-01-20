@@ -26,6 +26,9 @@ namespace YoableWPF
 
             // Load recent projects
             LoadRecentProjects();
+
+            // Show current app version
+            VersionText.Text = $"Version {VersionInfo.CurrentVersion}";
         }
 
         private void LoadRecentProjects()

@@ -25,6 +25,7 @@ namespace YoableWPF
 
         // Class management
         private List<LabelClass> projectClasses = new List<LabelClass>();
+        public IReadOnlyList<LabelClass> ProjectClasses => projectClasses;
 
         // External Managers/Handlers (unchanged)
         public YoloAI yoloAI;
@@ -86,7 +87,7 @@ namespace YoableWPF
             // Check for updates from Github
             if (Properties.Settings.Default.CheckUpdatesOnLaunch)
             {
-                var autoUpdater = new UpdateManager(this, overlayManager, "3.2.0"); // Current version
+                var autoUpdater = new UpdateManager(this, overlayManager, VersionInfo.CurrentVersion);
                 autoUpdater.CheckForUpdatesAsync();
             }
 
@@ -107,27 +108,8 @@ namespace YoableWPF
         {
             try
             {
-                // LanguageManager has already loaded resources into Application.Current.Resources
-                // Need to force all DynamicResource bindings to re-evaluate
-
-                // Remove local language resource dictionary from window (if exists)
-                var languageDictToRemove = this.Resources.MergedDictionaries
-                    .FirstOrDefault(d => d.Source != null && d.Source.ToString().Contains("Languages/Strings."));
-
-                if (languageDictToRemove != null)
-                {
-                    this.Resources.MergedDictionaries.Remove(languageDictToRemove);
-                }
-
-                // Force all DynamicResource bindings to re-lookup resources
-                // Trigger re-evaluation by temporarily removing and re-adding resource dictionary
-                var tempDict = new ResourceDictionary();
-                this.Resources.MergedDictionaries.Add(tempDict);
-                this.Resources.MergedDictionaries.Remove(tempDict);
-
-                // Force refresh all controls using DynamicResource
-                this.InvalidateVisual();
-                this.UpdateLayout();
+                // Force all DynamicResource bindings to re-evaluate
+                LanguageManager.ReloadWindowResources(this);
 
                 // Manually update window title and dynamic text
                 this.Title = LanguageManager.Instance.GetString("MainWindow_Title");
@@ -992,7 +974,7 @@ namespace YoableWPF
             MarkProjectDirty();
         }
 
-        private void ImportDirectory_Click(object sender, RoutedEventArgs e)
+        private async void ImportDirectory_Click(object sender, RoutedEventArgs e)
         {
             OpenFileDialog openFileDialog = new OpenFileDialog
             {
@@ -1017,7 +999,7 @@ namespace YoableWPF
                 Properties.Settings.Default.LastImageDirectory = folderPath;
                 Properties.Settings.Default.Save();
 
-                LoadImages(folderPath);
+                await LoadImagesAsync(folderPath);
             }
         }
 
@@ -1372,14 +1354,15 @@ namespace YoableWPF
             }
         }
 
-        public async void LoadImages(string directoryPath)
+        public Task LoadImagesAsync(string directoryPath)
         {
-            if (!Directory.Exists(directoryPath)) return;
+            if (!Directory.Exists(directoryPath))
+                return Task.CompletedTask;
 
-            await LoadImagesAsync(directoryPath);
+            return LoadImagesInternalAsync(directoryPath);
         }
 
-        private async Task LoadImagesAsync(string directoryPath)
+        private async Task LoadImagesInternalAsync(string directoryPath)
         {
             var tokenSource = new CancellationTokenSource();
             overlayManager.ShowOverlayWithProgress("Loading images...", tokenSource);
@@ -2147,9 +2130,6 @@ namespace YoableWPF
             
             // Update LabelManager with valid class IDs so it can fix orphaned labels
             labelManager.SetValidClassIds(projectClasses.Select(c => c.ClassId));
-            
-            // Refresh UIStateManager's cached project classes
-            uiStateManager.RefreshProjectClassesCache();
             
             // Select current class in list
             var currentClass = projectClasses.FirstOrDefault(c => c.ClassId == drawingCanvas.CurrentClassId);

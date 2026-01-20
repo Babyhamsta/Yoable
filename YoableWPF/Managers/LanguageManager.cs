@@ -339,6 +339,33 @@ namespace YoableWPF.Managers
 
             return key; // If not found, return the key itself
         }
+
+        /// <summary>
+        /// Forces DynamicResource bindings in a window to re-evaluate after language changes
+        /// </summary>
+        public static void ReloadWindowResources(Window window)
+        {
+            if (window == null)
+                return;
+
+            // Remove local language resource dictionary from window (if exists)
+            var languageDictToRemove = window.Resources.MergedDictionaries
+                .FirstOrDefault(d => d.Source != null && d.Source.ToString().Contains("Languages/Strings."));
+
+            if (languageDictToRemove != null)
+            {
+                window.Resources.MergedDictionaries.Remove(languageDictToRemove);
+            }
+
+            // Force all DynamicResource bindings to re-lookup resources
+            var tempDict = new ResourceDictionary();
+            window.Resources.MergedDictionaries.Add(tempDict);
+            window.Resources.MergedDictionaries.Remove(tempDict);
+
+            // Force refresh all controls using DynamicResource
+            window.InvalidateVisual();
+            window.UpdateLayout();
+        }
     }
 
     public class LanguageInfo

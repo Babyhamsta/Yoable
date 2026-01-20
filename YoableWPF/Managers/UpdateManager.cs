@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text;
 using System.Windows;
 using System.Windows.Threading;
 
@@ -78,6 +79,17 @@ namespace YoableWPF.Managers
                     Properties.Settings.Default.NewVersion = release.tag_name;
                     Properties.Settings.Default.Save();
 
+                    if (release.assets == null || release.assets.Length == 0)
+                    {
+                        await dispatcher.InvokeAsync(() => MessageBox.Show(
+                            mainWindow,
+                            "Update available, but no downloadable assets were found for this release.",
+                            "Update Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error));
+                        return;
+                    }
+
                     await DownloadAndInstallUpdateAsync(release.assets[0].browser_download_url);
                 }
             }
@@ -100,11 +112,54 @@ namespace YoableWPF.Managers
 
         private bool IsNewVersionAvailable(string newVersion)
         {
-            newVersion = newVersion.TrimStart('v');
-            var current = currentVersion.TrimStart('v');
-            Version v1 = Version.Parse(current);
-            Version v2 = Version.Parse(newVersion);
-            return v2 > v1;
+            if (!TryParseVersion(currentVersion, out var current))
+            {
+                Debug.WriteLine($"Unable to parse current version '{currentVersion}'");
+                return false;
+            }
+
+            if (!TryParseVersion(newVersion, out var latest))
+            {
+                Debug.WriteLine($"Unable to parse release version '{newVersion}'");
+                return false;
+            }
+
+            return latest > current;
+        }
+
+        private bool TryParseVersion(string versionText, out Version version)
+        {
+            version = new Version(0, 0, 0, 0);
+
+            if (string.IsNullOrWhiteSpace(versionText))
+                return false;
+
+            var trimmed = versionText.Trim().TrimStart('v', 'V');
+            var sb = new StringBuilder();
+            bool hasDigit = false;
+
+            foreach (var ch in trimmed)
+            {
+                if (char.IsDigit(ch) || ch == '.')
+                {
+                    sb.Append(ch);
+                    if (char.IsDigit(ch))
+                        hasDigit = true;
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            if (!hasDigit)
+                return false;
+
+            var candidate = sb.ToString().TrimEnd('.');
+            if (string.IsNullOrWhiteSpace(candidate))
+                return false;
+
+            return Version.TryParse(candidate, out version);
         }
 
         private async Task DownloadAndInstallUpdateAsync(string downloadUrl)

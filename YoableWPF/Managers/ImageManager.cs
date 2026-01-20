@@ -61,58 +61,67 @@ namespace YoableWPF.Managers
         {
             if (!Directory.Exists(directoryPath)) return new string[0];
 
-            return await Task.Run(async () =>
+            // Get all image files
+            var files = Directory.GetFiles(directoryPath, "*.*")
+                                .Where(f => f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
+                                           f.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                                .ToArray();
+
+            await LoadImagesFromPathsAsync(files, progress, cancellationToken, enableParallelProcessing);
+
+            return files;
+        }
+
+        // New async method for loading images from a list of paths
+        public async Task LoadImagesFromPathsAsync(
+            IEnumerable<string> files,
+            IProgress<(int current, int total, string message)> progress = null,
+            CancellationToken cancellationToken = default,
+            bool enableParallelProcessing = true)
+        {
+            var fileArray = files?.Where(f => !string.IsNullOrWhiteSpace(f)).ToArray() ?? Array.Empty<string>();
+
+            // Clear collections
+            imagePathMap.Clear();
+            imageStatuses.Clear();
+
+            int totalFiles = fileArray.Length;
+            int processedFiles = 0;
+            int batchSize = BatchSize > 0 ? BatchSize : 100;
+
+            // Process files in batches
+            for (int i = 0; i < fileArray.Length; i += batchSize)
             {
-                // Get all image files
-                var files = Directory.GetFiles(directoryPath, "*.*")
-                                    .Where(f => f.EndsWith(".jpg", StringComparison.OrdinalIgnoreCase) ||
-                                               f.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
-                                    .ToArray();
+                cancellationToken.ThrowIfCancellationRequested();
 
-                // Clear collections
-                imagePathMap.Clear();
-                imageStatuses.Clear();
+                var batch = fileArray.Skip(i).Take(batchSize).ToArray();
 
-                int totalFiles = files.Length;
-                int processedFiles = 0;
-                int batchSize = BatchSize; // Use configurable batch size
-
-                // Process files in batches
-                for (int i = 0; i < files.Length; i += batchSize)
+                if (enableParallelProcessing)
                 {
-                    cancellationToken.ThrowIfCancellationRequested();
-
-                    var batch = files.Skip(i).Take(batchSize).ToArray();
-
-                    // Check if parallel processing is enabled
-                    if (enableParallelProcessing)
+                    var options = new ParallelOptions { CancellationToken = cancellationToken };
+                    await Parallel.ForEachAsync(batch, options, (file, ct) =>
                     {
-                        // Process batch in parallel for better performance
-                        var tasks = batch.Select(async file =>
-                        {
-                            await Task.Run(() => AddImageThreadSafe(file), cancellationToken);
-                            return file;
-                        }).ToArray();
-
-                        await Task.WhenAll(tasks);
-                    }
-                    else
+                        AddImageThreadSafe(file);
+                        return ValueTask.CompletedTask;
+                    });
+                }
+                else
+                {
+                    // Offload sequential processing to avoid UI blocking
+                    await Task.Run(() =>
                     {
-                        // Process sequentially
                         foreach (var file in batch)
                         {
                             AddImageThreadSafe(file);
                         }
-                    }
-
-                    processedFiles += batch.Length;
-
-                    // Report progress
-                    progress?.Report((processedFiles, totalFiles, $"Loading images... {processedFiles}/{totalFiles}"));
+                    }, cancellationToken);
                 }
 
-                return files;
-            }, cancellationToken);
+                processedFiles += batch.Length;
+
+                // Report progress
+                progress?.Report((processedFiles, totalFiles, $"Loading images... {processedFiles}/{totalFiles}"));
+            }
         }
 
         // Direct port of AddImage

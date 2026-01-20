@@ -141,7 +141,7 @@ namespace YoableWPF
             {
                 var items = undoStack.ToArray();
                 undoStack.Clear();
-                foreach (var item in items.Take(MaxUndoSteps))
+                foreach (var item in items.Take(MaxUndoSteps).Reverse())
                 {
                     undoStack.Push(item);
                 }

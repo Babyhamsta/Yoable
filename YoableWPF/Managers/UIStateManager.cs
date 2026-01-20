@@ -13,6 +13,24 @@ namespace YoableWPF.Managers
         private List<ImageListItem> allImages = new List<ImageListItem>();
         private Dictionary<string, ImageListItem> imageListItemCache = new Dictionary<string, ImageListItem>();
 
+        private static SolidColorBrush CreateFrozenBrush(byte a, byte r, byte g, byte b)
+        {
+            var brush = new SolidColorBrush(Color.FromArgb(a, r, g, b));
+            brush.Freeze();
+            return brush;
+        }
+
+        private static readonly SolidColorBrush NeedsReviewBrush = CreateFrozenBrush(0xFF, 0xFF, 0xB7, 0x4D);
+        private static readonly SolidColorBrush UnverifiedBrush = CreateFrozenBrush(0xFF, 0xE5, 0x73, 0x73);
+        private static readonly SolidColorBrush VerifiedBrush = CreateFrozenBrush(0xFF, 0x81, 0xC7, 0x84);
+
+        private static readonly SolidColorBrush OrangeInactive = CreateFrozenBrush(0x44, 0xFF, 0xB7, 0x4D);
+        private static readonly SolidColorBrush OrangeActive = CreateFrozenBrush(0xFF, 0xFF, 0xB7, 0x4D);
+        private static readonly SolidColorBrush RedInactive = CreateFrozenBrush(0x44, 0xE5, 0x73, 0x73);
+        private static readonly SolidColorBrush RedActive = CreateFrozenBrush(0xFF, 0xE5, 0x73, 0x73);
+        private static readonly SolidColorBrush GreenInactive = CreateFrozenBrush(0x44, 0x81, 0xC7, 0x84);
+        private static readonly SolidColorBrush GreenActive = CreateFrozenBrush(0xFF, 0x81, 0xC7, 0x84);
+
         public UIStateManager(MainWindow mainWindow)
         {
             this.mainWindow = mainWindow;
@@ -61,39 +79,27 @@ namespace YoableWPF.Managers
             // Update the text blocks with counts
             mainWindow.NeedsReviewCount.Text = needsReview.ToString();
             mainWindow.NeedsReviewCount.Foreground = needsReview > 0
-                ? (SolidColorBrush)(new BrushConverter().ConvertFrom("#FFB74D"))
+                ? NeedsReviewBrush
                 : mainWindow.NeedsReviewCount.Foreground;
 
             mainWindow.UnverifiedCount.Text = unverified.ToString();
             mainWindow.UnverifiedCount.Foreground = unverified > 0
-                ? (SolidColorBrush)(new BrushConverter().ConvertFrom("#E57373"))
+                ? UnverifiedBrush
                 : mainWindow.UnverifiedCount.Foreground;
 
             mainWindow.VerifiedCount.Text = verified.ToString();
             mainWindow.VerifiedCount.Foreground = verified > 0
-                ? (SolidColorBrush)(new BrushConverter().ConvertFrom("#81C784"))
+                ? VerifiedBrush
                 : mainWindow.VerifiedCount.Foreground;
         }
 
-        // Cache for project classes to avoid repeated reflection
-        private List<LabelClass> cachedProjectClasses = null;
-        
         // Updated RefreshLabelList with class color indicators
         public void RefreshLabelList()
         {
             // Clear the label list
             mainWindow.LabelListBox.Items.Clear();
             
-            // Get project classes - use cached value or fetch via reflection
-            if (cachedProjectClasses == null)
-            {
-                var mainWindowType = mainWindow.GetType();
-                var projectClassesField = mainWindowType.GetField("projectClasses", 
-                    System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
-                cachedProjectClasses = projectClassesField?.GetValue(mainWindow) as List<LabelClass>;
-            }
-            
-            var projectClasses = cachedProjectClasses;
+            var projectClasses = mainWindow.ProjectClasses;
             
             foreach (var label in mainWindow.drawingCanvas.Labels)
             {
@@ -136,12 +142,6 @@ namespace YoableWPF.Managers
                 
                 mainWindow.LabelListBox.Items.Add(stackPanel);
             }
-        }
-        
-        // Call this method when project classes change to refresh the cache
-        public void RefreshProjectClassesCache()
-        {
-            cachedProjectClasses = null;
         }
 
         // Helper for sorting - direct port
@@ -377,23 +377,9 @@ namespace YoableWPF.Managers
             var baseLowFore = (System.Windows.Media.Brush)mainWindow
                 .FindResource("SystemControlForegroundBaseLowBrush");
 
-            var orangeInactive = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromArgb(0x44, 0xFF, 0xB7, 0x4D));
-            var orangeActive = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromArgb(0xFF, 0xFF, 0xB7, 0x4D));
-            var orangeFore = orangeActive;
-
-            var redInactive = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromArgb(0x44, 0xE5, 0x73, 0x73));
-            var redActive = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromArgb(0xFF, 0xE5, 0x73, 0x73));
-            var redFore = redActive;
-
-            var greenInactive = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromArgb(0x44, 0x81, 0xC7, 0x84));
-            var greenActive = new System.Windows.Media.SolidColorBrush(
-                System.Windows.Media.Color.FromArgb(0xFF, 0x81, 0xC7, 0x84));
-            var greenFore = greenActive;
+            var orangeFore = OrangeActive;
+            var redFore = RedActive;
+            var greenFore = GreenActive;
 
             // Set all button styles based on active button
             allButton.Background = activeButton == allButton ? baseLow : transparent;
@@ -401,13 +387,13 @@ namespace YoableWPF.Managers
             allButton.BorderThickness = activeButton == allButton ? new Thickness(1) : new Thickness(0);
             allButton.BorderBrush = activeButton == allButton ? baseLowFore : null;
 
-            reviewButton.Background = activeButton == reviewButton ? orangeActive : orangeInactive;
+            reviewButton.Background = activeButton == reviewButton ? OrangeActive : OrangeInactive;
             reviewButton.Foreground = activeButton == reviewButton ? white : orangeFore;
 
-            noLabelButton.Background = activeButton == noLabelButton ? redActive : redInactive;
+            noLabelButton.Background = activeButton == noLabelButton ? RedActive : RedInactive;
             noLabelButton.Foreground = activeButton == noLabelButton ? white : redFore;
 
-            verifiedButton.Background = activeButton == verifiedButton ? greenActive : greenInactive;
+            verifiedButton.Background = activeButton == verifiedButton ? GreenActive : GreenInactive;
             verifiedButton.Foreground = activeButton == verifiedButton ? white : greenFore;
         }
     }

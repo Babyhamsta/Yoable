@@ -31,14 +31,13 @@ namespace YoableWPF.Managers
         private DateTime lastSaveTime;
         private bool hasUnsavedChanges;
         private MainWindow mainWindow;
-        private bool isSaving = false;
-        private CancellationTokenSource saveCancellationToken;
+        private int isSaving = 0;
 
         public ProjectData CurrentProject { get; private set; }
         public DateTime LastSaveTime => lastSaveTime;
         public bool HasUnsavedChanges => hasUnsavedChanges;
         public bool IsProjectOpen => CurrentProject != null;
-        public bool IsSaving => isSaving;
+        public bool IsSaving => Volatile.Read(ref isSaving) == 1;
 
         private JsonSerializerOptions jsonOptions = new JsonSerializerOptions
         {
@@ -280,13 +279,11 @@ namespace YoableWPF.Managers
             if (CurrentProject == null)
                 return false;
 
-            if (isSaving)
+            if (Interlocked.Exchange(ref isSaving, 1) == 1)
             {
                 Debug.WriteLine("Save operation already in progress, skipping...");
                 return false;
             }
-
-            isSaving = true;
 
             try
             {
@@ -334,7 +331,7 @@ namespace YoableWPF.Managers
             }
             finally
             {
-                isSaving = false;
+                Volatile.Write(ref isSaving, 0);
             }
         }
 
@@ -426,6 +423,13 @@ namespace YoableWPF.Managers
         /// </summary>
         public void StartAutoSave()
         {
+            if (!Properties.Settings.Default.EnableAutoSave)
+            {
+                StopAutoSave();
+                Debug.WriteLine("Auto-save is disabled by settings");
+                return;
+            }
+
             int autoSaveInterval = Properties.Settings.Default.AutoSaveInterval;
             if (autoSaveInterval <= 0)
             {
@@ -474,6 +478,10 @@ namespace YoableWPF.Managers
         public void MarkDirty()
         {
             hasUnsavedChanges = true;
+
+            if (!Properties.Settings.Default.EnableAutoSave)
+                return;
+
             saveDebounceTimer.Stop();
             saveDebounceTimer.Start();
         }
@@ -582,6 +590,10 @@ namespace YoableWPF.Managers
                 CurrentProject.Images.Clear();
                 CurrentProject.ImageStatuses.Clear();
                 CurrentProject.AppCreatedLabels.Clear();
+                CurrentProject.LoadedModelPaths ??= new List<string>();
+                CurrentProject.ModelClassMappings ??= new Dictionary<string, Dictionary<int, int>>();
+                CurrentProject.LoadedModelPaths.Clear();
+                CurrentProject.ModelClassMappings.Clear();
 
                 // Export images
                 foreach (var kvp in mainWindow.imageManager.ImagePathMap)
@@ -622,11 +634,26 @@ namespace YoableWPF.Managers
                         string labelPath = Path.Combine(labelsFolder, labelFileName);
 
                         // Export labels using LabelManager
-                        mainWindow.labelManager.ExportLabelsToYolo(labelPath, imageInfo.Path, labels);
+                        mainWindow.labelManager.ExportLabelsToYolo(labelPath, imageInfo.OriginalDimensions, labels);
 
                         // Store relative path in project
                         string relativePath = Path.Combine(LABELS_FOLDER, labelFileName);
                         CurrentProject.AppCreatedLabels[fileName] = relativePath;
+                    }
+                }
+
+                // Export model paths and class mappings
+                if (mainWindow.yoloAI != null)
+                {
+                    CurrentProject.LoadedModelPaths = new List<string>();
+                    foreach (var model in mainWindow.yoloAI.GetLoadedModels())
+                    {
+                        CurrentProject.LoadedModelPaths.Add(model.ModelPath);
+
+                        if (model.ClassMapping != null && model.ClassMapping.Count > 0)
+                        {
+                            CurrentProject.ModelClassMappings[model.ModelPath] = new Dictionary<int, int>(model.ClassMapping);
+                        }
                     }
                 }
 
@@ -636,6 +663,8 @@ namespace YoableWPF.Managers
                     CurrentProject.LastSelectedImageIndex = selectedIndex;
                 }
                 CurrentProject.CurrentSortMode = sortMode;
+
+                Debug.WriteLine($"Export complete: {CurrentProject.Images.Count} images, {CurrentProject.AppCreatedLabels.Count} label files, {CurrentProject.LoadedModelPaths.Count} models, {CurrentProject.ModelClassMappings.Count} model mappings");
             });
         }
 
@@ -651,6 +680,8 @@ namespace YoableWPF.Managers
             CurrentProject.Images.Clear();
             CurrentProject.ImageStatuses.Clear();
             CurrentProject.AppCreatedLabels.Clear();
+            CurrentProject.LoadedModelPaths ??= new List<string>();
+            CurrentProject.ModelClassMappings ??= new Dictionary<string, Dictionary<int, int>>();
             CurrentProject.LoadedModelPaths.Clear();
             CurrentProject.ModelClassMappings.Clear();
 
@@ -693,7 +724,7 @@ namespace YoableWPF.Managers
                     string labelPath = Path.Combine(labelsFolder, labelFileName);
 
                     // Export labels using LabelManager
-                    mainWindow.labelManager.ExportLabelsToYolo(labelPath, imageInfo.Path, labels);
+                    mainWindow.labelManager.ExportLabelsToYolo(labelPath, imageInfo.OriginalDimensions, labels);
 
                     // Store relative path in project
                     string relativePath = Path.Combine(LABELS_FOLDER, labelFileName);
@@ -763,33 +794,42 @@ namespace YoableWPF.Managers
 
                 // Get parallel processing setting
                 bool enableParallel = Properties.Settings.Default.EnableParallelProcessing;
-                int batchSize = Properties.Settings.Default.UIBatchSize;
+                int processingBatchSize = Properties.Settings.Default.ProcessingBatchSize;
 
-                // Import images using async batch processing
-                int totalImages = CurrentProject.Images.Count;
-                int processedImages = 0;
+                // Set batch size for image processing (separate from UI batching)
+                mainWindow.imageManager.BatchSize = processingBatchSize;
 
-                // Set batch size for image manager
-                mainWindow.imageManager.BatchSize = batchSize;
-
-                // Process images in batches with progress
+                // Build list of image paths and log missing files
+                var imagePaths = new List<string>(CurrentProject.Images.Count);
                 foreach (var imageRef in CurrentProject.Images)
                 {
-                    if (cancellationToken.IsCancellationRequested)
-                        break;
-
                     if (File.Exists(imageRef.FullPath))
                     {
-                        await Task.Run(() => mainWindow.imageManager.AddImage(imageRef.FullPath), cancellationToken);
+                        imagePaths.Add(imageRef.FullPath);
                     }
                     else
                     {
                         Debug.WriteLine($"Warning: Image not found: {imageRef.FullPath}");
                     }
+                }
 
-                    processedImages++;
-                    int imageProgress = 10 + (int)((processedImages / (double)totalImages) * 30);
-                    progress?.Report((imageProgress, 100, $"Loading images... {processedImages}/{totalImages}"));
+                if (imagePaths.Count > 0)
+                {
+                    var imageProgress = new Progress<(int current, int total, string message)>(report =>
+                    {
+                        int overallProgress = 10 + (int)((report.current / (double)report.total) * 30);
+                        progress?.Report((overallProgress, 100, report.message));
+                    });
+
+                    await mainWindow.imageManager.LoadImagesFromPathsAsync(
+                        imagePaths,
+                        imageProgress,
+                        cancellationToken,
+                        enableParallel);
+                }
+                else
+                {
+                    progress?.Report((40, 100, "No images to load."));
                 }
 
                 progress?.Report((40, 100, "Loading image statuses..."));
@@ -805,102 +845,73 @@ namespace YoableWPF.Managers
                 // Set label batch size from settings
                 mainWindow.labelManager.LabelLoadBatchSize = Properties.Settings.Default.LabelLoadBatchSize;
 
-                // Prepare label files for batch loading
-                // First, copy all label files to a temporary directory for batch processing
-                string tempLabelsDir = Path.Combine(Path.GetTempPath(), $"yoable_labels_{Guid.NewGuid():N}");
-                Directory.CreateDirectory(tempLabelsDir);
+                // Prepare label file list for batch loading
+                var labelFiles = new List<string>();
 
-                int labelsLoaded = 0; // Declare outside try block so it's accessible later
-
-                try
+                foreach (var kvp in CurrentProject.AppCreatedLabels)
                 {
-                    int labelFilesCopied = 0;
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
 
-                    // Copy app-created labels to temp directory
-                    foreach (var kvp in CurrentProject.AppCreatedLabels)
+                    string relativePath = kvp.Value;
+                    string labelPath = Path.Combine(CurrentProject.ProjectFolder, relativePath);
+
+                    if (File.Exists(labelPath))
                     {
-                        if (cancellationToken.IsCancellationRequested)
-                            break;
-
-                        string fileName = kvp.Key;
-                        string relativePath = kvp.Value;
-                        string labelPath = Path.Combine(CurrentProject.ProjectFolder, relativePath);
-
-                        if (File.Exists(labelPath))
-                        {
-                            string tempLabelPath = Path.Combine(tempLabelsDir, Path.GetFileName(labelPath));
-                            File.Copy(labelPath, tempLabelPath, true);
-                            labelFilesCopied++;
-                        }
-                        else
-                        {
-                            Debug.WriteLine($"Warning: Label file not found: {labelPath}");
-                        }
-                    }
-
-                    // Copy imported labels to temp directory
-                    foreach (var kvp in CurrentProject.ImportedLabelPaths)
-                    {
-                        if (cancellationToken.IsCancellationRequested)
-                            break;
-
-                        string fileName = kvp.Key;
-                        string labelPath = kvp.Value;
-
-                        if (File.Exists(labelPath))
-                        {
-                            string tempLabelPath = Path.Combine(tempLabelsDir, Path.GetFileName(labelPath));
-                            File.Copy(labelPath, tempLabelPath, true);
-                            labelFilesCopied++;
-                        }
-                        else
-                        {
-                            Debug.WriteLine($"Warning: External label file not found: {labelPath}");
-                        }
-                    }
-
-                    if (labelFilesCopied > 0)
-                    {
-                        // Progress reporter for label loading
-                        var labelProgress = new Progress<(int current, int total, string message)>(report =>
-                        {
-                            // Map label loading progress to 50-90% range
-                            int overallProgress = 50 + (int)((report.current / (double)report.total) * 40);
-                            progress?.Report((overallProgress, 100, report.message));
-                        });
-
-                        // Use optimized batch label loader - MUCH faster!
-                        var (loadedCount, foundClassIds) = await mainWindow.labelManager.LoadYoloLabelsBatchAsync(
-                            tempLabelsDir,
-                            mainWindow.imageManager,
-                            labelProgress,
-                            cancellationToken,
-                            enableParallel
-                        );
-                        labelsLoaded = loadedCount;
-
-                        Debug.WriteLine($"Total labels loaded via batch processing: {labelsLoaded}");
-                        Debug.WriteLine($"Images in label storage: {mainWindow.labelManager.LabelStorage.Count}");
+                        labelFiles.Add(labelPath);
                     }
                     else
                     {
-                        Debug.WriteLine("No label files to load");
+                        Debug.WriteLine($"Warning: Label file not found: {labelPath}");
                     }
                 }
-                finally
+
+                foreach (var kvp in CurrentProject.ImportedLabelPaths)
                 {
-                    // Clean up temporary directory
-                    try
+                    if (cancellationToken.IsCancellationRequested)
+                        break;
+
+                    string labelPath = kvp.Value;
+
+                    if (File.Exists(labelPath))
                     {
-                        if (Directory.Exists(tempLabelsDir))
-                        {
-                            Directory.Delete(tempLabelsDir, true);
-                        }
+                        labelFiles.Add(labelPath);
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        Debug.WriteLine($"Failed to clean up temp directory: {ex.Message}");
+                        Debug.WriteLine($"Warning: External label file not found: {labelPath}");
                     }
+                }
+
+                int labelsLoaded = 0;
+
+                if (labelFiles.Count > 0)
+                {
+                    // Progress reporter for label loading
+                    var labelProgress = new Progress<(int current, int total, string message)>(report =>
+                    {
+                        int overallProgress = report.total > 0
+                            ? 50 + (int)((report.current / (double)report.total) * 40)
+                            : 50;
+                        progress?.Report((overallProgress, 100, report.message));
+                    });
+
+                    // Use optimized batch label loader - MUCH faster!
+                    var (loadedCount, foundClassIds) = await mainWindow.labelManager.LoadYoloLabelsBatchAsync(
+                        labelFiles,
+                        mainWindow.imageManager,
+                        labelProgress,
+                        cancellationToken,
+                        enableParallel
+                    );
+                    labelsLoaded = loadedCount;
+
+                    Debug.WriteLine($"Total labels loaded via batch processing: {labelsLoaded}");
+                    Debug.WriteLine($"Images in label storage: {mainWindow.labelManager.LabelStorage.Count}");
+                }
+                else
+                {
+                    Debug.WriteLine("No label files to load");
                 }
 
                 Debug.WriteLine($"Total labels loaded: {labelsLoaded}");
@@ -1395,7 +1406,6 @@ namespace YoableWPF.Managers
         {
             StopAutoSave();
             saveDebounceTimer?.Dispose();
-            saveCancellationToken?.Dispose();
         }
 
         #endregion

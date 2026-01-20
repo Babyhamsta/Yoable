@@ -93,10 +93,8 @@ public class YoutubeDownloader
                 });
             });
 
-            await mainWindow.Dispatcher.InvokeAsync(() => {
-                string absolutePath = Path.GetFullPath(Path.Combine(videoDirectory, "frames"));
-                mainWindow.LoadImages(absolutePath);
-            });
+            string absolutePath = Path.GetFullPath(Path.Combine(videoDirectory, "frames"));
+            await mainWindow.LoadImagesAsync(absolutePath);
 
             return true;
         }
@@ -141,10 +139,16 @@ public class YoutubeDownloader
             if (desiredFps <= 0)
                 desiredFps = 5; // Default to 5 FPS
 
+            // Guard against invalid FPS metadata
+            if (double.IsNaN(fps) || fps <= 0)
+                fps = desiredFps;
+
             desiredFps = Math.Min(desiredFps, fps);
 
             // Calculate which frames we need
             int frameInterval = (int)Math.Round(fps / desiredFps);
+            if (frameInterval < 1)
+                frameInterval = 1;
             var framePositions = new HashSet<int>();
             for (int i = 0; i < frameCount; i += frameInterval)
             {
