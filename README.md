@@ -1,6 +1,6 @@
 # Yoable
 
-**English** | [简体中文](#简体中文)
+**English** | [日本語](#日本語) | [Русский](#русский) | [简体中文](#简体中文)
 
 **Yoable** is an AI-powered image annotation tool designed to make dataset labeling faster and more efficient. It supports **YOLO v5/v8/v11 (ONNX)** models for automatic object detection and labeling. Yoable provides an intuitive interface for managing images, running AI-assisted labeling, and exporting labels in a format compatible with machine learning models.
 
@@ -12,34 +12,13 @@ For non-WPF version you can build the legacy source or use v1.2.0 from releases 
 
 ## English
 
-### 🆕 What's New in This Fork?
-
-This fork includes several important improvements and new features that enhance the usability and stability of Yoable:
-
-#### ✨ New Features
-
-- **🗺️ Model Class Mapping** - Map model class IDs to your project's class IDs, allowing you to use pre-trained models with different class structures. You can also filter out unwanted classes by setting them to "nan (不檢測)".
-- **🌐 Multilingual Support** - Full UI translation support for **繁體中文 (Traditional Chinese)**, **简体中文 (Simplified Chinese)**, and **English (US)**. Switch languages on the fly without restarting the application.
-- **⌨️ Customizable Hotkeys** - Fully customizable keyboard shortcuts for common actions including save project, image navigation, and label movement. Configure your preferred key combinations in settings.
-- **🔍 Class-Based Filtering** - Filter images by class labels using checkboxes. Quickly find images containing specific classes or combinations of classes for efficient workflow management.
-
-#### 🐛 Bug Fixes & Stability
-
-- **Filter Selection Crash Fix** - Fixed a critical bug that caused application crashes when switching between image filters. The fix ensures stable operation by properly managing event handlers during filter operations.
-- **Class ID Calculation Fix** - Fixed a bug where adding new classes could result in incorrect class ID calculation. Previously, `AddClass_Click` used `GetNextClassId()` which was based on `CurrentProject.Classes`, but the actual working list was `projectClasses`. If these were out of sync, it could cause ID calculation errors. The fix:
-  - Now directly calculates the next ID from `projectClasses` using `projectClasses.Max(c => c.ClassId) + 1`
-  - Synchronizes `CurrentProject.Classes` after adding a new class to ensure correct saving
-  - Ensures new classes always get the correct sequential ID (e.g., if IDs 0, 1, 2 exist, new class gets ID 3)
-
-#### 📝 Documentation
-
-- **Bilingual README** - Complete documentation in both English and Simplified Chinese for better accessibility.
-
-These improvements make this fork more robust and user-friendly, especially for users working with different model architectures and multilingual environments.
-
 ### 🚀 Features
 
 - **AI-Powered Auto Labeling** - Automatically detects objects using **YOLO v5/v8/v11 (ONNX)** models.
+- **🗺️ Model Class Mapping** - Map model class IDs to your project's class IDs, allowing you to use pre-trained models with different class structures. Filter out unwanted classes by setting them to "nan".
+- **🌐 Multilingual Support** - Full UI translation support for **English**, **日本語 (Japanese)**, **Русский (Russian)**, **简体中文 (Simplified Chinese)**, and **繁體中文 (Traditional Chinese)**. Switch languages on the fly without restarting.
+- **⌨️ Customizable Hotkeys** - Fully customizable keyboard shortcuts for common actions including save project, image navigation, and label movement.
+- **🔍 Class-Based Filtering** - Filter images by class labels using checkboxes. Quickly find images containing specific classes or combinations of classes.
 - **Manual Labeling Tools** - Easily add, edit, and remove bounding boxes.
 - **Bulk Image Import** - Load multiple images at once.
 - **YOLO Label Format Support** - Import and export annotations in **YOLO format**.
@@ -48,9 +27,7 @@ These improvements make this fork more robust and user-friendly, especially for 
 - **Crosshair Overlay** - Align annotations with precision.
 - **Adjustable AI Confidence** - Set detection confidence thresholds for better accuracy.
 - **Auto Updates** - Get the latest features and fixes with built-in update checks. (Can be disabled via settings)
-- **Project Support** - Yoable can create and save projects so you can pick back up where you left off.
-- **Customizable Hotkeys** - Configure keyboard shortcuts for all common actions to speed up your workflow.
-- **Class-Based Filtering** - Filter images by class labels to quickly find specific annotations.
+- **Project Support** - Create and save projects so you can pick back up where you left off.
 
 ### 📥 Installation
 
@@ -118,9 +95,9 @@ Yoable supports **class mapping** functionality that allows you to map model cla
 
 1. **Load a YOLO Model**: First, load your YOLO model in Yoable.
 2. **Open Class Mapping Dialog**: Access the class mapping feature from the model settings or menu.
-3. **Configure Mappings**: 
+3. **Configure Mappings**:
    - Map each model class to a corresponding project class
-   - Set classes to **"nan (不檢測)"** to skip detection for unwanted classes
+   - Set classes to **"nan"** to skip detection for unwanted classes
    - Custom class names are automatically detected from model metadata when available
 4. **Apply Mapping**: The mapping is automatically applied when using AI auto-labeling.
 
@@ -136,9 +113,11 @@ Yoable supports **multiple languages** for a better user experience. You can swi
 
 #### Supported Languages
 
-- **繁體中文 (Traditional Chinese)** - Default language
+- **English (US)** - Default language
+- **日本語 (Japanese)**
+- **Русский (Russian)**
 - **简体中文 (Simplified Chinese)**
-- **English (US)**
+- **繁體中文 (Traditional Chinese)**
 
 #### How to Change Language
 
@@ -153,41 +132,6 @@ Yoable supports **multiple languages** for a better user experience. You can swi
 - **Persistent Settings**: Your language preference is saved automatically
 - **Dynamic Switching**: Change language without restarting the application
 
-### 🐛 Bug Fixes & Stability Improvements
-
-#### Filter Selection Crash Fix
-
-A critical bug that caused application crashes when switching between image filters has been fixed. The issue occurred when:
-
-- Switching between filter options (All, Review, No Label, Verified)
-- The image list was being updated while a selection change event was triggered
-- This led to attempts to access items that no longer existed in the filtered list
-
-**The Fix:**
-- Temporarily unbind the `SelectionChanged` event handler before updating the image list
-- Safely restore selection after filtering is complete
-- Re-bind the event handler to ensure normal functionality continues
-
-This fix ensures stable operation when using the filter buttons, preventing crashes and maintaining proper selection state across filter changes.
-
-#### Class ID Calculation Fix
-
-A bug in class ID calculation has been fixed that could cause incorrect IDs when adding new classes. The issue occurred when:
-
-- `AddClass_Click` used `projectManager?.CurrentProject?.GetNextClassId()` to calculate new class IDs
-- `GetNextClassId()` was based on `CurrentProject.Classes`, but the actual working list was `projectClasses`
-- If these two lists were out of sync, it could result in duplicate or incorrect class IDs
-
-**The Fix:**
-- Now directly calculates the next ID from `projectClasses` using `projectClasses.Max(c => c.ClassId) + 1`
-- Synchronizes `CurrentProject.Classes` after adding a new class to ensure correct saving
-- Ensures new classes always get the correct sequential ID
-
-**Result:**
-- New classes now correctly get the next available ID (e.g., if IDs 0, 1, 2 exist, new class gets ID 3)
-- Project data is properly synchronized, ensuring correct saving
-- No more duplicate or incorrect class IDs
-
 ### 🌍 Contributing
 Yoable is **open-source**! Contribute by reporting issues, suggesting features, or improving the code.
 
@@ -196,38 +140,87 @@ For help and troubleshooting, visit our [GitHub Issues](https://github.com/Babyh
 
 ---
 
+## 日本語
+
+[English](#english) | **日本語** | [Русский](#русский) | [简体中文](#简体中文)
+
+### 🚀 機能
+
+- **AI駆動の自動ラベリング** - **YOLO v5/v8/v11 (ONNX)** モデルを使用してオブジェクトを自動検出します。
+- **🗺️ モデルクラスマッピング** - モデルのクラスIDをプロジェクトのクラスIDにマッピングし、異なるクラス構造を持つ事前学習済みモデルを使用できます。不要なクラスを「nan」に設定してフィルタリングします。
+- **🌐 多言語サポート** - **English**、**日本語 (Japanese)**、**Русский (Russian)**、**简体中文 (Simplified Chinese)**、**繁體中文 (Traditional Chinese)** の完全なUI翻訳をサポート。再起動せずにその場で言語を切り替えられます。
+- **⌨️ カスタマイズ可能なホットキー** - プロジェクトの保存、画像ナビゲーション、ラベルの移動など、一般的な操作のキーボードショートカットを完全にカスタマイズできます。
+- **🔍 クラスベースのフィルタリング** - チェックボックスを使用してクラスラベルで画像をフィルタリングします。特定のクラスまたはクラスの組み合わせを含む画像をすばやく見つけます。
+- **手動ラベリングツール** - バウンディングボックスを簡単に追加、編集、削除できます。
+- **一括画像インポート** - 複数の画像を一度に読み込みます。
+- **YOLOラベル形式サポート** - **YOLO形式**でアノテーションをインポートおよびエクスポートします。
+- **オプションのクラウドアップロード** - エクスポート時にラベル付きデータセットをアップロードして、より良いモデルに貢献できます。
+- **カスタマイズ可能なUI** - ライト/ダークテーマとカスタマイズ可能なラベルの外観。
+- **クロスヘアオーバーレイ** - 精密にアノテーションを配置します。
+- **調整可能なAI信頼度** - より高い精度のために検出信頼度のしきい値を設定します。
+- **自動更新** - 組み込みの更新チェックで最新の機能と修正を取得します。（設定で無効にできます）
+- **プロジェクトサポート** - プロジェクトを作成して保存し、中断したところから再開できます。
+
+### 📥 インストール
+
+1. [GitHub Releases](https://github.com/Babyhamsta/Yoable/releases) から最新リリースをダウンロードします。
+2. Yoableをダウンロードして実行します（インストール不要！）。
+3. （オプション）AI支援ラベリングのために **YOLO v5/v8/v11 (ONNX)** モデルを読み込みます。
+
+### 🌍 貢献
+Yoableは**オープンソース**です！問題の報告、機能の提案、コードの改善によって貢献してください。
+
+### 📌 サポート
+ヘルプとトラブルシューティングについては、[GitHub Issues](https://github.com/Babyhamsta/Yoable/issues) にアクセスするか、コミュニティに参加してください。
+
+---
+
+## Русский
+
+[English](#english) | [日本語](#日本語) | **Русский** | [简体中文](#简体中文)
+
+### 🚀 Возможности
+
+- **Автоматическая разметка с ИИ** - Автоматически обнаруживает объекты с помощью моделей **YOLO v5/v8/v11 (ONNX)**.
+- **🗺️ Сопоставление классов моделей** - Сопоставьте идентификаторы классов модели с идентификаторами классов вашего проекта, что позволяет использовать предобученные модели с различными структурами классов. Фильтруйте нежелательные классы, устанавливая их в значение «nan».
+- **🌐 Многоязычная поддержка** - Полная поддержка перевода интерфейса для **English**, **日本語 (Japanese)**, **Русский (Russian)**, **简体中文 (Simplified Chinese)** и **繁體中文 (Traditional Chinese)**. Переключайте языки на лету без перезапуска.
+- **⌨️ Настраиваемые горячие клавиши** - Полностью настраиваемые сочетания клавиш для общих действий, включая сохранение проекта, навигацию по изображениям и перемещение меток.
+- **🔍 Фильтрация по классам** - Фильтруйте изображения по меткам классов с помощью флажков. Быстро находите изображения, содержащие определенные классы или комбинации классов.
+- **Инструменты ручной разметки** - Легко добавляйте, редактируйте и удаляйте ограничивающие рамки.
+- **Массовый импорт изображений** - Загружайте несколько изображений одновременно.
+- **Поддержка формата меток YOLO** - Импортируйте и экспортируйте аннотации в **формате YOLO**.
+- **Дополнительная загрузка в облако** - Выберите загрузку размеченных наборов данных при экспорте, чтобы внести вклад в улучшение моделей.
+- **Настраиваемый интерфейс** - Светлая/темная тема и настраиваемый внешний вид меток.
+- **Наложение перекрестия** - Выравнивайте аннотации с точностью.
+- **Регулируемая достоверность ИИ** - Установите пороги достоверности обнаружения для лучшей точности.
+- **Автоматические обновления** - Получайте последние функции и исправления с помощью встроенной проверки обновлений. (Можно отключить в настройках)
+- **Поддержка проектов** - Создавайте и сохраняйте проекты, чтобы продолжить с того места, где вы остановились.
+
+### 📥 Установка
+
+1. Загрузите последний релиз с [GitHub Releases](https://github.com/Babyhamsta/Yoable/releases).
+2. Загрузите и запустите Yoable (установка не требуется!).
+3. (Необязательно) Загрузите модель **YOLO v5/v8/v11 (ONNX)** для разметки с помощью ИИ.
+
+### 🌍 Участие
+Yoable **с открытым исходным кодом**! Вносите свой вклад, сообщая о проблемах, предлагая функции или улучшая код.
+
+### 📌 Поддержка
+Для помощи и устранения неполадок посетите наши [GitHub Issues](https://github.com/Babyhamsta/Yoable/issues) или присоединяйтесь к нашему сообществу.
+
+---
+
 ## 简体中文
 
-[English](#english) | **简体中文**
-
-### 🆕 此 Fork 版本的新功能
-
-此 fork 版本包含了多項重要的改進和新功能，提升了 Yoable 的可用性和穩定性：
-
-#### ✨ 新功能
-
-- **🗺️ 模型類別映射** - 將模型類別 ID 映射到項目的類別 ID，允許您使用具有不同類別結構的預訓練模型。您還可以通過將不需要的類別設置為 "nan (不檢測)" 來過濾它們。
-- **🌐 多語言支持** - 完整的界面翻譯支持 **繁體中文 (Traditional Chinese)**、**简体中文 (Simplified Chinese)** 和 **English (US)**。無需重啟應用程序即可隨時切換語言。
-- **⌨️ 自定義快捷鍵** - 為常用操作（保存項目、圖片導航、標籤移動等）完全自定義鍵盤快捷鍵。在設置中配置您首選的按鍵組合。
-- **🔍 類別過濾** - 使用複選框按類別標籤過濾圖片。快速查找包含特定類別或類別組合的圖片，提高工作流程效率。
-
-#### 🐛 錯誤修復與穩定性
-
-- **過濾器選擇崩潰修復** - 修復了在切換圖片過濾器時導致應用程序崩潰的嚴重錯誤。此修復通過在過濾操作期間正確管理事件處理器來確保穩定運行。
-- **類別 ID 計算修復** - 修復了添加新類別時可能導致類別 ID 計算錯誤的問題。之前，`AddClass_Click` 使用 `GetNextClassId()`，該方法基於 `CurrentProject.Classes`，但實際使用的列表是 `projectClasses`。如果兩者不同步，會導致 ID 計算錯誤。修復方案：
-  - 現在直接從 `projectClasses` 計算下一個 ID：`projectClasses.Max(c => c.ClassId) + 1`
-  - 添加類別後同步更新 `CurrentProject.Classes`，確保保存時正確
-  - 確保新類別始終獲得正確的順序 ID（例如：如果已有 ID 0, 1, 2，新類別會得到 ID 3）
-
-#### 📝 文檔
-
-- **雙語 README** - 提供完整的英文和簡體中文文檔，提高可訪問性。
-
-這些改進使此 fork 版本更加穩定和用戶友好，特別適合使用不同模型架構和多語言環境的用戶。
+[English](#english) | [日本語](#日本語) | [Русский](#русский) | **简体中文**
 
 ### 🚀 功能特性
 
 - **AI 驱动的自动标注** - 使用 **YOLO v5/v8/v11 (ONNX)** 模型自动检测对象。
+- **🗺️ 模型类别映射** - 将模型类别 ID 映射到项目的类别 ID，允许您使用具有不同类别结构的预训练模型。可以将不需要的类别设置为 "nan" 来过滤它们。
+- **🌐 多语言支持** - 完整的界面翻译支持 **English**、**日本語 (Japanese)**、**Русский (Russian)**、**简体中文 (Simplified Chinese)** 和 **繁體中文 (Traditional Chinese)**。无需重启应用程序即可随时切换语言。
+- **⌨️ 自定义快捷键** - 为常用操作（保存项目、图片导航、标签移动等）完全自定义键盘快捷键。
+- **🔍 类别过滤** - 使用复选框按类别标签过滤图片。快速查找包含特定类别或类别组合的图片。
 - **手动标注工具** - 轻松添加、编辑和删除边界框。
 - **批量图片导入** - 一次性加载多张图片。
 - **YOLO 标签格式支持** - 以 **YOLO 格式**导入和导出标注。
@@ -236,9 +229,7 @@ For help and troubleshooting, visit our [GitHub Issues](https://github.com/Babyh
 - **十字准线叠加** - 精确对齐标注。
 - **可调节 AI 置信度** - 设置检测置信度阈值以获得更好的准确性。
 - **自动更新** - 通过内置更新检查获取最新功能和修复。（可通过设置禁用）
-- **项目支持** - Yoable 可以创建和保存项目，让您可以随时继续之前的工作。
-- **自定義快捷鍵** - 為所有常用操作配置鍵盤快捷鍵，加快您的工作流程。
-- **類別過濾** - 按類別標籤過濾圖片，快速查找特定標註。
+- **项目支持** - 创建和保存项目，让您可以随时继续之前的工作。
 
 ### 📥 安装
 
@@ -272,12 +263,12 @@ For help and troubleshooting, visit our [GitHub Issues](https://github.com/Babyh
 - Yoable 会自动检查更新。
 - 如果有新版本可用，系统会提示您更新。
 
-#### 自定義快捷鍵
+#### 自定义快捷键
 - 从菜单打开 **设置**
 - 导航到 **键盘快捷键** 部分
-- 点击任何操作按钮来设置自定义快捷鍵
+- 点击任何操作按钮来设置自定义快捷键
 - 按下您想要的按键组合（例如：`Ctrl + S`、`A`、`D` 等）
-- 按 **Escape** 取消快捷鍵录制
+- 按 **Escape** 取消快捷键录制
 - 支持的操作：
   - **保存项目** - 默认：`Ctrl + S`
   - **上一张图片** - 默认：`A`
@@ -287,12 +278,12 @@ For help and troubleshooting, visit our [GitHub Issues](https://github.com/Babyh
   - **向左移动标签** - 默认：`左方向键`
   - **向右移动标签** - 默认：`右方向键`
 
-#### 按類別過濾
-- 在過濾面板中展開 **類別過濾** 部分
-- 使用複選框選擇要過濾的類別
-- 將顯示包含所選類別標籤的圖片
-- 選擇所有類別或清除所有選擇以顯示所有圖片
-- 類別過濾器可與狀態過濾器（全部、審查、無標籤、已完成）組合使用
+#### 按类别过滤
+- 在过滤面板中展开 **类别过滤** 部分
+- 使用复选框选择要过滤的类别
+- 将显示包含所选类别标签的图片
+- 选择所有类别或清除所有选择以显示所有图片
+- 类别过滤器可与状态过滤器（全部、审查、无标签、已完成）组合使用
 
 ### 🗺️ 模型类别映射
 
@@ -308,7 +299,7 @@ Yoable 支持 **类别映射** 功能，允许您将模型的类别 ID 映射到
 2. **打开类别映射对话框**：从模型设置或菜单中访问类别映射功能。
 3. **配置映射**：
    - 将每个模型类别映射到相应的项目类别
-   - 将类别设置为 **"nan (不檢測)"** 以跳过不需要的类别检测
+   - 将类别设置为 **"nan"** 以跳过不需要的类别检测
    - 如果可用，自定义类别名称会自动从模型元数据中检测
 4. **应用映射**：在使用 AI 自动标注时，映射会自动应用。
 
@@ -324,9 +315,11 @@ Yoable 支持 **多种语言**，以提供更好的用户体验。您可以随�
 
 #### 支持的语言
 
-- **繁體中文 (Traditional Chinese)** - 默认语言
+- **English (US)** - 默认语言
+- **日本語 (Japanese)**
+- **Русский (Russian)**
 - **简体中文 (Simplified Chinese)**
-- **English (US)**
+- **繁體中文 (Traditional Chinese)**
 
 #### 如何更改语言
 
@@ -341,41 +334,6 @@ Yoable 支持 **多种语言**，以提供更好的用户体验。您可以随�
 - **持久化设置**：您的语言偏好会自动保存
 - **动态切换**：无需重启应用程序即可更改语言
 
-### 🐛 错误修复与稳定性改进
-
-#### 过滤器选择崩溃修复
-
-已修复一个导致在切换图片过滤器时应用程序崩溃的严重错误。该问题在以下情况下发生：
-
-- 在过滤器选项之间切换（全部、审查、无标签、已完成）
-- 在触发选择更改事件时更新图片列表
-- 这导致尝试访问已不在过滤列表中的项目
-
-**修复方案：**
-- 在更新图片列表之前暂时解除 `SelectionChanged` 事件处理器的绑定
-- 在过滤完成后安全地恢复选择
-- 重新绑定事件处理器以确保正常功能继续运行
-
-此修复确保了使用过滤器按钮时的稳定运行，防止崩溃并在过滤器更改时保持正确的选择状态。
-
-#### 類別 ID 計算修復
-
-已修復一個類別 ID 計算錯誤，該問題在添加新類別時可能導致 ID 計算錯誤。該問題在以下情況下發生：
-
-- `AddClass_Click` 使用 `projectManager?.CurrentProject?.GetNextClassId()` 來計算新類別 ID
-- `GetNextClassId()` 基於 `CurrentProject.Classes`，但實際使用的列表是 `projectClasses`
-- 如果這兩個列表不同步，可能會導致重複或錯誤的類別 ID
-
-**修復方案：**
-- 現在直接從 `projectClasses` 計算下一個 ID：`projectClasses.Max(c => c.ClassId) + 1`
-- 添加類別後同步更新 `CurrentProject.Classes`，確保保存時正確
-- 確保新類別始終獲得正確的順序 ID
-
-**結果：**
-- 新類別現在會正確獲得下一個可用的 ID（例如：如果已有 ID 0, 1, 2，新類別會得到 ID 3）
-- 項目數據已正確同步，確保保存時正確
-- 不再出現重複或錯誤的類別 ID
-
 ### 🌍 贡献
 Yoable 是 **开源** 的！通过报告问题、建议功能或改进代码来做出贡献。
 
@@ -384,4 +342,4 @@ Yoable 是 **开源** 的！通过报告问题、建议功能或改进代码来�
 
 ---
 
-⭐ **如果觉得有用，请给这个仓库点个星！** / **Star this repo** if you find it useful!
+⭐ **Star this repo if you find it useful!** / **役に立ったらこのリポジトリにスターを付けてください！** / **Поставьте звезду этому репозиторию, если он вам полезен!** / **如果觉得有用，请给这个仓库点个星！**
