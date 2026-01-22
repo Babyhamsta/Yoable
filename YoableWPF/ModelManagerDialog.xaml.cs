@@ -168,7 +168,7 @@ namespace YoableWPF
                                 "You can add classes in the 'Classes' area on the right panel.";
                             string title = LanguageManager.Instance.GetString("ModelManager_NeedProjectClassesTitle") ?? 
                                 "Project Classes Required";
-                            MessageBox.Show(message, title,
+                            CustomMessageBox.Show(message, title,
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Information);
                         }
@@ -190,7 +190,7 @@ namespace YoableWPF
                         "You can add classes in the 'Classes' area on the right panel.";
                     string title = LanguageManager.Instance.GetString("ModelManager_NeedProjectClassesTitle") ?? 
                         "Project Classes Required";
-                    MessageBox.Show(message, title,
+                    CustomMessageBox.Show(message, title,
                         MessageBoxButton.OK,
                         MessageBoxImage.Information);
                     return;
@@ -228,7 +228,7 @@ namespace YoableWPF
         {
             string message = LanguageManager.Instance.GetString("ModelManager_ConfirmClearAll") ?? "Remove all loaded models?";
             string title = LanguageManager.Instance.GetString("ModelManager_ClearModels") ?? "Clear Models";
-            var result = MessageBox.Show(message, title,
+            var result = CustomMessageBox.Show(message, title,
                 MessageBoxButton.YesNo, MessageBoxImage.Question);
 
             if (result == MessageBoxResult.Yes)

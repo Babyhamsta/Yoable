@@ -290,7 +290,7 @@ namespace YoableWPF
 
                     if (lines.Count == 0)
                     {
-                        MessageBox.Show(
+                        CustomMessageBox.Show(
                             LanguageManager.Instance.GetString("Mapping_ClassFileEmpty"), 
                             LanguageManager.Instance.GetString("Mapping_Error"), 
                             MessageBoxButton.OK, 
@@ -340,7 +340,7 @@ namespace YoableWPF
                     // Validate class count
                     if (classNames.Count != model.ModelInfo.NumClasses)
                     {
-                        var result = MessageBox.Show(
+                        var result = CustomMessageBox.Show(
                             string.Format(LanguageManager.Instance.GetString("Mapping_ClassCountMismatch"), 
                                 classNames.Count, 
                                 model.ModelInfo.NumClasses, 
@@ -362,7 +362,7 @@ namespace YoableWPF
                     // Update info text after loading
                     UpdateInfoText();
 
-                    MessageBox.Show(
+                    CustomMessageBox.Show(
                         string.Format(LanguageManager.Instance.GetString("Mapping_LoadSuccess"), classNames.Count),
                         LanguageManager.Instance.GetString("Mapping_LoadSuccessTitle"),
                         MessageBoxButton.OK,
@@ -370,7 +370,7 @@ namespace YoableWPF
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(
+                    CustomMessageBox.Show(
                         string.Format(LanguageManager.Instance.GetString("Mapping_LoadError"), ex.Message),
                         LanguageManager.Instance.GetString("Mapping_Error"),
                         MessageBoxButton.OK,

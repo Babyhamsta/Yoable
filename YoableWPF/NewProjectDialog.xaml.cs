@@ -2,6 +2,7 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using YoableWPF.Managers;
 
 namespace YoableWPF
 {
@@ -58,9 +59,9 @@ namespace YoableWPF
             // Validate project name
             if (string.IsNullOrWhiteSpace(ProjectName))
             {
-                MessageBox.Show(
-                    "Please enter a project name.",
-                    "Project Name Required",
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_Project_NameRequired") ?? "Please enter a project name.",
+                    LanguageManager.Instance.GetString("Msg_ValidationError") ?? "Validation Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 return;
@@ -69,9 +70,9 @@ namespace YoableWPF
             // Check for invalid characters in project name
             if (ProjectName.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0)
             {
-                MessageBox.Show(
-                    "Project name contains invalid characters.\nPlease use only valid file name characters.",
-                    "Invalid Project Name",
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_Project_NameInvalid") ?? "Project name contains invalid characters.\nPlease use only valid file name characters.",
+                    LanguageManager.Instance.GetString("Msg_ValidationError") ?? "Validation Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 return;
@@ -80,9 +81,9 @@ namespace YoableWPF
             // Validate location
             if (string.IsNullOrWhiteSpace(ProjectLocation))
             {
-                MessageBox.Show(
-                    "Please select a project location.",
-                    "Location Required",
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_Project_LocationRequired") ?? "Please select a project location.",
+                    LanguageManager.Instance.GetString("Msg_ValidationError") ?? "Validation Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 return;
@@ -90,9 +91,9 @@ namespace YoableWPF
 
             if (!Directory.Exists(ProjectLocation))
             {
-                var result = MessageBox.Show(
-                    $"The location '{ProjectLocation}' does not exist.\n\nDo you want to create it?",
-                    "Create Location",
+                var result = CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_Project_LocationNotExist") ?? "The location '{0}' does not exist.\n\nDo you want to create it?", ProjectLocation),
+                    LanguageManager.Instance.GetString("Msg_Project_CreateLocation") ?? "Create Location",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question);
 
@@ -104,9 +105,9 @@ namespace YoableWPF
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(
-                            $"Failed to create location:\n\n{ex.Message}",
-                            "Error",
+                        CustomMessageBox.Show(
+                            string.Format(LanguageManager.Instance.GetString("Msg_Project_FailedCreateLocation") ?? "Failed to create location:\n\n{0}", ex.Message),
+                            LanguageManager.Instance.GetString("Msg_Error") ?? "Error",
                             MessageBoxButton.OK,
                             MessageBoxImage.Error);
                         return;
@@ -126,9 +127,9 @@ namespace YoableWPF
 
                 if (File.Exists(projectFile))
                 {
-                    var result = MessageBox.Show(
-                        $"A project with this name already exists at this location.\n\nDo you want to open it instead?",
-                        "Project Exists",
+                    var result = CustomMessageBox.Show(
+                        LanguageManager.Instance.GetString("Msg_Project_AlreadyExists") ?? "A project with this name already exists at this location.\n\nDo you want to open it instead?",
+                        LanguageManager.Instance.GetString("Msg_Project_Exists") ?? "Project Exists",
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Question);
 

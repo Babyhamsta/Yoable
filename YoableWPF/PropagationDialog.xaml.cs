@@ -31,7 +31,7 @@ namespace YoableWPF
         {
             if (!RunImageSimilarity && !RunObjectSimilarity && !RunTracking)
             {
-                MessageBox.Show(
+                CustomMessageBox.Show(
                     LanguageManager.Instance.GetString("Propagation_NoModesSelected") ?? "Select at least one propagation mode.",
                     LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                     MessageBoxButton.OK,

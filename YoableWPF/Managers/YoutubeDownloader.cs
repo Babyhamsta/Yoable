@@ -58,8 +58,8 @@ public class YoutubeDownloader
 
             if (streamInfo == null)
             {
-                MessageBox.Show($"No compatible video streams found for {video.Title}",
-                    "Download Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_YouTube_NoCompatibleStream") ?? "No compatible video streams found for {0}", video.Title),
+                    LanguageManager.Instance.GetString("Msg_YouTube_DownloadError") ?? "Download Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
 
@@ -119,8 +119,8 @@ public class YoutubeDownloader
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Processing failed: {ex.Message}",
-                "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+            CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_YouTube_ProcessingFailed") ?? "Processing failed: {0}", ex.Message),
+                LanguageManager.Instance.GetString("Msg_Error") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             return false;
         }
         finally

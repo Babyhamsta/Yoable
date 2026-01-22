@@ -72,7 +72,7 @@ namespace YoableWPF
                 }
                 else
                 {
-                    MessageBox.Show(
+                    CustomMessageBox.Show(
                         LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_InvalidPath") ?? "Invalid folder path.",
                         LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                         MessageBoxButton.OK,
@@ -115,7 +115,7 @@ namespace YoableWPF
                 }
                 else
                 {
-                    MessageBox.Show(
+                    CustomMessageBox.Show(
                         LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_InvalidPath") ?? "Invalid folder path.",
                         LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                         MessageBoxButton.OK,
@@ -129,7 +129,7 @@ namespace YoableWPF
             // Validate paths
             if (string.IsNullOrEmpty(ImagesFolderPath) || !Directory.Exists(ImagesFolderPath))
             {
-                MessageBox.Show(
+                CustomMessageBox.Show(
                     LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_InvalidImagesPath") ?? "Please select a valid images folder.",
                     LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                     MessageBoxButton.OK,
@@ -139,7 +139,7 @@ namespace YoableWPF
 
             if (string.IsNullOrEmpty(LabelsFolderPath) || !Directory.Exists(LabelsFolderPath))
             {
-                MessageBox.Show(
+                CustomMessageBox.Show(
                     LanguageManager.Instance.GetString("Dialog_ImportLabelsAndImage_InvalidLabelsPath") ?? "Please select a valid labels folder.",
                     LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                     MessageBoxButton.OK,

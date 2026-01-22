@@ -151,7 +151,7 @@ namespace YoableWPF
             if (projectManager?.IsProjectOpen != true || !projectManager.HasUnsavedChanges)
                 return true; // No unsaved changes, safe to proceed
 
-            var result = MessageBox.Show(
+            var result = CustomMessageBox.Show(
                 $"Save changes to the current project before {actionDescription}?",
                 "Unsaved Changes",
                 MessageBoxButton.YesNoCancel,
@@ -337,13 +337,13 @@ namespace YoableWPF
             {
                 overlayManager.HideOverlay();
                 this.IsEnabled = true;
-                MessageBox.Show("Project loading was canceled.", "Canceled", MessageBoxButton.OK, MessageBoxImage.Information);
+                CustomMessageBox.Show(LanguageManager.Instance.GetString("Msg_ProjectLoadCanceled") ?? "Project loading was canceled.", LanguageManager.Instance.GetString("Msg_Canceled") ?? "Canceled", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 overlayManager.HideOverlay();
                 this.IsEnabled = true;
-                MessageBox.Show($"Failed to load project:\n\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_FailedToLoadProject") ?? "Failed to load project:\n\n{0}", ex.Message), LanguageManager.Instance.GetString("Msg_Error") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -382,9 +382,9 @@ namespace YoableWPF
         {
             if (projectManager == null || !projectManager.IsProjectOpen)
             {
-                MessageBox.Show(
-                    "No project is currently open.",
-                    "No Project",
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_NoProjectOpen") ?? "No project is currently open.",
+                    LanguageManager.Instance.GetString("Msg_NoProject") ?? "No Project",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
                 return;
@@ -432,9 +432,9 @@ namespace YoableWPF
         {
             if (projectManager == null || !projectManager.IsProjectOpen)
             {
-                MessageBox.Show(
-                    "No project is currently open.",
-                    "No Project",
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_NoProjectOpen") ?? "No project is currently open.",
+                    LanguageManager.Instance.GetString("Msg_NoProject") ?? "No Project",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
                 return;
@@ -693,9 +693,9 @@ namespace YoableWPF
             // Check for unsaved changes
             if (projectManager != null && projectManager.IsProjectOpen && projectManager.HasUnsavedChanges)
             {
-                var result = MessageBox.Show(
-                    $"Do you want to save changes to '{projectManager.CurrentProject.ProjectName}'?",
-                    "Unsaved Changes",
+                var result = CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_UnsavedChangesPrompt") ?? "Do you want to save changes to '{0}'?", projectManager.CurrentProject.ProjectName),
+                    LanguageManager.Instance.GetString("Msg_UnsavedChanges") ?? "Unsaved Changes",
                     MessageBoxButton.YesNoCancel,
                     MessageBoxImage.Question);
 
@@ -937,17 +937,17 @@ namespace YoableWPF
 
             if (totalSuggestions == 0)
             {
-                MessageBox.Show(
-                    "No suggestions to clear.",
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_NoSuggestionsToClear") ?? "No suggestions to clear.",
                     LanguageManager.Instance.GetString("Main_Information") ?? "Information",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
                 return;
             }
 
-            var result = MessageBox.Show(
-                $"Are you sure you want to clear all {totalSuggestions} suggestions from all images?",
-                "Clear All Suggestions",
+            var result = CustomMessageBox.Show(
+                string.Format(LanguageManager.Instance.GetString("Msg_ConfirmClearAllSuggestions") ?? "Are you sure you want to clear all {0} suggestions from all images?", totalSuggestions),
+                LanguageManager.Instance.GetString("Menu_ClearAllSuggestions") ?? "Clear All Suggestions",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
@@ -977,8 +977,8 @@ namespace YoableWPF
                 MarkProjectDirty();
             }
 
-            MessageBox.Show(
-                $"Cleared {cleared} suggestions from all images.",
+            CustomMessageBox.Show(
+                string.Format(LanguageManager.Instance.GetString("Msg_SuggestionsCleared") ?? "Cleared {0} suggestions from all images.", cleared),
                 LanguageManager.Instance.GetString("Main_Information") ?? "Information",
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
@@ -1050,9 +1050,9 @@ namespace YoableWPF
                 message += $"\n... and {duplicateList.Count - 5} more";
             }
 
-            MessageBox.Show(
+            CustomMessageBox.Show(
                 message,
-                "Duplicate Image Names",
+                LanguageManager.Instance.GetString("Msg_DuplicateImageNames") ?? "Duplicate Image Names",
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
@@ -1100,7 +1100,7 @@ namespace YoableWPF
             // Check if there's a current image
             if (string.IsNullOrEmpty(imageManager.CurrentImagePath))
             {
-                MessageBox.Show(
+                CustomMessageBox.Show(
                     LanguageManager.Instance.GetString("Main_NoImageSelected") ?? "No image selected.",
                     LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                     MessageBoxButton.OK,
@@ -1111,7 +1111,7 @@ namespace YoableWPF
             // Check if there are any labels to clear
             if (drawingCanvas.Labels == null || drawingCanvas.Labels.Count == 0)
             {
-                MessageBox.Show(
+                CustomMessageBox.Show(
                     LanguageManager.Instance.GetString("Main_NoLabelsToClear") ?? "No labels to clear.",
                     LanguageManager.Instance.GetString("Main_Information") ?? "Information",
                     MessageBoxButton.OK,
@@ -1130,7 +1130,7 @@ namespace YoableWPF
                 confirmMessage = string.Format(confirmMessage, drawingCanvas.Labels.Count);
             }
             
-            var result = MessageBox.Show(
+            var result = CustomMessageBox.Show(
                 confirmMessage,
                 LanguageManager.Instance.GetString("Main_ConfirmClear") ?? "Confirm Clear",
                 MessageBoxButton.YesNo,
@@ -1245,11 +1245,11 @@ namespace YoableWPF
             }
             catch (OperationCanceledException)
             {
-                MessageBox.Show("Loading cancelled.", "Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
+                CustomMessageBox.Show(LanguageManager.Instance.GetString("Msg_LoadingCanceled") ?? "Loading cancelled.", LanguageManager.Instance.GetString("Msg_Canceled") ?? "Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error occurred during loading: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_ErrorDuringLoading") ?? "Error occurred during loading: {0}", ex.Message), LanguageManager.Instance.GetString("Msg_Error") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -1455,8 +1455,8 @@ namespace YoableWPF
             int modelCount = yoloAI.GetLoadedModelsCount();
             if (modelCount == 0)
             {
-                var result = MessageBox.Show("No models loaded. Would you like to load models now?",
-                    "No Models", MessageBoxButton.YesNo, MessageBoxImage.Question);
+                var result = CustomMessageBox.Show(LanguageManager.Instance.GetString("Msg_NoModelsLoaded") ?? "No models loaded. Would you like to load models now?",
+                    LanguageManager.Instance.GetString("Msg_NoModels") ?? "No Models", MessageBoxButton.YesNo, MessageBoxImage.Question);
 
                 if (result == MessageBoxResult.Yes)
                 {
@@ -1466,11 +1466,13 @@ namespace YoableWPF
             }
 
             // Show ensemble info if multiple models
-            string processingMode = modelCount == 1 ? "single model" : $"ensemble ({modelCount} models)";
-            var continueResult = MessageBox.Show(
-                $"Process {imageManager.ImagePathMap.Count} images using {processingMode} detection?\n\n" +
-                (modelCount > 3 ? "Note: Processing with many models may take considerable time." : ""),
-                "Start Detection",
+            string processingMode = modelCount == 1 ?
+                (LanguageManager.Instance.GetString("Msg_SingleModel") ?? "single model") :
+                string.Format(LanguageManager.Instance.GetString("Msg_EnsembleModels") ?? "ensemble ({0} models)", modelCount);
+            var continueResult = CustomMessageBox.Show(
+                string.Format(LanguageManager.Instance.GetString("Msg_ProcessImagesPrompt") ?? "Process {0} images using {1} detection?", imageManager.ImagePathMap.Count, processingMode) +
+                (modelCount > 3 ? "\n\n" + (LanguageManager.Instance.GetString("Msg_ManyModelsWarning") ?? "Note: Processing with many models may take considerable time.") : ""),
+                LanguageManager.Instance.GetString("Msg_StartDetection") ?? "Start Detection",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
@@ -1496,7 +1498,7 @@ namespace YoableWPF
                     {
                         Dispatcher.Invoke(() =>
                         {
-                            MessageBox.Show($"File not found: {imagePath.Path}", "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_FileNotFound") ?? "File not found: {0}", imagePath.Path), LanguageManager.Instance.GetString("Msg_Error") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
                         });
                         continue;
                     }
@@ -1545,9 +1547,9 @@ namespace YoableWPF
 
                 OnLabelsChanged();
 
-                string modeInfo = modelCount == 1 ? "" : $" using {modelCount} models";
-                MessageBox.Show($"Auto-labeling complete{modeInfo}.\nTotal detections: {totalDetections}",
-                    "AI Labels", MessageBoxButton.OK, MessageBoxImage.Information);
+                string modeInfo = modelCount == 1 ? "" : string.Format(LanguageManager.Instance.GetString("Msg_UsingModels") ?? " using {0} models", modelCount);
+                CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_AutoLabelComplete") ?? "Auto-labeling complete{0}.\nTotal detections: {1}", modeInfo, totalDetections),
+                    LanguageManager.Instance.GetString("Msg_AILabels") ?? "AI Labels", MessageBoxButton.OK, MessageBoxImage.Information);
 
                 MarkProjectDirty();
             });
@@ -1558,7 +1560,7 @@ namespace YoableWPF
             // Allow suggestions without a project - works like auto-labeling with in-memory storage
             if (imageManager.ImagePathMap.Count == 0)
             {
-                MessageBox.Show(
+                CustomMessageBox.Show(
                     LanguageManager.Instance.GetString("Main_NoImageSelected") ?? "No images loaded.",
                     LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                     MessageBoxButton.OK,
@@ -1599,7 +1601,7 @@ namespace YoableWPF
         {
             if (!Properties.Settings.Default.EnablePropagation)
             {
-                MessageBox.Show(
+                CustomMessageBox.Show(
                     LanguageManager.Instance.GetString("Propagation_Disabled") ?? "Propagation is disabled in settings.",
                     LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                     MessageBoxButton.OK,
@@ -1610,7 +1612,7 @@ namespace YoableWPF
             string currentFile = GetCurrentFileName();
             if (dialog.Scope == PropagationScope.CurrentImage && string.IsNullOrEmpty(currentFile))
             {
-                MessageBox.Show(
+                CustomMessageBox.Show(
                     LanguageManager.Instance.GetString("Main_NoImageSelected") ?? "No image selected.",
                     LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                     MessageBoxButton.OK,
@@ -1635,7 +1637,7 @@ namespace YoableWPF
 
             if (sourceFiles.Count == 0)
             {
-                MessageBox.Show(
+                CustomMessageBox.Show(
                     LanguageManager.Instance.GetString("Propagation_NoSources") ?? "No labeled images found to use as sources.",
                     LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                     MessageBoxButton.OK,
@@ -1772,7 +1774,7 @@ namespace YoableWPF
             catch (Exception ex)
             {
                 overlayManager.HideOverlay();
-                MessageBox.Show(
+                CustomMessageBox.Show(
                     $"{LanguageManager.Instance.GetString("Main_Error") ?? "Error"}\n{ex.Message}",
                     LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                     MessageBoxButton.OK,
@@ -1790,13 +1792,10 @@ namespace YoableWPF
 
                 if (hasPartialResults)
                 {
-                    var keepResult = MessageBox.Show(
-                        $"Propagation was canceled, but some results were generated.\n\n" +
-                        $"Suggestions: {summary.SuggestionsAdded}\n" +
-                        $"Labels: {summary.LabelsAdded}\n" +
-                        $"Images affected: {summary.ImagesAffected}\n\n" +
-                        $"Do you want to keep these partial results?",
-                        "Keep Partial Results?",
+                    var keepResult = CustomMessageBox.Show(
+                        string.Format(LanguageManager.Instance.GetString("Msg_PropagationPartialResults") ?? "Propagation was canceled, but some results were generated.\n\nSuggestions: {0}\nLabels: {1}\nImages affected: {2}\n\nDo you want to keep these partial results?",
+                            summary.SuggestionsAdded, summary.LabelsAdded, summary.ImagesAffected),
+                        LanguageManager.Instance.GetString("Msg_KeepPartialResults") ?? "Keep Partial Results?",
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Question);
 
@@ -1817,7 +1816,7 @@ namespace YoableWPF
                             drawingCanvas.InvalidateVisual();
                         }
 
-                        MessageBox.Show(
+                        CustomMessageBox.Show(
                             LanguageManager.Instance.GetString("Propagation_Canceled") ?? "Propagation canceled.",
                             LanguageManager.Instance.GetString("Main_Information") ?? "Information",
                             MessageBoxButton.OK,
@@ -1828,7 +1827,7 @@ namespace YoableWPF
                 }
                 else
                 {
-                    MessageBox.Show(
+                    CustomMessageBox.Show(
                         LanguageManager.Instance.GetString("Propagation_Canceled") ?? "Propagation canceled.",
                         LanguageManager.Instance.GetString("Main_Information") ?? "Information",
                         MessageBoxButton.OK,
@@ -1853,7 +1852,7 @@ namespace YoableWPF
                 summary.SuggestionsAdded,
                 summary.LabelsAdded,
                 summary.ImagesAffected);
-            MessageBox.Show(message, LanguageManager.Instance.GetString("Propagation_Title") ?? "Propagation",
+            CustomMessageBox.Show(message, LanguageManager.Instance.GetString("Propagation_Title") ?? "Propagation",
                 MessageBoxButton.OK, MessageBoxImage.Information);
 
             MarkProjectDirty();
@@ -1917,11 +1916,11 @@ namespace YoableWPF
             }
             catch (OperationCanceledException)
             {
-                MessageBox.Show("Image loading was canceled.", "Canceled", MessageBoxButton.OK, MessageBoxImage.Information);
+                CustomMessageBox.Show(LanguageManager.Instance.GetString("Msg_ImageLoadCanceled") ?? "Image loading was canceled.", LanguageManager.Instance.GetString("Msg_Canceled") ?? "Canceled", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error loading images: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_ErrorLoadingImages") ?? "Error loading images: {0}", ex.Message), LanguageManager.Instance.GetString("Msg_Error") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {
@@ -1971,8 +1970,8 @@ namespace YoableWPF
             // Check if images are loaded first (REQUIRED for cached dimensions)
             if (imageManager.ImagePathMap.Count == 0)
             {
-                MessageBox.Show("Please load images before importing labels.\n\nImages must be loaded first so label dimensions can be calculated correctly.",
-                    "Load Images First", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CustomMessageBox.Show(LanguageManager.Instance.GetString("Msg_LoadImagesFirst") ?? "Please load images before importing labels.\n\nImages must be loaded first so label dimensions can be calculated correctly.",
+                    LanguageManager.Instance.GetString("Msg_LoadImagesFirstTitle") ?? "Load Images First", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -1984,7 +1983,7 @@ namespace YoableWPF
 
             if (totalFiles == 0)
             {
-                MessageBox.Show("No YOLO label files found in the selected directory.", "Label Import", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CustomMessageBox.Show(LanguageManager.Instance.GetString("Msg_NoLabelFilesFound") ?? "No YOLO label files found in the selected directory.", LanguageManager.Instance.GetString("Msg_LabelImport") ?? "Label Import", MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 
@@ -2073,12 +2072,12 @@ namespace YoableWPF
             catch (OperationCanceledException)
             {
                 overlayManager.HideOverlay();
-                MessageBox.Show("Label import was cancelled by user.", "Import Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
+                CustomMessageBox.Show(LanguageManager.Instance.GetString("Msg_LabelImportCanceled") ?? "Label import was cancelled by user.", LanguageManager.Instance.GetString("Msg_ImportCanceled") ?? "Import Cancelled", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
                 overlayManager.HideOverlay();
-                MessageBox.Show($"Error importing labels: {ex.Message}", "Import Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_ErrorImportingLabels") ?? "Error importing labels: {0}", ex.Message), LanguageManager.Instance.GetString("Msg_ImportError") ?? "Import Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -2100,19 +2099,19 @@ namespace YoableWPF
                     tokenSource.Token);
 
                 overlayManager.HideOverlay();
-                MessageBox.Show("Labels exported successfully!", "Export Complete",
+                CustomMessageBox.Show(LanguageManager.Instance.GetString("Msg_LabelsExported") ?? "Labels exported successfully!", LanguageManager.Instance.GetString("Msg_ExportComplete") ?? "Export Complete",
                     MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (OperationCanceledException)
             {
                 overlayManager.HideOverlay();
-                MessageBox.Show("Export canceled.", "Canceled",
+                CustomMessageBox.Show(LanguageManager.Instance.GetString("Msg_ExportCanceled") ?? "Export canceled.", LanguageManager.Instance.GetString("Msg_Canceled") ?? "Canceled",
                     MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch (Exception ex)
             {
                 overlayManager.HideOverlay();
-                MessageBox.Show($"Export failed: {ex.Message}", "Error",
+                CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_ExportFailed") ?? "Export failed: {0}", ex.Message), LanguageManager.Instance.GetString("Msg_Error") ?? "Error",
                     MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
@@ -2955,9 +2954,9 @@ namespace YoableWPF
             // Can't remove the last class
             if (projectClasses.Count <= 1)
             {
-                MessageBox.Show(
-                    "Cannot remove the last class. At least one class must exist.",
-                    "Cannot Remove Class",
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_CannotRemoveLastClass") ?? "Cannot remove the last class. At least one class must exist.",
+                    LanguageManager.Instance.GetString("Msg_CannotRemoveClassTitle") ?? "Cannot Remove Class",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 return;

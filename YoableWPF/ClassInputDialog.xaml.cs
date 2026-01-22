@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Media;
 using Xceed.Wpf.Toolkit;
+using YoableWPF.Managers;
 
 namespace YoableWPF
 {
@@ -113,9 +114,9 @@ namespace YoableWPF
             
             if (string.IsNullOrWhiteSpace(ClassName))
             {
-                System.Windows.MessageBox.Show(
-                    "Please enter a class name.",
-                    "Validation Error",
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_Class_NameRequired") ?? "Please enter a class name.",
+                    LanguageManager.Instance.GetString("Msg_ValidationError") ?? "Validation Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 ClassNameTextBox.Focus();
@@ -128,9 +129,9 @@ namespace YoableWPF
             {
                 if (MergeTargetComboBox.SelectedItem == null)
                 {
-                    System.Windows.MessageBox.Show(
-                        "Please select a target class to merge into.",
-                        "Validation Error",
+                    CustomMessageBox.Show(
+                        LanguageManager.Instance.GetString("Msg_Class_SelectMergeTarget") ?? "Please select a target class to merge into.",
+                        LanguageManager.Instance.GetString("Msg_ValidationError") ?? "Validation Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
                     MergeTargetComboBox.Focus();

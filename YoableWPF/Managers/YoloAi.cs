@@ -271,8 +271,8 @@ namespace YoableWPF.Managers
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Error detecting YOLO format: {ex.Message}\n\nModel may not be compatible.",
-                    "Model Detection Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_ModelDetectionError") ?? "Error detecting YOLO format: {0}\n\nModel may not be compatible.", ex.Message),
+                    LanguageManager.Instance.GetString("Msg_ModelDetectionErrorTitle") ?? "Model Detection Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return new YoloModelInfo { Format = YoloFormat.Unknown };
             }
         }
@@ -792,12 +792,9 @@ namespace YoableWPF.Managers
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Error running AI inference on image:\n\n{ex.Message}\n\n" +
-                    $"Image size: {image.Width}x{image.Height}\n" +
-                    $"Model expected size: {model.ModelInfo.ModelInputSize}x{model.ModelInfo.ModelInputSize}\n\n" +
-                    $"Please ensure your model is compatible with the image.",
-                    "AI Inference Error",
+                CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_AIInferenceError") ?? "Error running AI inference on image:\n\n{0}\n\nImage size: {1}x{2}\nModel expected size: {3}x{3}\n\nPlease ensure your model is compatible with the image.", ex.Message, image.Width, image.Height, model.ModelInfo.ModelInputSize),
+                    LanguageManager.Instance.GetString("Msg_AIInferenceErrorTitle") ?? "AI Inference Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 return new List<Rectangle>();
@@ -840,12 +837,9 @@ namespace YoableWPF.Managers
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Error running AI inference on image:\n\n{ex.Message}\n\n" +
-                    $"Image size: {image.Width}x{image.Height}\n" +
-                    $"Model expected size: {model.ModelInfo.ModelInputSize}x{model.ModelInfo.ModelInputSize}\n\n" +
-                    $"Please ensure your model is compatible with the image.",
-                    "AI Inference Error",
+                CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_AIInferenceError") ?? "Error running AI inference on image:\n\n{0}\n\nImage size: {1}x{2}\nModel expected size: {3}x{3}\n\nPlease ensure your model is compatible with the image.", ex.Message, image.Width, image.Height, model.ModelInfo.ModelInputSize),
+                    LanguageManager.Instance.GetString("Msg_AIInferenceErrorTitle") ?? "AI Inference Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 return new List<Detection>();
@@ -906,11 +900,9 @@ namespace YoableWPF.Managers
                         // If this is a critical error (like wrong dimensions), show warning
                         if (modelEx.Message.Contains("dimension") || modelEx.Message.Contains("shape"))
                         {
-                            MessageBox.Show(
-                                $"Warning: Model '{model.Name}' failed to process the image.\n\n" +
-                                $"Error: {modelEx.Message}\n\n" +
-                                $"Continuing with remaining models...",
-                                "Model Processing Warning",
+                            CustomMessageBox.Show(
+                                string.Format(LanguageManager.Instance.GetString("Msg_ModelProcessingWarning") ?? "Warning: Model '{0}' failed to process the image.\n\nError: {1}\n\nContinuing with remaining models...", model.Name, modelEx.Message),
+                                LanguageManager.Instance.GetString("Msg_ModelProcessingWarningTitle") ?? "Model Processing Warning",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Warning);
                         }
@@ -944,11 +936,9 @@ namespace YoableWPF.Managers
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Error running ensemble AI inference:\n\n{ex.Message}\n\n" +
-                    $"Image size: {image.Width}x{image.Height}\n\n" +
-                    $"Please check your models and image compatibility.",
-                    "Ensemble Inference Error",
+                CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_EnsembleInferenceError") ?? "Error running ensemble AI inference:\n\n{0}\n\nImage size: {1}x{2}\n\nPlease check your models and image compatibility.", ex.Message, image.Width, image.Height),
+                    LanguageManager.Instance.GetString("Msg_EnsembleInferenceErrorTitle") ?? "Ensemble Inference Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 return new List<Rectangle>();
@@ -1009,11 +999,9 @@ namespace YoableWPF.Managers
                         // If this is a critical error (like wrong dimensions), show warning
                         if (modelEx.Message.Contains("dimension") || modelEx.Message.Contains("shape"))
                         {
-                            MessageBox.Show(
-                                $"Warning: Model '{model.Name}' failed to process the image.\n\n" +
-                                $"Error: {modelEx.Message}\n\n" +
-                                $"Continuing with remaining models...",
-                                "Model Processing Warning",
+                            CustomMessageBox.Show(
+                                string.Format(LanguageManager.Instance.GetString("Msg_ModelProcessingWarning") ?? "Warning: Model '{0}' failed to process the image.\n\nError: {1}\n\nContinuing with remaining models...", model.Name, modelEx.Message),
+                                LanguageManager.Instance.GetString("Msg_ModelProcessingWarningTitle") ?? "Model Processing Warning",
                                 MessageBoxButton.OK,
                                 MessageBoxImage.Warning);
                         }
@@ -1047,11 +1035,9 @@ namespace YoableWPF.Managers
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Error running ensemble AI inference:\n\n{ex.Message}\n\n" +
-                    $"Image size: {image.Width}x{image.Height}\n\n" +
-                    $"Please check your models and image compatibility.",
-                    "Ensemble Inference Error",
+                CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_EnsembleInferenceError") ?? "Error running ensemble AI inference:\n\n{0}\n\nImage size: {1}x{2}\n\nPlease check your models and image compatibility.", ex.Message, image.Width, image.Height),
+                    LanguageManager.Instance.GetString("Msg_EnsembleInferenceErrorTitle") ?? "Ensemble Inference Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 return new List<(Rectangle, int)>();
@@ -1127,7 +1113,7 @@ namespace YoableWPF.Managers
                 {
                     if (!silent)
                     {
-                        MessageBox.Show("This model is already loaded.", "Model Already Loaded",
+                        CustomMessageBox.Show(LanguageManager.Instance.GetString("Msg_ModelAlreadyLoaded") ?? "This model is already loaded.", LanguageManager.Instance.GetString("Msg_ModelAlreadyLoadedTitle") ?? "Model Already Loaded",
                             MessageBoxButton.OK, MessageBoxImage.Information);
                     }
                     return loadedModels.FirstOrDefault(m => m.ModelPath == modelPath);
@@ -1143,16 +1129,16 @@ namespace YoableWPF.Managers
                 {
                     if (!silent)
                     {
-                        MessageBox.Show($"GPU initialization failed: {errorMessage}\nFalling back to CPU.",
-                                      "GPU Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_GPUInitFailed") ?? "GPU initialization failed: {0}\nFalling back to CPU.", errorMessage),
+                                      LanguageManager.Instance.GetString("Msg_GPUWarning") ?? "GPU Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
                     }
 
                     if (!TryInitializeSession(model, false, out errorMessage))
                     {
                         if (!silent)
                         {
-                            MessageBox.Show($"Failed to initialize model: {errorMessage}",
-                                          "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                            CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_ModelInitFailed") ?? "Failed to initialize model: {0}", errorMessage),
+                                          LanguageManager.Instance.GetString("Msg_Error") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
                         return null;
                     }
@@ -1164,12 +1150,8 @@ namespace YoableWPF.Managers
                     model.Session?.Dispose();
                     if (!silent)
                     {
-                        MessageBox.Show("Failed to detect YOLO model format or unsupported model type.\n\n" +
-                                      "Supported formats:\n" +
-                                      "- YOLOv5: [batch, detections, 5+classes]\n" +
-                                      "- YOLOv8: [batch, 4+classes, detections]\n\n" +
-                                      "Note: Segmentation models are not supported.",
-                                      "Unsupported Model", MessageBoxButton.OK, MessageBoxImage.Error);
+                        CustomMessageBox.Show(LanguageManager.Instance.GetString("Msg_UnsupportedModel") ?? "Failed to detect YOLO model format or unsupported model type.\n\nSupported formats:\n- YOLOv5: [batch, detections, 5+classes]\n- YOLOv8: [batch, 4+classes, detections]\n\nNote: Segmentation models are not supported.",
+                                      LanguageManager.Instance.GetString("Msg_UnsupportedModelTitle") ?? "Unsupported Model", MessageBoxButton.OK, MessageBoxImage.Error);
                     }
                     return null;
                 }
@@ -1230,13 +1212,8 @@ namespace YoableWPF.Managers
                         _ => "Unknown"
                     };
 
-                    MessageBox.Show($"Model '{model.Name}' loaded successfully.\n" +
-                                  $"Format: {formatName}\n" +
-                                  $"Classes: {modelInfo.NumClasses}\n" +
-                                  $"Detections: {modelInfo.NumDetections}\n" +
-                                  $"Input Size: {modelInfo.ModelInputSize}x{modelInfo.ModelInputSize}\n" +
-                                  $"Total models: {loadedModels.Count}",
-                        "Model Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
+                    CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_ModelLoadedSuccess") ?? "Model '{0}' loaded successfully.\nFormat: {1}\nClasses: {2}\nDetections: {3}\nInput Size: {4}x{4}\nTotal models: {5}", model.Name, formatName, modelInfo.NumClasses, modelInfo.NumDetections, modelInfo.ModelInputSize, loadedModels.Count),
+                        LanguageManager.Instance.GetString("Msg_ModelLoaded") ?? "Model Loaded", MessageBoxButton.OK, MessageBoxImage.Information);
                 }
                 else
                 {
@@ -1249,8 +1226,8 @@ namespace YoableWPF.Managers
             {
                 if (!silent)
                 {
-                    MessageBox.Show($"Error loading model: {ex.Message}",
-                                  "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                    CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_ErrorLoadingModel") ?? "Error loading model: {0}", ex.Message),
+                                  LanguageManager.Instance.GetString("Msg_Error") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 }
                 else
                 {

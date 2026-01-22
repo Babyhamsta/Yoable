@@ -56,9 +56,9 @@ namespace YoableWPF
                 }
                 else
                 {
-                    var result = MessageBox.Show(
-                        $"Project file not found:\n{projectPath}\n\nRemove from recent projects?",
-                        "Project Not Found",
+                    var result = CustomMessageBox.Show(
+                        string.Format(LanguageManager.Instance.GetString("Msg_ProjectNotFound") ?? "Project file not found:\n{0}\n\nRemove from recent projects?", projectPath),
+                        LanguageManager.Instance.GetString("Msg_Warning") ?? "Warning",
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Warning);
 
@@ -207,9 +207,9 @@ namespace YoableWPF
                 Debug.WriteLine($"Error loading project: {ex.Message}");
                 overlayManager?.HideOverlay();
 
-                MessageBox.Show(
-                    $"Failed to load project:\n\n{ex.Message}",
-                    "Error",
+                CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_FailedToLoadProject") ?? "Failed to load project:\n\n{0}", ex.Message),
+                    LanguageManager.Instance.GetString("Msg_Error") ?? "Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
 
@@ -233,18 +233,18 @@ namespace YoableWPF
                     }
                     else
                     {
-                        MessageBox.Show(
-                            $"Project folder not found:\n{folderPath}",
-                            "Folder Not Found",
+                        CustomMessageBox.Show(
+                            string.Format(LanguageManager.Instance.GetString("Msg_FolderNotFound") ?? "Folder not found: {0}", folderPath),
+                            LanguageManager.Instance.GetString("Msg_Warning") ?? "Warning",
                             MessageBoxButton.OK,
                             MessageBoxImage.Warning);
                     }
                 }
                 catch (Exception ex)
                 {
-                    MessageBox.Show(
-                        $"Failed to open project folder:\n\n{ex.Message}",
-                        "Error",
+                    CustomMessageBox.Show(
+                        string.Format(LanguageManager.Instance.GetString("Msg_Project_OpenFolderFailed") ?? "Failed to open project folder:\n\n{0}", ex.Message),
+                        LanguageManager.Instance.GetString("Msg_Error") ?? "Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
                 }
@@ -255,9 +255,9 @@ namespace YoableWPF
         {
             if (sender is Button button && button.Tag is string projectPath)
             {
-                var result = MessageBox.Show(
-                    $"Are you sure you want to delete this project?\n\n{projectPath}\n\nThis action cannot be undone.",
-                    "Delete Project",
+                var result = CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_Project_ConfirmDelete") ?? "Are you sure you want to delete this project?\n\n{0}\n\nThis action cannot be undone.", projectPath),
+                    LanguageManager.Instance.GetString("Msg_Project_DeleteTitle") ?? "Delete Project",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning);
 
@@ -277,17 +277,17 @@ namespace YoableWPF
                         // Refresh the list
                         LoadRecentProjects();
 
-                        MessageBox.Show(
-                            "Project deleted successfully.",
-                            "Success",
+                        CustomMessageBox.Show(
+                            LanguageManager.Instance.GetString("Msg_Project_Deleted") ?? "Project deleted successfully.",
+                            LanguageManager.Instance.GetString("Msg_Success") ?? "Success",
                             MessageBoxButton.OK,
                             MessageBoxImage.Information);
                     }
                     catch (Exception ex)
                     {
-                        MessageBox.Show(
-                            $"Failed to delete project:\n\n{ex.Message}",
-                            "Error",
+                        CustomMessageBox.Show(
+                            string.Format(LanguageManager.Instance.GetString("Msg_Project_FailedDelete") ?? "Failed to delete project:\n\n{0}", ex.Message),
+                            LanguageManager.Instance.GetString("Msg_Error") ?? "Error",
                             MessageBoxButton.OK,
                             MessageBoxImage.Error);
                     }

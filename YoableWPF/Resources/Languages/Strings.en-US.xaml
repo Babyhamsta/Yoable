@@ -266,6 +266,196 @@
     <system:String x:Key="ModelManager_NeedProjectClasses">Please create classes in the project first, then configure model class mapping.&#x0a;&#x0a;You can add classes in the 'Classes' area on the right panel.</system:String>
     <system:String x:Key="ModelManager_NeedProjectClassesTitle">Project Classes Required</system:String>
     
+    <!-- Common Message Strings -->
+    <system:String x:Key="Msg_Error">Error</system:String>
+    <system:String x:Key="Msg_Warning">Warning</system:String>
+    <system:String x:Key="Msg_Success">Success</system:String>
+    <system:String x:Key="Msg_Canceled">Canceled</system:String>
+    <system:String x:Key="Msg_Confirm">Confirm</system:String>
+    <system:String x:Key="Msg_ValidationError">Validation Error</system:String>
+    <system:String x:Key="Msg_LoadingCanceled">Loading was canceled.</system:String>
+    <system:String x:Key="Msg_OperationCanceled">Operation was canceled.</system:String>
+    <system:String x:Key="Msg_ProjectLoadCanceled">Project loading was canceled.</system:String>
+    <system:String x:Key="Msg_FailedToLoadProject">Failed to load project:\n\n{0}</system:String>
+    <system:String x:Key="Msg_FailedToSaveProject">Failed to save project:\n\n{0}</system:String>
+    <system:String x:Key="Msg_ErrorOccurred">An error occurred: {0}</system:String>
+    <system:String x:Key="Msg_FileNotFound">File not found: {0}</system:String>
+    <system:String x:Key="Msg_FolderNotFound">Folder not found: {0}</system:String>
+    <system:String x:Key="Msg_ProjectNotFound">Project file not found:\n{0}\n\nRemove from recent projects?</system:String>
+    <system:String x:Key="Msg_UnsavedChanges">You have unsaved changes.\n\nDo you want to save before continuing?</system:String>
+    <system:String x:Key="Msg_UnsavedChangesTitle">Unsaved Changes</system:String>
+    <system:String x:Key="Msg_ConfirmAction">Are you sure you want to continue?</system:String>
+
+    <!-- Project Messages -->
+    <system:String x:Key="Msg_Project_NameRequired">Please enter a project name.</system:String>
+    <system:String x:Key="Msg_Project_NameInvalid">Project name contains invalid characters.\nPlease use only valid file name characters.</system:String>
+    <system:String x:Key="Msg_Project_LocationRequired">Please select a project location.</system:String>
+    <system:String x:Key="Msg_Project_LocationNotExist">The location '{0}' does not exist.\n\nDo you want to create it?</system:String>
+    <system:String x:Key="Msg_Project_CreateLocation">Create Location</system:String>
+    <system:String x:Key="Msg_Project_FailedCreateLocation">Failed to create location:\n\n{0}</system:String>
+    <system:String x:Key="Msg_Project_AlreadyExists">A project with this name already exists at this location.\n\nDo you want to open it instead?</system:String>
+    <system:String x:Key="Msg_Project_Exists">Project Exists</system:String>
+    <system:String x:Key="Msg_Project_FolderExists">A folder named '{0}' already exists at this location.\n\nDo you want to use this folder?</system:String>
+    <system:String x:Key="Msg_Project_Deleted">Project deleted successfully.</system:String>
+    <system:String x:Key="Msg_Project_FailedDelete">Failed to delete project:\n\n{0}</system:String>
+    <system:String x:Key="Msg_Project_ConfirmDelete">Are you sure you want to delete this project?\n\n{0}\n\nThis action cannot be undone.</system:String>
+    <system:String x:Key="Msg_Project_DeleteTitle">Delete Project</system:String>
+    <system:String x:Key="Msg_Project_OpenFolderFailed">Failed to open project folder:\n\n{0}</system:String>
+
+    <!-- Image/Label Messages -->
+    <system:String x:Key="Msg_Image_LoadCanceled">Image loading was canceled.</system:String>
+    <system:String x:Key="Msg_Image_LoadError">Error loading images: {0}</system:String>
+    <system:String x:Key="Msg_Label_ImportCanceled">Label import was cancelled by user.</system:String>
+    <system:String x:Key="Msg_Label_ImportCanceledTitle">Import Cancelled</system:String>
+    <system:String x:Key="Msg_Label_ImportError">Error importing labels: {0}</system:String>
+    <system:String x:Key="Msg_Label_ImportErrorTitle">Import Error</system:String>
+    <system:String x:Key="Msg_Label_NoFiles">No YOLO label files found in the selected directory.</system:String>
+    <system:String x:Key="Msg_Label_LoadImagesFirst">Please load images before importing labels.\n\nImages must be loaded first so label dimensions can be calculated correctly.</system:String>
+    <system:String x:Key="Msg_Label_LoadImagesFirstTitle">Load Images First</system:String>
+    <system:String x:Key="Msg_Export_Success">Labels exported successfully!</system:String>
+    <system:String x:Key="Msg_Export_Complete">Export Complete</system:String>
+    <system:String x:Key="Msg_Export_Canceled">Export canceled.</system:String>
+    <system:String x:Key="Msg_Export_Failed">Export failed: {0}</system:String>
+
+    <!-- AI/Model Messages -->
+    <system:String x:Key="Msg_Model_NoModels">No models loaded. Would you like to load models now?</system:String>
+    <system:String x:Key="Msg_Model_NoModelsTitle">No Models Loaded</system:String>
+    <system:String x:Key="Msg_Model_AlreadyLoaded">This model is already loaded.</system:String>
+    <system:String x:Key="Msg_Model_AlreadyLoadedTitle">Model Already Loaded</system:String>
+    <system:String x:Key="Msg_Model_LoadSuccess">Model '{0}' loaded successfully.\n\nFormat: {1}\nClasses: {2}\nDevice: {3}</system:String>
+    <system:String x:Key="Msg_Model_LoadSuccessTitle">Model Loaded</system:String>
+    <system:String x:Key="Msg_Model_LoadError">Error loading model: {0}</system:String>
+    <system:String x:Key="Msg_Model_LoadErrorTitle">Model Load Error</system:String>
+    <system:String x:Key="Msg_Model_DetectionError">Error detecting YOLO format: {0}\n\nModel may not be compatible.</system:String>
+    <system:String x:Key="Msg_Model_DetectionErrorTitle">Model Detection Error</system:String>
+    <system:String x:Key="Msg_Model_UnsupportedFormat">Failed to detect YOLO model format or unsupported model type.\n\nPlease ensure the model is a valid YOLOv5 or YOLOv8 ONNX model.</system:String>
+    <system:String x:Key="Msg_Model_UnsupportedFormatTitle">Unsupported Model</system:String>
+    <system:String x:Key="Msg_Model_GPUFailed">GPU initialization failed: {0}\nFalling back to CPU.</system:String>
+    <system:String x:Key="Msg_Model_GPUFailedTitle">GPU Initialization Failed</system:String>
+    <system:String x:Key="Msg_Model_InitFailed">Failed to initialize model: {0}</system:String>
+    <system:String x:Key="Msg_Model_InitFailedTitle">Initialization Error</system:String>
+    <system:String x:Key="Msg_AutoLabel_Complete">Auto-labeling complete{0}.\nTotal detections: {1}</system:String>
+    <system:String x:Key="Msg_AutoLabel_CompleteTitle">Auto-Labeling Complete</system:String>
+    <system:String x:Key="Msg_AutoLabel_Confirm">This will detect and label objects in {0} images.\n\nExisting labels will be replaced. Continue?</system:String>
+    <system:String x:Key="Msg_AutoLabel_ConfirmTitle">Confirm Auto-Labeling</system:String>
+
+    <!-- Propagation Messages -->
+    <system:String x:Key="Msg_Propagation_NoImages">Please load images before running propagation.</system:String>
+    <system:String x:Key="Msg_Propagation_NoLabels">No labeled images found to propagate from.</system:String>
+    <system:String x:Key="Msg_Propagation_Canceled">Propagation was canceled.</system:String>
+    <system:String x:Key="Msg_Propagation_KeepPartial">Propagation was canceled.\n\n{0} suggestions were generated before cancellation.\n\nDo you want to keep these partial results?</system:String>
+    <system:String x:Key="Msg_Propagation_KeepPartialTitle">Keep Partial Results?</system:String>
+    <system:String x:Key="Msg_Propagation_PartialKept">Partial results kept. {0} suggestions available for review.</system:String>
+    <system:String x:Key="Msg_Propagation_PartialCleared">Partial results cleared.</system:String>
+
+    <!-- Suggestion Messages -->
+    <system:String x:Key="Msg_Suggestion_ClearConfirm">Clear all {0} suggestions from the project?</system:String>
+    <system:String x:Key="Msg_Suggestion_ClearTitle">Clear All Suggestions</system:String>
+    <system:String x:Key="Msg_Suggestion_ClearSuccess">Cleared {0} suggestions.</system:String>
+    <system:String x:Key="Msg_Suggestion_NoSuggestions">No suggestions to clear.</system:String>
+
+    <!-- Class Messages -->
+    <system:String x:Key="Msg_Class_NameRequired">Please enter a class name.</system:String>
+    <system:String x:Key="Msg_Class_SelectTarget">Please select a target class.</system:String>
+    <system:String x:Key="Msg_Class_ConfirmMergeDelete">Are you sure you want to delete all labels with class '{0}'?\n\nThis action cannot be undone!</system:String>
+    <system:String x:Key="Msg_Class_ConfirmDeletion">Confirm Deletion</system:String>
+    <system:String x:Key="Msg_Class_NoSelection">Please select a class first.</system:String>
+    <system:String x:Key="Msg_Class_CannotDeleteLast">Cannot delete the last remaining class.\nAt least one class must exist.</system:String>
+
+    <!-- YouTube/Video Messages -->
+    <system:String x:Key="Msg_YouTube_EnterURL">Please enter a YouTube URL</system:String>
+    <system:String x:Key="Msg_YouTube_NoStreams">No compatible video streams found for {0}</system:String>
+    <system:String x:Key="Msg_YouTube_ProcessingFailed">Processing failed: {0}</system:String>
+
+    <!-- Update Messages -->
+    <system:String x:Key="Msg_Update_NoAssets">Update available, but no downloadable assets were found for this release.</system:String>
+    <system:String x:Key="Msg_Update_CheckFailed">Update check failed: {0}</system:String>
+    <system:String x:Key="Msg_Update_Failed">Update failed: {0}</system:String>
+    <system:String x:Key="Msg_Update_Error">Update Error</system:String>
+
+    <!-- Additional Message Keys used by code -->
+    <system:String x:Key="Msg_Class_ConfirmDeleteLabels">Are you sure you want to delete all labels with class '{0}'?\n\nThis action cannot be undone!</system:String>
+    <system:String x:Key="Msg_ConfirmDeletion">Confirm Deletion</system:String>
+    <system:String x:Key="Msg_Class_SelectMergeTarget">Please select a target class to merge into.</system:String>
+    <system:String x:Key="Msg_NoProjectOpen">No project is currently open.</system:String>
+    <system:String x:Key="Msg_NoProject">No Project</system:String>
+    <system:String x:Key="Msg_UnsavedChangesPrompt">Do you want to save changes to '{0}'?</system:String>
+    <system:String x:Key="Msg_NoSuggestionsToClear">No suggestions to clear.</system:String>
+    <system:String x:Key="Msg_ConfirmClearAllSuggestions">Are you sure you want to clear all {0} suggestions from all images?</system:String>
+    <system:String x:Key="Msg_SuggestionsCleared">Cleared {0} suggestions from all images.</system:String>
+    <system:String x:Key="Msg_DuplicateImageNames">Duplicate Image Names</system:String>
+    <system:String x:Key="Msg_ErrorDuringLoading">Error occurred during loading: {0}</system:String>
+    <system:String x:Key="Msg_NoModels">No Models</system:String>
+    <system:String x:Key="Msg_NoModelsLoaded">No models loaded. Would you like to load models now?</system:String>
+    <system:String x:Key="Msg_SingleModel">single model</system:String>
+    <system:String x:Key="Msg_EnsembleModels">ensemble ({0} models)</system:String>
+    <system:String x:Key="Msg_ProcessImagesPrompt">Process {0} images using {1} detection?</system:String>
+    <system:String x:Key="Msg_ManyModelsWarning">Note: Processing with many models may take considerable time.</system:String>
+    <system:String x:Key="Msg_StartDetection">Start Detection</system:String>
+    <system:String x:Key="Msg_UsingModels"> using {0} models</system:String>
+    <system:String x:Key="Msg_AILabels">AI Labels</system:String>
+    <system:String x:Key="Msg_PropagationPartialResults">Propagation was canceled, but some results were generated.\n\nSuggestions: {0}\nLabels: {1}\nImages affected: {2}\n\nDo you want to keep these partial results?</system:String>
+    <system:String x:Key="Msg_KeepPartialResults">Keep Partial Results?</system:String>
+    <system:String x:Key="Msg_ImageLoadCanceled">Image loading was canceled.</system:String>
+    <system:String x:Key="Msg_ErrorLoadingImages">Error loading images: {0}</system:String>
+    <system:String x:Key="Msg_LoadImagesFirst">Please load images before importing labels.\n\nImages must be loaded first so label dimensions can be calculated correctly.</system:String>
+    <system:String x:Key="Msg_LoadImagesFirstTitle">Load Images First</system:String>
+    <system:String x:Key="Msg_NoLabelFilesFound">No YOLO label files found in the selected directory.</system:String>
+    <system:String x:Key="Msg_LabelImport">Label Import</system:String>
+    <system:String x:Key="Msg_LabelImportCanceled">Label import was cancelled by user.</system:String>
+    <system:String x:Key="Msg_ImportCanceled">Import Cancelled</system:String>
+    <system:String x:Key="Msg_ErrorImportingLabels">Error importing labels: {0}</system:String>
+    <system:String x:Key="Msg_ImportError">Import Error</system:String>
+    <system:String x:Key="Msg_LabelsExported">Labels exported successfully!</system:String>
+    <system:String x:Key="Msg_ExportComplete">Export Complete</system:String>
+    <system:String x:Key="Msg_ExportCanceled">Export canceled.</system:String>
+    <system:String x:Key="Msg_ExportFailed">Export failed: {0}</system:String>
+    <system:String x:Key="Msg_CannotRemoveLastClass">Cannot remove the last class. At least one class must exist.</system:String>
+    <system:String x:Key="Msg_CannotRemoveClassTitle">Cannot Remove Class</system:String>
+    <system:String x:Key="Msg_FolderExists">A folder named '{0}' already exists at this location.\n\nDo you want to use this folder?</system:String>
+    <system:String x:Key="Msg_FolderExistsTitle">Folder Exists</system:String>
+    <system:String x:Key="Msg_FailedToCreateProject">Failed to create project:\n\n{0}</system:String>
+    <system:String x:Key="Msg_ErrorCreatingProject">Error Creating Project</system:String>
+    <system:String x:Key="Msg_ProjectFileNotFound">Project file not found:\n{0}</system:String>
+    <system:String x:Key="Msg_FileNotFoundTitle">File Not Found</system:String>
+    <system:String x:Key="Msg_ProjectFileCorrupted">Failed to load project. The project file may be corrupted.</system:String>
+    <system:String x:Key="Msg_LoadError">Load Error</system:String>
+    <system:String x:Key="Msg_ErrorLoadingProject">Error Loading Project</system:String>
+    <system:String x:Key="Msg_SaveError">Save Error</system:String>
+    <system:String x:Key="Msg_FailedToSaveProjectAs">Failed to save project as:\n\n{0}</system:String>
+    <system:String x:Key="Msg_SaveAsError">Save As Error</system:String>
+    <system:String x:Key="Msg_ErrorLoadingProjectData">Error loading project data:\n\n{0}</system:String>
+    <system:String x:Key="Msg_MissingFiles">Missing Files</system:String>
+    <system:String x:Key="Msg_CleanupOrphanedLabels">Clean up these orphaned labels?</system:String>
+    <system:String x:Key="Msg_OrphanedLabels">Orphaned Labels</system:String>
+    <system:String x:Key="Msg_LocateMissingImages">Looking for {0} missing image(s).\n\nHave your images been moved to a new folder?\nIf yes, browse to the new location and we'll try to find them.</system:String>
+    <system:String x:Key="Msg_LocateImages">Locate Images</system:String>
+    <system:String x:Key="Msg_ImagesRelocated">Successfully relocated {0} out of {1} image(s)!</system:String>
+    <system:String x:Key="Msg_ImagesFound">Images Found</system:String>
+    <system:String x:Key="Msg_NoMatchingImages">No matching images found in the selected folder.</system:String>
+    <system:String x:Key="Msg_ImagesNotFound">Images Not Found</system:String>
+    <system:String x:Key="Msg_ModelDetectionError">Error detecting YOLO format: {0}\n\nModel may not be compatible.</system:String>
+    <system:String x:Key="Msg_ModelDetectionErrorTitle">Model Detection Error</system:String>
+    <system:String x:Key="Msg_AIInferenceError">Error running AI inference on image:\n\n{0}\n\nImage size: {1}x{2}\nModel expected size: {3}x{3}\n\nPlease ensure your model is compatible with the image.</system:String>
+    <system:String x:Key="Msg_AIInferenceErrorTitle">AI Inference Error</system:String>
+    <system:String x:Key="Msg_ModelProcessingWarning">Warning: Model '{0}' failed to process the image.\n\nError: {1}\n\nContinuing with remaining models...</system:String>
+    <system:String x:Key="Msg_ModelProcessingWarningTitle">Model Processing Warning</system:String>
+    <system:String x:Key="Msg_EnsembleInferenceError">Error running ensemble AI inference:\n\n{0}\n\nImage size: {1}x{2}\n\nPlease check your models and image compatibility.</system:String>
+    <system:String x:Key="Msg_EnsembleInferenceErrorTitle">Ensemble Inference Error</system:String>
+    <system:String x:Key="Msg_ModelAlreadyLoaded">This model is already loaded.</system:String>
+    <system:String x:Key="Msg_ModelAlreadyLoadedTitle">Model Already Loaded</system:String>
+    <system:String x:Key="Msg_GPUInitFailed">GPU initialization failed: {0}\nFalling back to CPU.</system:String>
+    <system:String x:Key="Msg_GPUWarning">GPU Warning</system:String>
+    <system:String x:Key="Msg_ModelInitFailed">Failed to initialize model: {0}</system:String>
+    <system:String x:Key="Msg_UnsupportedModel">Failed to detect YOLO model format or unsupported model type.\n\nSupported formats:\n- YOLOv5: [batch, detections, 5+classes]\n- YOLOv8: [batch, 4+classes, detections]\n\nNote: Segmentation models are not supported.</system:String>
+    <system:String x:Key="Msg_UnsupportedModelTitle">Unsupported Model</system:String>
+    <system:String x:Key="Msg_ModelLoadedSuccess">Model '{0}' loaded successfully.\nFormat: {1}\nClasses: {2}\nDetections: {3}\nInput Size: {4}x{4}\nTotal models: {5}</system:String>
+    <system:String x:Key="Msg_ModelLoaded">Model Loaded</system:String>
+    <system:String x:Key="Msg_ErrorLoadingModel">Error loading model: {0}</system:String>
+    <system:String x:Key="Msg_YouTube_NoCompatibleStream">No compatible video streams found for {0}</system:String>
+    <system:String x:Key="Msg_YouTube_DownloadError">Download Error</system:String>
+    <system:String x:Key="Msg_AutoLabelComplete">Auto-labeling complete{0}.\nTotal detections: {1}</system:String>
+
     <!-- Import Labels and Image Dialog -->
     <system:String x:Key="Dialog_ImportLabelsAndImage_Title">Import Labels &amp; Images</system:String>
     <system:String x:Key="Dialog_ImportLabelsAndImage_Description">Select image and label folders to import into the project</system:String>

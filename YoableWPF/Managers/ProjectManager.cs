@@ -71,9 +71,9 @@ namespace YoableWPF.Managers
                 string projectFolder = Path.Combine(projectLocation, projectName);
                 if (Directory.Exists(projectFolder))
                 {
-                    var result = MessageBox.Show(
-                        $"A folder named '{projectName}' already exists at this location.\n\nDo you want to use this folder?",
-                        "Folder Exists",
+                    var result = CustomMessageBox.Show(
+                        string.Format(LanguageManager.Instance.GetString("Msg_FolderExists") ?? "A folder named '{0}' already exists at this location.\n\nDo you want to use this folder?", projectName),
+                        LanguageManager.Instance.GetString("Msg_FolderExistsTitle") ?? "Folder Exists",
                         MessageBoxButton.YesNo,
                         MessageBoxImage.Question);
 
@@ -121,9 +121,9 @@ namespace YoableWPF.Managers
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Failed to create project:\n\n{ex.Message}",
-                    "Error Creating Project",
+                CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_FailedToCreateProject") ?? "Failed to create project:\n\n{0}", ex.Message),
+                    LanguageManager.Instance.GetString("Msg_ErrorCreatingProject") ?? "Error Creating Project",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 return false;
@@ -139,9 +139,9 @@ namespace YoableWPF.Managers
             {
                 if (!File.Exists(projectPath))
                 {
-                    MessageBox.Show(
-                        $"Project file not found:\n{projectPath}",
-                        "File Not Found",
+                    CustomMessageBox.Show(
+                        string.Format(LanguageManager.Instance.GetString("Msg_ProjectFileNotFound") ?? "Project file not found:\n{0}", projectPath),
+                        LanguageManager.Instance.GetString("Msg_FileNotFoundTitle") ?? "File Not Found",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
                     return false;
@@ -155,9 +155,9 @@ namespace YoableWPF.Managers
 
                 if (CurrentProject == null)
                 {
-                    MessageBox.Show(
-                        "Failed to load project. The project file may be corrupted.",
-                        "Load Error",
+                    CustomMessageBox.Show(
+                        LanguageManager.Instance.GetString("Msg_ProjectFileCorrupted") ?? "Failed to load project. The project file may be corrupted.",
+                        LanguageManager.Instance.GetString("Msg_LoadError") ?? "Load Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
                     return false;
@@ -203,9 +203,9 @@ namespace YoableWPF.Managers
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Failed to load project:\n\n{ex.Message}",
-                    "Error Loading Project",
+                CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_FailedToLoadProject") ?? "Failed to load project:\n\n{0}", ex.Message),
+                    LanguageManager.Instance.GetString("Msg_ErrorLoadingProject") ?? "Error Loading Project",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 return false;
@@ -230,9 +230,9 @@ namespace YoableWPF.Managers
 
             if (checkForUnsavedChanges && hasUnsavedChanges)
             {
-                var result = MessageBox.Show(
-                    $"Do you want to save changes to '{CurrentProject.ProjectName}'?",
-                    "Unsaved Changes",
+                var result = CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_UnsavedChangesPrompt") ?? "Do you want to save changes to '{0}'?", CurrentProject.ProjectName),
+                    LanguageManager.Instance.GetString("Msg_UnsavedChanges") ?? "Unsaved Changes",
                     MessageBoxButton.YesNoCancel,
                     MessageBoxImage.Question);
 
@@ -324,9 +324,9 @@ namespace YoableWPF.Managers
                 Debug.WriteLine($"Error saving project: {ex.Message}");
                 await mainWindow.Dispatcher.InvokeAsync(() =>
                 {
-                    MessageBox.Show(
-                        $"Failed to save project:\n\n{ex.Message}",
-                        "Save Error",
+                    CustomMessageBox.Show(
+                        string.Format(LanguageManager.Instance.GetString("Msg_FailedToSaveProject") ?? "Failed to save project:\n\n{0}", ex.Message),
+                        LanguageManager.Instance.GetString("Msg_SaveError") ?? "Save Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
                 });
@@ -408,9 +408,9 @@ namespace YoableWPF.Managers
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
-                    $"Failed to save project as:\n\n{ex.Message}",
-                    "Save As Error",
+                CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_FailedToSaveProjectAs") ?? "Failed to save project as:\n\n{0}", ex.Message),
+                    LanguageManager.Instance.GetString("Msg_SaveAsError") ?? "Save As Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error);
                 return false;
@@ -944,9 +944,9 @@ namespace YoableWPF.Managers
                 Debug.WriteLine($"Error importing project data: {ex.Message}");
                 await mainWindow.Dispatcher.InvokeAsync(() =>
                 {
-                    MessageBox.Show(
-                        $"Error loading project data:\n\n{ex.Message}",
-                        "Import Error",
+                    CustomMessageBox.Show(
+                        string.Format(LanguageManager.Instance.GetString("Msg_ErrorLoadingProjectData") ?? "Error loading project data:\n\n{0}", ex.Message),
+                        LanguageManager.Instance.GetString("Msg_ImportError") ?? "Import Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
                 });
@@ -1131,9 +1131,9 @@ namespace YoableWPF.Managers
             {
                 message += "Would you like to locate the missing images?";
 
-                var dialogResult = MessageBox.Show(
+                var dialogResult = CustomMessageBox.Show(
                     message,
-                    "Missing Files",
+                    LanguageManager.Instance.GetString("Msg_MissingFiles") ?? "Missing Files",
                     MessageBoxButton.YesNoCancel,
                     MessageBoxImage.Warning);
 
@@ -1157,9 +1157,9 @@ namespace YoableWPF.Managers
             }
             else if (result.OrphanedLabels.Any())
             {
-                var cleanupResult = MessageBox.Show(
-                    message + "Clean up these orphaned labels?",
-                    "Orphaned Labels",
+                var cleanupResult = CustomMessageBox.Show(
+                    message + (LanguageManager.Instance.GetString("Msg_CleanupOrphanedLabels") ?? "Clean up these orphaned labels?"),
+                    LanguageManager.Instance.GetString("Msg_OrphanedLabels") ?? "Orphaned Labels",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Question);
 
@@ -1177,11 +1177,9 @@ namespace YoableWPF.Managers
         /// </summary>
         private bool TryRelocateImages(List<string> missingImages)
         {
-            var result = MessageBox.Show(
-                $"Looking for {missingImages.Count} missing image(s).\n\n" +
-                "Have your images been moved to a new folder?\n" +
-                "If yes, browse to the new location and we'll try to find them.",
-                "Locate Images",
+            var result = CustomMessageBox.Show(
+                string.Format(LanguageManager.Instance.GetString("Msg_LocateMissingImages") ?? "Looking for {0} missing image(s).\n\nHave your images been moved to a new folder?\nIf yes, browse to the new location and we'll try to find them.", missingImages.Count),
+                LanguageManager.Instance.GetString("Msg_LocateImages") ?? "Locate Images",
                 MessageBoxButton.OKCancel,
                 MessageBoxImage.Question);
 
@@ -1222,9 +1220,9 @@ namespace YoableWPF.Managers
 
             if (foundCount > 0)
             {
-                MessageBox.Show(
-                    $"Successfully relocated {foundCount} out of {missingImages.Count} image(s)!",
-                    "Images Found",
+                CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_ImagesRelocated") ?? "Successfully relocated {0} out of {1} image(s)!", foundCount, missingImages.Count),
+                    LanguageManager.Instance.GetString("Msg_ImagesFound") ?? "Images Found",
                     MessageBoxButton.OK,
                     MessageBoxImage.Information);
 
@@ -1233,9 +1231,9 @@ namespace YoableWPF.Managers
             }
             else
             {
-                MessageBox.Show(
-                    "No matching images found in the selected folder.",
-                    "Images Not Found",
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_NoMatchingImages") ?? "No matching images found in the selected folder.",
+                    LanguageManager.Instance.GetString("Msg_ImagesNotFound") ?? "Images Not Found",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
                 return false;

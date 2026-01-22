@@ -1,5 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
+using YoableWPF.Managers;
 
 namespace YoableWPF
 {
@@ -18,7 +19,10 @@ namespace YoableWPF
         {
             if (string.IsNullOrWhiteSpace(YoutubeUrlTextBox.Text))
             {
-                MessageBox.Show("Please enter a YouTube URL", "Validation Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_YouTube_EnterURL") ?? "Please enter a YouTube URL",
+                    LanguageManager.Instance.GetString("Msg_ValidationError") ?? "Validation Error",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
 

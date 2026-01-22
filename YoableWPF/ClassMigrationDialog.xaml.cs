@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows;
+using YoableWPF.Managers;
 
 namespace YoableWPF
 {
@@ -62,9 +63,9 @@ namespace YoableWPF
                 }
                 else
                 {
-                    MessageBox.Show(
-                        "Please select a target class.",
-                        "Validation Error",
+                    CustomMessageBox.Show(
+                        LanguageManager.Instance.GetString("Msg_Class_SelectTarget") ?? "Please select a target class.",
+                        LanguageManager.Instance.GetString("Msg_ValidationError") ?? "Validation Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Warning);
                     return;
@@ -73,9 +74,9 @@ namespace YoableWPF
             else
             {
                 // Confirm deletion
-                var result = MessageBox.Show(
-                    $"Are you sure you want to delete all labels with class '{classToRemove.Name}'?\n\nThis action cannot be undone!",
-                    "Confirm Deletion",
+                var result = CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_Class_ConfirmDeleteLabels") ?? "Are you sure you want to delete all labels with class '{0}'?\n\nThis action cannot be undone!", classToRemove.Name),
+                    LanguageManager.Instance.GetString("Msg_ConfirmDeletion") ?? "Confirm Deletion",
                     MessageBoxButton.YesNo,
                     MessageBoxImage.Warning);
                 

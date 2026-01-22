@@ -82,10 +82,10 @@ namespace YoableWPF.Managers
 
                     if (release.assets == null || release.assets.Length == 0)
                     {
-                        await dispatcher.InvokeAsync(() => MessageBox.Show(
+                        await dispatcher.InvokeAsync(() => CustomMessageBox.Show(
                             mainWindow,
-                            "Update available, but no downloadable assets were found for this release.",
-                            "Update Error",
+                            LanguageManager.Instance.GetString("Msg_Update_NoAssets") ?? "Update available, but no downloadable assets were found for this release.",
+                            LanguageManager.Instance.GetString("Msg_Update_Error") ?? "Update Error",
                             MessageBoxButton.OK,
                             MessageBoxImage.Error));
                         return;
@@ -96,10 +96,10 @@ namespace YoableWPF.Managers
             }
             catch (Exception ex)
             {
-                await dispatcher.InvokeAsync(() => MessageBox.Show(
+                await dispatcher.InvokeAsync(() => CustomMessageBox.Show(
                     mainWindow,
-                    $"Update check failed: {ex.Message}",
-                    "Update Error",
+                    string.Format(LanguageManager.Instance.GetString("Msg_Update_CheckFailed") ?? "Update check failed: {0}", ex.Message),
+                    LanguageManager.Instance.GetString("Msg_Update_Error") ?? "Update Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Error));
             }
@@ -200,7 +200,7 @@ namespace YoableWPF.Managers
                 await dispatcher.InvokeAsync(() =>
                 {
                     overlayManager.HideOverlay();
-                    MessageBox.Show(
+                    CustomMessageBox.Show(
                         mainWindow,
                         $"Update failed: {ex.Message}",
                         "Update Error",
