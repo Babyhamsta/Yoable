@@ -44,6 +44,7 @@ public class YoutubeDownloader
 
             var streamInfo = streamManifest.GetVideoStreams()
                 .Where(s => s.Container == YoutubeExplode.Videos.Streams.Container.Mp4)
+                .Where(s => s.VideoCodec.Contains("avc1", StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(s => s.VideoQuality)
                 .FirstOrDefault();
 
