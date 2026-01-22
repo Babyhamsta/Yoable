@@ -351,12 +351,8 @@ namespace YoableWPF
         {
             if (projectManager == null || !projectManager.IsProjectOpen)
             {
-                // No project open, prompt to create one
-                MessageBox.Show(
-                    "No project is currently open. Create a new project or open an existing one.",
-                    "No Project",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
+                // No project open - directly open project creation dialog
+                NewProject_Click(sender, e);
                 return;
             }
 
@@ -935,6 +931,59 @@ namespace YoableWPF
             MarkProjectDirty();
         }
 
+        private async void ClearAllSuggestions_Click(object sender, RoutedEventArgs e)
+        {
+            int totalSuggestions = labelManager.GetTotalSuggestionCount();
+
+            if (totalSuggestions == 0)
+            {
+                MessageBox.Show(
+                    "No suggestions to clear.",
+                    LanguageManager.Instance.GetString("Main_Information") ?? "Information",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            var result = MessageBox.Show(
+                $"Are you sure you want to clear all {totalSuggestions} suggestions from all images?",
+                "Clear All Suggestions",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Question);
+
+            if (result != MessageBoxResult.Yes)
+                return;
+
+            int cleared = labelManager.ClearAllSuggestions();
+
+            // Update all image statuses
+            await UpdateAllImageStatusesAsync();
+
+            // Update current image display
+            string currentFile = GetCurrentFileName();
+            if (!string.IsNullOrEmpty(currentFile))
+            {
+                drawingCanvas.SuggestedLabels = labelManager.GetSuggestions(currentFile);
+                drawingCanvas.SelectedSuggestion = null;
+            }
+
+            uiStateManager.RefreshLabelList();
+            uiStateManager.UpdateStatusCounts();
+            UpdateSuggestionSummaryUI();
+            drawingCanvas.InvalidateVisual();
+
+            if (projectManager?.IsProjectOpen == true)
+            {
+                MarkProjectDirty();
+            }
+
+            MessageBox.Show(
+                $"Cleared {cleared} suggestions from all images.",
+                LanguageManager.Instance.GetString("Main_Information") ?? "Information",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+        }
+
         private void UpdateSuggestionSummaryUI()
         {
             string currentFile = GetCurrentFileName();
@@ -1506,10 +1555,11 @@ namespace YoableWPF
 
         private void AutoSuggestLabels_Click(object sender, RoutedEventArgs e)
         {
-            if (projectManager == null || !projectManager.IsProjectOpen)
+            // Allow suggestions without a project - works like auto-labeling with in-memory storage
+            if (imageManager.ImagePathMap.Count == 0)
             {
                 MessageBox.Show(
-                    LanguageManager.Instance.GetString("Status_NoProject") ?? "No project is currently open.",
+                    LanguageManager.Instance.GetString("Main_NoImageSelected") ?? "No images loaded.",
                     LanguageManager.Instance.GetString("Main_Error") ?? "Error",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning);
@@ -1520,10 +1570,32 @@ namespace YoableWPF
             if (dialog.ShowDialog() != true)
                 return;
 
+            // Create a fresh PropagationManager for each run to ensure clean state
+            propagationManager = new PropagationManager(labelManager, imageManager);
+            if (projectManager?.IsProjectOpen == true && !string.IsNullOrEmpty(projectManager.CurrentProject?.ProjectFolder))
+            {
+                propagationManager.SetProjectFolder(projectManager.CurrentProject.ProjectFolder);
+            }
+
             _ = RunPropagationAsync(dialog);
         }
 
         private async Task RunPropagationAsync(PropagationDialog dialog)
+        {
+            try
+            {
+                await RunPropagationInternalAsync(dialog);
+            }
+            finally
+            {
+                // Clear reference and force GC to release GDI+ resources
+                propagationManager = null;
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+            }
+        }
+
+        private async Task RunPropagationInternalAsync(PropagationDialog dialog)
         {
             if (!Properties.Settings.Default.EnablePropagation)
             {
@@ -1713,12 +1785,56 @@ namespace YoableWPF
 
             if (tokenSource.IsCancellationRequested)
             {
-                MessageBox.Show(
-                    LanguageManager.Instance.GetString("Propagation_Canceled") ?? "Propagation canceled.",
-                    LanguageManager.Instance.GetString("Main_Information") ?? "Information",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Information);
-                return;
+                // Check if any suggestions were added before the cancel
+                bool hasPartialResults = summary.SuggestionsAdded > 0 || summary.LabelsAdded > 0;
+
+                if (hasPartialResults)
+                {
+                    var keepResult = MessageBox.Show(
+                        $"Propagation was canceled, but some results were generated.\n\n" +
+                        $"Suggestions: {summary.SuggestionsAdded}\n" +
+                        $"Labels: {summary.LabelsAdded}\n" +
+                        $"Images affected: {summary.ImagesAffected}\n\n" +
+                        $"Do you want to keep these partial results?",
+                        "Keep Partial Results?",
+                        MessageBoxButton.YesNo,
+                        MessageBoxImage.Question);
+
+                    if (keepResult == MessageBoxResult.No)
+                    {
+                        // Clear all suggestions if user doesn't want partial results
+                        int cleared = labelManager.ClearAllSuggestions();
+                        if (cleared > 0)
+                        {
+                            await UpdateAllImageStatusesAsync();
+                            if (!string.IsNullOrEmpty(currentFile))
+                            {
+                                drawingCanvas.SuggestedLabels = labelManager.GetSuggestions(currentFile);
+                            }
+                            uiStateManager.RefreshLabelList();
+                            uiStateManager.UpdateStatusCounts();
+                            UpdateSuggestionSummaryUI();
+                            drawingCanvas.InvalidateVisual();
+                        }
+
+                        MessageBox.Show(
+                            LanguageManager.Instance.GetString("Propagation_Canceled") ?? "Propagation canceled.",
+                            LanguageManager.Instance.GetString("Main_Information") ?? "Information",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Information);
+                        return;
+                    }
+                    // Fall through to update UI with partial results
+                }
+                else
+                {
+                    MessageBox.Show(
+                        LanguageManager.Instance.GetString("Propagation_Canceled") ?? "Propagation canceled.",
+                        LanguageManager.Instance.GetString("Main_Information") ?? "Information",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    return;
+                }
             }
             await UpdateAllImageStatusesAsync();
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -6,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace YoableWPF.Managers
 {
@@ -30,12 +32,16 @@ namespace YoableWPF.Managers
         public const string PhaseTracking = "tracking";
 
         private const int ProgressInterval = 250;
+        private const int MaxMatchingSize = 640; // Increased from 320 for better quality
+        private const int MinTemplateSize = 32;  // Don't shrink templates below this
+        private const double MinMatchThreshold = 0.3; // Minimum NCC score to consider a match valid
 
         private readonly LabelManager labelManager;
         private readonly ImageManager imageManager;
-        private readonly Dictionary<string, ulong> hashCache = new(StringComparer.OrdinalIgnoreCase);
-        private readonly Dictionary<string, float[]> histogramCache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, ulong> hashCache = new(StringComparer.OrdinalIgnoreCase);
+        private readonly ConcurrentDictionary<string, float[]> histogramCache = new(StringComparer.OrdinalIgnoreCase);
         private string cacheFilePath;
+        private readonly object saveLock = new();
 
         public PropagationManager(LabelManager labelManager, ImageManager imageManager)
         {
@@ -48,8 +54,7 @@ namespace YoableWPF.Managers
             if (string.IsNullOrWhiteSpace(projectFolder))
             {
                 cacheFilePath = null;
-                hashCache.Clear();
-                histogramCache.Clear();
+                // Keep in-memory caches for non-project mode
                 return;
             }
 
@@ -58,6 +63,100 @@ namespace YoableWPF.Managers
             cacheFilePath = Path.Combine(cacheFolder, "propagation_cache.json");
             LoadCache();
         }
+
+        #region Bitmap Cache
+
+        /// <summary>
+        /// Thread-safe bitmap cache for sequential processing.
+        /// Caches raw byte data and dimensions, returns new Bitmap instances.
+        /// </summary>
+        private class BitmapCache : IDisposable
+        {
+            private readonly Dictionary<string, (byte[] data, int width, int height, int stride)> cache
+                = new(StringComparer.OrdinalIgnoreCase);
+            private readonly object cacheLock = new();
+
+            public Bitmap GetOrLoad(string path)
+            {
+                (byte[] data, int width, int height, int stride) cached;
+
+                lock (cacheLock)
+                {
+                    if (!cache.TryGetValue(path, out cached))
+                    {
+                        // Load and convert to byte array
+                        using var original = new Bitmap(path);
+                        var format = System.Drawing.Imaging.PixelFormat.Format32bppArgb;
+                        var rect = new Rectangle(0, 0, original.Width, original.Height);
+
+                        using var converted = new Bitmap(original.Width, original.Height, format);
+                        using (var g = Graphics.FromImage(converted))
+                        {
+                            g.DrawImage(original, 0, 0, original.Width, original.Height);
+                        }
+
+                        var bitmapData = converted.LockBits(rect, System.Drawing.Imaging.ImageLockMode.ReadOnly, format);
+                        try
+                        {
+                            int stride = Math.Abs(bitmapData.Stride);
+                            int byteCount = stride * converted.Height;
+                            var data = new byte[byteCount];
+                            System.Runtime.InteropServices.Marshal.Copy(bitmapData.Scan0, data, 0, byteCount);
+                            cached = (data, original.Width, original.Height, stride);
+                            cache[path] = cached;
+                        }
+                        finally
+                        {
+                            converted.UnlockBits(bitmapData);
+                        }
+                    }
+                }
+
+                // Create a new Bitmap from the cached data (outside lock for better parallelism)
+                var format2 = System.Drawing.Imaging.PixelFormat.Format32bppArgb;
+                var bitmap = new Bitmap(cached.width, cached.height, format2);
+                var rect2 = new Rectangle(0, 0, cached.width, cached.height);
+                var bmpData = bitmap.LockBits(rect2, System.Drawing.Imaging.ImageLockMode.WriteOnly, format2);
+                try
+                {
+                    // Copy row by row to handle stride differences
+                    int destStride = Math.Abs(bmpData.Stride);
+                    int srcStride = cached.stride;
+                    int rowBytes = cached.width * 4; // 4 bytes per pixel for 32bpp
+
+                    if (destStride == srcStride)
+                    {
+                        System.Runtime.InteropServices.Marshal.Copy(cached.data, 0, bmpData.Scan0, cached.data.Length);
+                    }
+                    else
+                    {
+                        for (int y = 0; y < cached.height; y++)
+                        {
+                            System.Runtime.InteropServices.Marshal.Copy(
+                                cached.data, y * srcStride,
+                                bmpData.Scan0 + y * destStride, rowBytes);
+                        }
+                    }
+                }
+                finally
+                {
+                    bitmap.UnlockBits(bmpData);
+                }
+                return bitmap;
+            }
+
+            public void Dispose()
+            {
+                lock (cacheLock)
+                {
+                    cache.Clear();
+                }
+            }
+        }
+
+        #endregion
+
+        #region Image Similarity
 
         public double GetImageSimilarity(string pathA, string pathB, ImageSimilarityMode mode)
         {
@@ -76,26 +175,27 @@ namespace YoableWPF.Managers
 
         public ulong GetImageHash(string imagePath)
         {
-            if (hashCache.TryGetValue(imagePath, out var cached))
-                return cached;
-
-            using var bitmap = new Bitmap(imagePath);
-            ulong hash = ComputeDHash(bitmap);
-            hashCache[imagePath] = hash;
-            SaveCache();
-            return hash;
+            return hashCache.GetOrAdd(imagePath, path =>
+            {
+                using var bitmap = new Bitmap(path);
+                ulong hash = ComputeDHash(bitmap);
+                SaveCacheDebounced();
+                return hash;
+            });
         }
 
         public float[] GetHistogram(string imagePath)
         {
-            if (histogramCache.TryGetValue(imagePath, out var cached))
-                return cached;
-
-            using var bitmap = new Bitmap(imagePath);
-            var hist = ComputeHistogram(bitmap, 16);
-            histogramCache[imagePath] = hist;
-            return hist;
+            return histogramCache.GetOrAdd(imagePath, path =>
+            {
+                using var bitmap = new Bitmap(path);
+                return ComputeHistogram(bitmap, 16);
+            });
         }
+
+        #endregion
+
+        #region Run Image Similarity (Parallelized)
 
         public PropagationSummary RunImageSimilarity(
             IEnumerable<string> sourceFiles,
@@ -113,94 +213,109 @@ namespace YoableWPF.Managers
             var candidateList = candidateFiles.ToList();
             int totalComparisons = sourceList.Count * candidateList.Count;
             int processedComparisons = 0;
-            var perImageAdded = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var perImageAdded = new ConcurrentDictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var summaryLock = new object();
 
-            foreach (var sourceFile in sourceList)
+            // Prepare source data
+            var sourcesWithLabels = sourceList
+                .Where(f => imageManager.ImagePathMap.TryGetValue(f, out _))
+                .Select(f => new
+                {
+                    File = f,
+                    Info = imageManager.ImagePathMap[f],
+                    Labels = labelManager.GetLabels(f)
+                })
+                .Where(s => s.Labels.Count > 0)
+                .ToList();
+
+            if (sourcesWithLabels.Count == 0)
+                return summary;
+
+            // Process candidates in parallel
+            Parallel.ForEach(candidateList, new ParallelOptions { CancellationToken = cancellationToken }, candidateFile =>
             {
                 if (cancellationToken.IsCancellationRequested)
-                    break;
+                    return;
 
-                if (!imageManager.ImagePathMap.TryGetValue(sourceFile, out var sourceInfo))
-                    continue;
+                if (!imageManager.ImagePathMap.TryGetValue(candidateFile, out var candidateInfo))
+                    return;
 
-                var sourceLabels = labelManager.GetLabels(sourceFile);
-                if (sourceLabels.Count == 0)
-                    continue;
+                if (skipLabeled &&
+                    labelManager.LabelStorage.TryGetValue(candidateFile, out var existingLabels) &&
+                    existingLabels.Count > 0)
+                {
+                    return;
+                }
 
-                var sourceSize = sourceInfo.OriginalDimensions;
-
-                foreach (var candidateFile in candidateList)
+                foreach (var source in sourcesWithLabels)
                 {
                     if (cancellationToken.IsCancellationRequested)
                         break;
 
-                    processedComparisons++;
+                    Interlocked.Increment(ref processedComparisons);
                     ReportProgress(progress, PhaseImageSimilarity, processedComparisons, totalComparisons);
 
-                    if (candidateFile.Equals(sourceFile, StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    if (!imageManager.ImagePathMap.TryGetValue(candidateFile, out var candidateInfo))
-                        continue;
-
-                    if (skipLabeled &&
-                        labelManager.LabelStorage.TryGetValue(candidateFile, out var existingLabels) &&
-                        existingLabels.Count > 0)
-                    {
-                        continue;
-                    }
-
-                    double similarity = GetImageSimilarity(sourceInfo.Path, candidateInfo.Path, GetSimilarityMode());
-                    if (similarity < similarityThreshold)
+                    if (candidateFile.Equals(source.File, StringComparison.OrdinalIgnoreCase))
                         continue;
 
                     if (maxSuggestionsPerImage > 0 &&
                         perImageAdded.TryGetValue(candidateFile, out int existingCount) &&
                         existingCount >= maxSuggestionsPerImage)
                     {
-                        continue;
+                        break;
                     }
 
-                    var suggestions = new List<SuggestedLabel>();
-                    foreach (var label in sourceLabels)
-                    {
-                        if (maxSuggestionsPerImage > 0 &&
-                            perImageAdded.TryGetValue(candidateFile, out int addedCount) &&
-                            addedCount + suggestions.Count >= maxSuggestionsPerImage)
-                            break;
+                    double similarity = GetImageSimilarity(source.Info.Path, candidateInfo.Path, GetSimilarityMode());
+                    if (similarity < similarityThreshold)
+                        continue;
 
-                        var rect = ScaleRect(label.Rect, sourceSize, candidateInfo.OriginalDimensions);
+                    var suggestions = new List<SuggestedLabel>();
+                    foreach (var label in source.Labels)
+                    {
+                        if (maxSuggestionsPerImage > 0)
+                        {
+                            int currentCount = perImageAdded.GetOrAdd(candidateFile, 0);
+                            if (currentCount + suggestions.Count >= maxSuggestionsPerImage)
+                                break;
+                        }
+
+                        var rect = ScaleRect(label.Rect, source.Info.OriginalDimensions, candidateInfo.OriginalDimensions);
                         if (rect.Width <= 1 || rect.Height <= 1)
                             continue;
 
-                        suggestions.Add(SuggestedLabel.FromRect(rect, label.ClassId, SuggestionSource.ImageSimilarity, similarity, sourceFile));
+                        suggestions.Add(SuggestedLabel.FromRect(rect, label.ClassId, SuggestionSource.ImageSimilarity, similarity, source.File));
                     }
 
                     if (suggestions.Count == 0)
                         continue;
 
-                    if (autoAccept)
+                    lock (summaryLock)
                     {
-                        int added = AddLabels(candidateFile, suggestions);
-                        summary.LabelsAdded += added;
-                        perImageAdded.TryGetValue(candidateFile, out int previousAdded);
-                        perImageAdded[candidateFile] = previousAdded + added;
+                        if (autoAccept)
+                        {
+                            int added = AddLabels(candidateFile, suggestions);
+                            summary.LabelsAdded += added;
+                            perImageAdded.AddOrUpdate(candidateFile, added, (k, v) => v + added);
+                            if (added > 0) summary.ImagesAffected++;
+                        }
+                        else
+                        {
+                            int added = labelManager.AddSuggestions(candidateFile, suggestions, mergeIoUThreshold);
+                            summary.SuggestionsAdded += added;
+                            perImageAdded.AddOrUpdate(candidateFile, added, (k, v) => v + added);
+                            if (added > 0) summary.ImagesAffected++;
+                        }
                     }
-                    else
-                    {
-                        labelManager.AddSuggestions(candidateFile, suggestions, mergeIoUThreshold);
-                        summary.SuggestionsAdded += suggestions.Count;
-                        perImageAdded.TryGetValue(candidateFile, out int previousAdded);
-                        perImageAdded[candidateFile] = previousAdded + suggestions.Count;
-                    }
-
-                    summary.ImagesAffected++;
                 }
-            }
+            });
 
             ReportProgress(progress, PhaseImageSimilarity, totalComparisons, totalComparisons, true);
             return summary;
         }
+
+        #endregion
+
+        #region Run Object Similarity (Parallelized with Bitmap Cache)
 
         public PropagationSummary RunObjectSimilarity(
             IEnumerable<string> sourceFiles,
@@ -222,9 +337,12 @@ namespace YoableWPF.Managers
             var sourceList = sourceFiles.ToList();
             var candidateList = candidateFiles.ToList();
             var similarityMode = GetSimilarityMode();
-            var perImageAdded = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var perImageAdded = new ConcurrentDictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var summaryLock = new object();
             int totalRankComparisons = sourceList.Count * candidateList.Count;
             int processedRankComparisons = 0;
+
+            using var bitmapCache = new BitmapCache();
 
             foreach (var sourceFile in sourceList)
             {
@@ -238,28 +356,29 @@ namespace YoableWPF.Managers
                 if (sourceLabels.Count == 0)
                     continue;
 
-                using var sourceBitmap = new Bitmap(sourceInfo.Path);
+                using var sourceBitmap = bitmapCache.GetOrLoad(sourceInfo.Path);
 
-                var rankedCandidates = new List<(string file, double similarity)>();
-                foreach (var candidateFile in candidateList)
+                // Build ranked candidates
+                var rankedCandidates = new ConcurrentBag<(string file, double similarity)>();
+                Parallel.ForEach(candidateList, new ParallelOptions { CancellationToken = cancellationToken }, candidateFile =>
                 {
                     if (cancellationToken.IsCancellationRequested)
-                        break;
+                        return;
 
-                    processedRankComparisons++;
+                    Interlocked.Increment(ref processedRankComparisons);
                     ReportProgress(progress, PhaseObjectRanking, processedRankComparisons, totalRankComparisons);
 
                     if (candidateFile.Equals(sourceFile, StringComparison.OrdinalIgnoreCase))
-                        continue;
+                        return;
 
                     if (!imageManager.ImagePathMap.TryGetValue(candidateFile, out var candidateInfo))
-                        continue;
+                        return;
 
                     if (skipLabeled &&
                         labelManager.LabelStorage.TryGetValue(candidateFile, out var existingLabels) &&
                         existingLabels.Count > 0)
                     {
-                        continue;
+                        return;
                     }
 
                     double similarity = 1.0;
@@ -267,27 +386,20 @@ namespace YoableWPF.Managers
                     {
                         similarity = GetImageSimilarity(sourceInfo.Path, candidateInfo.Path, similarityMode);
                         if (similarity < imageSimilarityThreshold)
-                            continue;
+                            return;
                     }
 
                     rankedCandidates.Add((candidateFile, similarity));
-                }
+                });
 
-                if (restrictToSimilar)
-                {
-                    rankedCandidates = rankedCandidates
-                        .OrderByDescending(c => c.similarity)
-                        .Take(candidateLimit)
-                        .ToList();
-                }
-                else
-                {
-                    rankedCandidates = rankedCandidates.Take(candidateLimit).ToList();
-                }
+                var sortedCandidates = restrictToSimilar
+                    ? rankedCandidates.OrderByDescending(c => c.similarity).Take(candidateLimit).ToList()
+                    : rankedCandidates.Take(candidateLimit).ToList();
 
-                int totalMatchChecks = sourceLabels.Count * rankedCandidates.Count;
+                int totalMatchChecks = sourceLabels.Count * sortedCandidates.Count;
                 int processedMatchChecks = 0;
 
+                // Process labels against candidates (sequential to avoid GDI+ threading issues)
                 foreach (var label in sourceLabels)
                 {
                     if (cancellationToken.IsCancellationRequested)
@@ -301,12 +413,12 @@ namespace YoableWPF.Managers
                     if (template == null)
                         continue;
 
-                    foreach (var candidate in rankedCandidates)
+                    foreach (var candidate in sortedCandidates)
                     {
                         if (cancellationToken.IsCancellationRequested)
                             break;
 
-                        processedMatchChecks++;
+                        Interlocked.Increment(ref processedMatchChecks);
                         ReportProgress(progress, PhaseObjectMatching, processedMatchChecks, totalMatchChecks);
 
                         if (maxSuggestionsPerImage > 0 &&
@@ -319,9 +431,11 @@ namespace YoableWPF.Managers
                         if (!imageManager.ImagePathMap.TryGetValue(candidate.file, out var candidateInfo))
                             continue;
 
-                        using var candidateBitmap = new Bitmap(candidateInfo.Path);
-                        var match = FindBestTemplateMatch(candidateBitmap, template, searchStride);
-                        if (match.Score < objectThreshold)
+                        using var candidateBitmap = bitmapCache.GetOrLoad(candidateInfo.Path);
+                        var match = FindBestTemplateMatchNCC(candidateBitmap, template, searchStride);
+
+                        // Skip if below minimum threshold (no valid match found)
+                        if (match.Score < MinMatchThreshold || match.Score < objectThreshold)
                             continue;
 
                         var suggestionRect = match.Rect;
@@ -329,28 +443,20 @@ namespace YoableWPF.Managers
                             continue;
 
                         var suggestion = SuggestedLabel.FromRect(suggestionRect, label.ClassId, SuggestionSource.ObjectSimilarity, match.Score, sourceFile);
+
                         if (autoAccept)
                         {
                             int added = AddLabels(candidate.file, new List<SuggestedLabel> { suggestion });
                             summary.LabelsAdded += added;
-                            perImageAdded.TryGetValue(candidate.file, out int previousAdded);
-                            perImageAdded[candidate.file] = previousAdded + added;
+                            perImageAdded.AddOrUpdate(candidate.file, added, (k, v) => v + added);
+                            if (added > 0) summary.ImagesAffected++;
                         }
                         else
                         {
-                            labelManager.AddSuggestions(candidate.file, new List<SuggestedLabel> { suggestion }, mergeIoUThreshold);
-                            summary.SuggestionsAdded += 1;
-                            perImageAdded.TryGetValue(candidate.file, out int previousAdded);
-                            perImageAdded[candidate.file] = previousAdded + 1;
-                        }
-
-                        summary.ImagesAffected++;
-
-                        if (maxSuggestionsPerImage > 0 &&
-                            perImageAdded.TryGetValue(candidate.file, out int currentAdded) &&
-                            currentAdded >= maxSuggestionsPerImage)
-                        {
-                            break;
+                            int added = labelManager.AddSuggestions(candidate.file, new List<SuggestedLabel> { suggestion }, mergeIoUThreshold);
+                            summary.SuggestionsAdded += added;
+                            perImageAdded.AddOrUpdate(candidate.file, added, (k, v) => v + added);
+                            if (added > 0) summary.ImagesAffected++;
                         }
                     }
                 }
@@ -361,6 +467,10 @@ namespace YoableWPF.Managers
             ReportProgress(progress, PhaseObjectRanking, totalRankComparisons, totalRankComparisons, true);
             return summary;
         }
+
+        #endregion
+
+        #region Run Tracking (Improved with NCC and Constrained Search)
 
         public PropagationSummary RunTracking(
             string startFile,
@@ -377,7 +487,8 @@ namespace YoableWPF.Managers
             CancellationToken cancellationToken = default)
         {
             var summary = new PropagationSummary();
-            var perImageAdded = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+            var perImageAdded = new ConcurrentDictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+
             int startIndex = -1;
             for (int i = 0; i < orderedFiles.Count; i++)
             {
@@ -397,7 +508,8 @@ namespace YoableWPF.Managers
             if (startLabels.Count == 0)
                 return summary;
 
-            using var startBitmap = new Bitmap(startInfo.Path);
+            using var bitmapCache = new BitmapCache();
+            using var startBitmap = bitmapCache.GetOrLoad(startInfo.Path);
 
             int maxForward = Math.Min(frameWindow, orderedFiles.Count - startIndex - 1);
             int maxBackward = Math.Min(frameWindow, startIndex);
@@ -405,38 +517,52 @@ namespace YoableWPF.Managers
             int totalTrackChecks = targetFrames * startLabels.Count;
             int processedTrackChecks = 0;
 
-            for (int offset = 1; offset <= frameWindow; offset++)
+            // Track positions for constrained search
+            var forwardPositions = new Dictionary<int, System.Windows.Rect>();
+            var backwardPositions = new Dictionary<int, System.Windows.Rect>();
+
+            // Initialize with start positions
+            for (int i = 0; i < startLabels.Count; i++)
             {
-                if (cancellationToken.IsCancellationRequested)
-                    break;
+                forwardPositions[i] = startLabels[i].Rect;
+                backwardPositions[i] = startLabels[i].Rect;
+            }
 
-                int forwardIndex = startIndex + offset;
-                int backwardIndex = startIndex - offset;
+            // Process forward frames sequentially (GDI+ isn't thread-safe)
+            for (int offset = 1; offset <= maxForward && !cancellationToken.IsCancellationRequested; offset++)
+            {
+                int targetIndex = startIndex + offset;
+                TrackToFrame(
+                    startFile, orderedFiles[targetIndex], startLabels, startBitmap, bitmapCache,
+                    forwardPositions, trackingThreshold, autoAccept, skipLabeled,
+                    maxSuggestionsPerImage, minBoxSize, searchStride, mergeIoUThreshold,
+                    summary, perImageAdded,
+                    ref processedTrackChecks, totalTrackChecks, progress, cancellationToken);
+            }
 
-                if (forwardIndex < orderedFiles.Count)
-                {
-                    summary = TrackToFrame(startFile, orderedFiles[forwardIndex], startLabels, startBitmap,
-                        trackingThreshold, autoAccept, skipLabeled, maxSuggestionsPerImage, minBoxSize, searchStride, mergeIoUThreshold, summary, perImageAdded,
-                        ref processedTrackChecks, totalTrackChecks, progress, cancellationToken);
-                }
-
-                if (backwardIndex >= 0)
-                {
-                    summary = TrackToFrame(startFile, orderedFiles[backwardIndex], startLabels, startBitmap,
-                        trackingThreshold, autoAccept, skipLabeled, maxSuggestionsPerImage, minBoxSize, searchStride, mergeIoUThreshold, summary, perImageAdded,
-                        ref processedTrackChecks, totalTrackChecks, progress, cancellationToken);
-                }
+            // Process backward frames sequentially
+            for (int offset = 1; offset <= maxBackward && !cancellationToken.IsCancellationRequested; offset++)
+            {
+                int targetIndex = startIndex - offset;
+                TrackToFrame(
+                    startFile, orderedFiles[targetIndex], startLabels, startBitmap, bitmapCache,
+                    backwardPositions, trackingThreshold, autoAccept, skipLabeled,
+                    maxSuggestionsPerImage, minBoxSize, searchStride, mergeIoUThreshold,
+                    summary, perImageAdded,
+                    ref processedTrackChecks, totalTrackChecks, progress, cancellationToken);
             }
 
             ReportProgress(progress, PhaseTracking, totalTrackChecks, totalTrackChecks, true);
             return summary;
         }
 
-        private PropagationSummary TrackToFrame(
+        private void TrackToFrame(
             string sourceFile,
             string targetFile,
             List<LabelData> startLabels,
             Bitmap startBitmap,
+            BitmapCache bitmapCache,
+            Dictionary<int, System.Windows.Rect> lastPositions,
             double trackingThreshold,
             bool autoAccept,
             bool skipLabeled,
@@ -445,38 +571,40 @@ namespace YoableWPF.Managers
             int searchStride,
             double mergeIoUThreshold,
             PropagationSummary summary,
-            Dictionary<string, int> perImageAdded,
+            ConcurrentDictionary<string, int> perImageAdded,
             ref int processedTrackChecks,
             int totalTrackChecks,
             IProgress<(string phase, int current, int total)> progress,
-            CancellationToken cancellationToken = default)
+            CancellationToken cancellationToken)
         {
             if (!imageManager.ImagePathMap.TryGetValue(targetFile, out var targetInfo))
-                return summary;
+                return;
 
             if (maxSuggestionsPerImage > 0 &&
                 perImageAdded.TryGetValue(targetFile, out int addedCount) &&
                 addedCount >= maxSuggestionsPerImage)
             {
-                return summary;
+                return;
             }
 
             if (skipLabeled &&
                 labelManager.LabelStorage.TryGetValue(targetFile, out var existingLabels) &&
                 existingLabels.Count > 0)
             {
-                return summary;
+                return;
             }
 
-            using var targetBitmap = new Bitmap(targetInfo.Path);
-            foreach (var label in startLabels)
+            using var targetBitmap = bitmapCache.GetOrLoad(targetInfo.Path);
+
+            for (int labelIndex = 0; labelIndex < startLabels.Count; labelIndex++)
             {
                 if (cancellationToken.IsCancellationRequested)
                     break;
 
-                processedTrackChecks++;
+                Interlocked.Increment(ref processedTrackChecks);
                 ReportProgress(progress, PhaseTracking, processedTrackChecks, totalTrackChecks);
 
+                var label = startLabels[labelIndex];
                 var templateRect = label.Rect;
                 if (templateRect.Width < minBoxSize || templateRect.Height < minBoxSize)
                     continue;
@@ -485,31 +613,49 @@ namespace YoableWPF.Managers
                 if (template == null)
                     continue;
 
-                var match = FindBestTemplateMatch(targetBitmap, template, searchStride);
-                if (match.Score < trackingThreshold)
+                // Get constrained search area based on last known position
+                System.Windows.Rect? searchArea = null;
+                if (lastPositions.TryGetValue(labelIndex, out var lastPos))
+                {
+                    // Search within 2x the object size around the last known position
+                    double searchMarginX = lastPos.Width * 2;
+                    double searchMarginY = lastPos.Height * 2;
+                    searchArea = new System.Windows.Rect(
+                        Math.Max(0, lastPos.X - searchMarginX),
+                        Math.Max(0, lastPos.Y - searchMarginY),
+                        lastPos.Width + searchMarginX * 2,
+                        lastPos.Height + searchMarginY * 2);
+                }
+
+                var match = FindBestTemplateMatchNCC(targetBitmap, template, searchStride, searchArea);
+
+                // Skip if below minimum threshold (no valid match found)
+                if (match.Score < MinMatchThreshold || match.Score < trackingThreshold)
                     continue;
 
                 var suggestionRect = match.Rect;
                 if (suggestionRect.Width < minBoxSize || suggestionRect.Height < minBoxSize)
                     continue;
 
+                // Update last known position for next frame
+                lastPositions[labelIndex] = suggestionRect;
+
                 var suggestion = SuggestedLabel.FromRect(suggestionRect, label.ClassId, SuggestionSource.Tracking, match.Score, sourceFile);
+
                 if (autoAccept)
                 {
                     int added = AddLabels(targetFile, new List<SuggestedLabel> { suggestion });
                     summary.LabelsAdded += added;
-                    perImageAdded.TryGetValue(targetFile, out int previousAdded);
-                    perImageAdded[targetFile] = previousAdded + added;
+                    perImageAdded.AddOrUpdate(targetFile, added, (k, v) => v + added);
+                    if (added > 0) summary.ImagesAffected++;
                 }
                 else
                 {
-                    labelManager.AddSuggestions(targetFile, new List<SuggestedLabel> { suggestion }, mergeIoUThreshold);
-                    summary.SuggestionsAdded += 1;
-                    perImageAdded.TryGetValue(targetFile, out int previousAdded);
-                    perImageAdded[targetFile] = previousAdded + 1;
+                    int added = labelManager.AddSuggestions(targetFile, new List<SuggestedLabel> { suggestion }, mergeIoUThreshold);
+                    summary.SuggestionsAdded += added;
+                    perImageAdded.AddOrUpdate(targetFile, added, (k, v) => v + added);
+                    if (added > 0) summary.ImagesAffected++;
                 }
-
-                summary.ImagesAffected++;
 
                 if (maxSuggestionsPerImage > 0 &&
                     perImageAdded.TryGetValue(targetFile, out int currentAdded) &&
@@ -518,9 +664,248 @@ namespace YoableWPF.Managers
                     break;
                 }
             }
-
-            return summary;
         }
+
+        #endregion
+
+        #region Template Matching with NCC (Normalized Cross-Correlation)
+
+        /// <summary>
+        /// Find best template match using Normalized Cross-Correlation (NCC).
+        /// NCC is invariant to brightness/contrast changes and gives 0-1 scores.
+        /// </summary>
+        private static TemplateMatchResult FindBestTemplateMatchNCC(
+            Bitmap image, Bitmap template, int stride, System.Windows.Rect? constrainedSearchArea = null)
+        {
+            stride = Math.Max(1, stride);
+
+            // Calculate scale - use higher resolution (640px) and don't shrink templates too small
+            float scale = Math.Min(1f, MaxMatchingSize / (float)Math.Max(image.Width, image.Height));
+            int scaledTemplateWidth = Math.Max(MinTemplateSize, (int)(template.Width * scale));
+            int scaledTemplateHeight = Math.Max(MinTemplateSize, (int)(template.Height * scale));
+
+            // Recalculate scale if template would be too small
+            if (template.Width * scale < MinTemplateSize || template.Height * scale < MinTemplateSize)
+            {
+                scale = Math.Min((float)MinTemplateSize / template.Width, (float)MinTemplateSize / template.Height);
+                scale = Math.Min(scale, 1f); // Don't upscale
+            }
+
+            int scaledWidth = Math.Max(1, (int)(image.Width * scale));
+            int scaledHeight = Math.Max(1, (int)(image.Height * scale));
+            scaledTemplateWidth = Math.Max(1, (int)(template.Width * scale));
+            scaledTemplateHeight = Math.Max(1, (int)(template.Height * scale));
+
+            using var scaledImage = new Bitmap(image, new Size(scaledWidth, scaledHeight));
+            using var scaledTemplate = new Bitmap(template, new Size(scaledTemplateWidth, scaledTemplateHeight));
+
+            // Convert to RGB arrays for color-based matching
+            var imageData = ToRGBArrays(scaledImage, out int imgW, out int imgH);
+            var templateData = ToRGBArrays(scaledTemplate, out int tplW, out int tplH);
+
+            // Calculate scaled search area if constrained
+            int searchMinX = 0, searchMinY = 0;
+            int searchMaxX = imgW - tplW;
+            int searchMaxY = imgH - tplH;
+
+            if (constrainedSearchArea.HasValue)
+            {
+                var area = constrainedSearchArea.Value;
+                searchMinX = Math.Max(0, (int)(area.X * scale));
+                searchMinY = Math.Max(0, (int)(area.Y * scale));
+                searchMaxX = Math.Min(searchMaxX, (int)((area.X + area.Width) * scale) - tplW);
+                searchMaxY = Math.Min(searchMaxY, (int)((area.Y + area.Height) * scale) - tplH);
+            }
+
+            if (searchMaxX < searchMinX || searchMaxY < searchMinY)
+                return new TemplateMatchResult { Score = 0, Rect = System.Windows.Rect.Empty };
+
+            var match = FindBestMatchNCC(imageData, imgW, imgH, templateData, tplW, tplH, stride,
+                searchMinX, searchMinY, searchMaxX, searchMaxY);
+
+            if (match.Score < MinMatchThreshold)
+                return new TemplateMatchResult { Score = match.Score, Rect = System.Windows.Rect.Empty };
+
+            double invScale = 1.0 / scale;
+            var rect = new System.Windows.Rect(match.X * invScale, match.Y * invScale, tplW * invScale, tplH * invScale);
+            return new TemplateMatchResult { Score = match.Score, Rect = rect };
+        }
+
+        /// <summary>
+        /// Convert bitmap to separate R, G, B arrays
+        /// </summary>
+        private static (byte[] r, byte[] g, byte[] b) ToRGBArrays(Bitmap bitmap, out int width, out int height)
+        {
+            width = bitmap.Width;
+            height = bitmap.Height;
+            int size = width * height;
+            var r = new byte[size];
+            var g = new byte[size];
+            var b = new byte[size];
+
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    var pixel = bitmap.GetPixel(x, y);
+                    int idx = y * width + x;
+                    r[idx] = pixel.R;
+                    g[idx] = pixel.G;
+                    b[idx] = pixel.B;
+                }
+            }
+
+            return (r, g, b);
+        }
+
+        /// <summary>
+        /// Find best match using Normalized Cross-Correlation (NCC) on RGB channels
+        /// </summary>
+        private static TemplateMatchRaw FindBestMatchNCC(
+            (byte[] r, byte[] g, byte[] b) image, int imageW, int imageH,
+            (byte[] r, byte[] g, byte[] b) template, int tplW, int tplH,
+            int stride, int minX, int minY, int maxX, int maxY)
+        {
+            stride = Math.Max(1, stride);
+            double bestScore = -1;
+            int bestX = 0;
+            int bestY = 0;
+
+            if (maxX < minX || maxY < minY)
+                return new TemplateMatchRaw { Score = 0 };
+
+            // Pre-compute template statistics for NCC
+            var templateStats = ComputeTemplateStats(template, tplW, tplH);
+
+            object lockObj = new object();
+
+            // Parallelize the search
+            Parallel.For(minY, maxY + 1, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, y =>
+            {
+                if ((y - minY) % stride != 0)
+                    return;
+
+                for (int x = minX; x <= maxX; x += stride)
+                {
+                    double ncc = ComputeNCC(image, imageW, template, tplW, tplH, x, y, templateStats);
+
+                    if (ncc > bestScore)
+                    {
+                        lock (lockObj)
+                        {
+                            if (ncc > bestScore)
+                            {
+                                bestScore = ncc;
+                                bestX = x;
+                                bestY = y;
+                            }
+                        }
+                    }
+                }
+            });
+
+            return new TemplateMatchRaw { Score = bestScore, X = bestX, Y = bestY };
+        }
+
+        private static (double meanR, double meanG, double meanB, double stdR, double stdG, double stdB) ComputeTemplateStats(
+            (byte[] r, byte[] g, byte[] b) template, int tplW, int tplH)
+        {
+            int n = tplW * tplH;
+            double sumR = 0, sumG = 0, sumB = 0;
+            double sumSqR = 0, sumSqG = 0, sumSqB = 0;
+
+            for (int i = 0; i < n; i++)
+            {
+                sumR += template.r[i];
+                sumG += template.g[i];
+                sumB += template.b[i];
+                sumSqR += template.r[i] * template.r[i];
+                sumSqG += template.g[i] * template.g[i];
+                sumSqB += template.b[i] * template.b[i];
+            }
+
+            double meanR = sumR / n;
+            double meanG = sumG / n;
+            double meanB = sumB / n;
+            double varR = (sumSqR / n) - (meanR * meanR);
+            double varG = (sumSqG / n) - (meanG * meanG);
+            double varB = (sumSqB / n) - (meanB * meanB);
+
+            return (meanR, meanG, meanB, Math.Sqrt(Math.Max(0, varR)), Math.Sqrt(Math.Max(0, varG)), Math.Sqrt(Math.Max(0, varB)));
+        }
+
+        private static double ComputeNCC(
+            (byte[] r, byte[] g, byte[] b) image, int imageW,
+            (byte[] r, byte[] g, byte[] b) template, int tplW, int tplH,
+            int offsetX, int offsetY,
+            (double meanR, double meanG, double meanB, double stdR, double stdG, double stdB) tplStats)
+        {
+            int n = tplW * tplH;
+
+            // Compute image patch statistics
+            double sumR = 0, sumG = 0, sumB = 0;
+            double sumSqR = 0, sumSqG = 0, sumSqB = 0;
+
+            for (int j = 0; j < tplH; j++)
+            {
+                int imgRowIdx = (offsetY + j) * imageW + offsetX;
+                for (int i = 0; i < tplW; i++)
+                {
+                    int imgIdx = imgRowIdx + i;
+                    sumR += image.r[imgIdx];
+                    sumG += image.g[imgIdx];
+                    sumB += image.b[imgIdx];
+                    sumSqR += image.r[imgIdx] * image.r[imgIdx];
+                    sumSqG += image.g[imgIdx] * image.g[imgIdx];
+                    sumSqB += image.b[imgIdx] * image.b[imgIdx];
+                }
+            }
+
+            double imgMeanR = sumR / n;
+            double imgMeanG = sumG / n;
+            double imgMeanB = sumB / n;
+            double imgVarR = (sumSqR / n) - (imgMeanR * imgMeanR);
+            double imgVarG = (sumSqG / n) - (imgMeanG * imgMeanG);
+            double imgVarB = (sumSqB / n) - (imgMeanB * imgMeanB);
+            double imgStdR = Math.Sqrt(Math.Max(0, imgVarR));
+            double imgStdG = Math.Sqrt(Math.Max(0, imgVarG));
+            double imgStdB = Math.Sqrt(Math.Max(0, imgVarB));
+
+            // Compute cross-correlation for each channel
+            double crossCorrR = 0, crossCorrG = 0, crossCorrB = 0;
+            for (int j = 0; j < tplH; j++)
+            {
+                int imgRowIdx = (offsetY + j) * imageW + offsetX;
+                int tplRowIdx = j * tplW;
+                for (int i = 0; i < tplW; i++)
+                {
+                    int imgIdx = imgRowIdx + i;
+                    int tplIdx = tplRowIdx + i;
+                    crossCorrR += (image.r[imgIdx] - imgMeanR) * (template.r[tplIdx] - tplStats.meanR);
+                    crossCorrG += (image.g[imgIdx] - imgMeanG) * (template.g[tplIdx] - tplStats.meanG);
+                    crossCorrB += (image.b[imgIdx] - imgMeanB) * (template.b[tplIdx] - tplStats.meanB);
+                }
+            }
+
+            // Compute NCC for each channel
+            double denomR = n * imgStdR * tplStats.stdR;
+            double denomG = n * imgStdG * tplStats.stdG;
+            double denomB = n * imgStdB * tplStats.stdB;
+
+            double nccR = denomR > 1e-10 ? crossCorrR / denomR : 0;
+            double nccG = denomG > 1e-10 ? crossCorrG / denomG : 0;
+            double nccB = denomB > 1e-10 ? crossCorrB / denomB : 0;
+
+            // Average NCC across channels (gives better discrimination for colored objects)
+            double avgNcc = (nccR + nccG + nccB) / 3.0;
+
+            // Clamp to 0-1 range (NCC can be negative for anti-correlated regions)
+            return Math.Max(0, Math.Min(1, (avgNcc + 1) / 2.0));
+        }
+
+        #endregion
+
+        #region Helper Methods
 
         private static void ReportProgress(IProgress<(string phase, int current, int total)> progress, string phase, int current, int total, bool force = false)
         {
@@ -599,6 +984,24 @@ namespace YoableWPF.Managers
             return (ImageSimilarityMode)Properties.Settings.Default.PropagationImageSimilarityMode;
         }
 
+        #endregion
+
+        #region Cache Management
+
+        private DateTime lastCacheSave = DateTime.MinValue;
+        private const int CacheSaveDebounceMs = 5000;
+
+        private void SaveCacheDebounced()
+        {
+            if (string.IsNullOrEmpty(cacheFilePath))
+                return;
+
+            if ((DateTime.Now - lastCacheSave).TotalMilliseconds < CacheSaveDebounceMs)
+                return;
+
+            SaveCache();
+        }
+
         private void LoadCache()
         {
             if (string.IsNullOrEmpty(cacheFilePath) || !File.Exists(cacheFilePath))
@@ -628,20 +1031,28 @@ namespace YoableWPF.Managers
             if (string.IsNullOrEmpty(cacheFilePath))
                 return;
 
-            try
+            lock (saveLock)
             {
-                var data = new PropagationCache
+                try
                 {
-                    ImageHashes = new Dictionary<string, ulong>(hashCache)
-                };
-                string json = JsonSerializer.Serialize(data);
-                File.WriteAllText(cacheFilePath, json);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"Failed to save propagation cache: {ex.Message}");
+                    lastCacheSave = DateTime.Now;
+                    var data = new PropagationCache
+                    {
+                        ImageHashes = new Dictionary<string, ulong>(hashCache)
+                    };
+                    string json = JsonSerializer.Serialize(data);
+                    File.WriteAllText(cacheFilePath, json);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Failed to save propagation cache: {ex.Message}");
+                }
             }
         }
+
+        #endregion
+
+        #region Hash/Histogram Computation
 
         private static ulong ComputeDHash(Bitmap image)
         {
@@ -753,88 +1164,9 @@ namespace YoableWPF.Managers
             return crop;
         }
 
-        private static TemplateMatchResult FindBestTemplateMatch(Bitmap image, Bitmap template, int stride)
-        {
-            stride = Math.Max(1, stride);
-            int maxSize = 320;
-            float scale = Math.Min(1f, maxSize / (float)Math.Max(image.Width, image.Height));
-            int scaledWidth = Math.Max(1, (int)(image.Width * scale));
-            int scaledHeight = Math.Max(1, (int)(image.Height * scale));
-            int scaledTemplateWidth = Math.Max(1, (int)(template.Width * scale));
-            int scaledTemplateHeight = Math.Max(1, (int)(template.Height * scale));
+        #endregion
 
-            using var scaledImage = new Bitmap(image, new Size(scaledWidth, scaledHeight));
-            using var scaledTemplate = new Bitmap(template, new Size(scaledTemplateWidth, scaledTemplateHeight));
-
-            var imageData = ToGrayscaleArray(scaledImage, out int imgW, out int imgH);
-            var templateData = ToGrayscaleArray(scaledTemplate, out int tplW, out int tplH);
-
-            var match = FindBestMatch(imageData, imgW, imgH, templateData, tplW, tplH, stride);
-
-            if (match.Score <= 0)
-                return new TemplateMatchResult { Score = match.Score, Rect = System.Windows.Rect.Empty };
-
-            double invScale = 1.0 / scale;
-            var rect = new System.Windows.Rect(match.X * invScale, match.Y * invScale, tplW * invScale, tplH * invScale);
-            return new TemplateMatchResult { Score = match.Score, Rect = rect };
-        }
-
-        private static byte[] ToGrayscaleArray(Bitmap bitmap, out int width, out int height)
-        {
-            width = bitmap.Width;
-            height = bitmap.Height;
-            var data = new byte[width * height];
-
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    var pixel = bitmap.GetPixel(x, y);
-                    data[y * width + x] = (byte)((pixel.R + pixel.G + pixel.B) / 3);
-                }
-            }
-
-            return data;
-        }
-
-        private static TemplateMatchRaw FindBestMatch(byte[] image, int imageW, int imageH, byte[] template, int tplW, int tplH, int stride)
-        {
-            stride = Math.Max(1, stride);
-            double bestScore = -1;
-            int bestX = 0;
-            int bestY = 0;
-
-            int maxX = imageW - tplW;
-            int maxY = imageH - tplH;
-            if (maxX < 0 || maxY < 0)
-                return new TemplateMatchRaw();
-
-            for (int y = 0; y <= maxY; y += stride)
-            {
-                for (int x = 0; x <= maxX; x += stride)
-                {
-                    double sad = 0;
-                    for (int j = 0; j < tplH; j++)
-                    {
-                        int imageIndex = (y + j) * imageW + x;
-                        int tplIndex = j * tplW;
-                        for (int i = 0; i < tplW; i++)
-                        {
-                            sad += Math.Abs(image[imageIndex + i] - template[tplIndex + i]);
-                        }
-                    }
-                    double score = 1.0 - (sad / (tplW * tplH * 255.0));
-                    if (score > bestScore)
-                    {
-                        bestScore = score;
-                        bestX = x;
-                        bestY = y;
-                    }
-                }
-            }
-
-            return new TemplateMatchRaw { Score = bestScore, X = bestX, Y = bestY };
-        }
+        #region Internal Classes
 
         private class PropagationCache
         {
@@ -853,5 +1185,7 @@ namespace YoableWPF.Managers
             public double Score { get; set; }
             public System.Windows.Rect Rect { get; set; }
         }
+
+        #endregion
     }
 }

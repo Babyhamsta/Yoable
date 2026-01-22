@@ -178,11 +178,17 @@ namespace YoableWPF.Managers
         // Helper for sorting - direct port
         public void SortImagesByName()
         {
-            var items = mainWindow.ImageListBox.Items.Cast<ImageListItem>().ToList();
+            // Get source list - use allImages if populated (filter-aware), otherwise use current items
+            var sourceItems = (allImages != null && allImages.Count > 0)
+                ? allImages
+                : mainWindow.ImageListBox.Items.Cast<ImageListItem>().ToList();
             var selectedItem = mainWindow.ImageListBox.SelectedItem as ImageListItem;
 
             // Sort by filename
-            var sorted = items.OrderBy(x => x.FileName).ToList();
+            var sorted = sourceItems.OrderBy(x => x.FileName).ToList();
+
+            // Update allImages to maintain sort order for filters
+            allImages = new List<ImageListItem>(sorted);
 
             // Update ListBox while preserving selection
             mainWindow.ImageListBox.SelectionChanged -= mainWindow.ImageListBox_SelectionChanged;
@@ -211,11 +217,14 @@ namespace YoableWPF.Managers
 
         public void SortImagesByStatus()
         {
-            var items = mainWindow.ImageListBox.Items.Cast<ImageListItem>().ToList();
+            // Get source list - use allImages if populated (filter-aware), otherwise use current items
+            var sourceItems = (allImages != null && allImages.Count > 0)
+                ? allImages
+                : mainWindow.ImageListBox.Items.Cast<ImageListItem>().ToList();
             var selectedItem = mainWindow.ImageListBox.SelectedItem as ImageListItem;
 
             // Custom sort order: Suggested first, then VerificationNeeded, then NoLabel, then Verified
-            var sorted = items.OrderBy(x => {
+            var sorted = sourceItems.OrderBy(x => {
                 switch (x.Status)
                 {
                     case ImageStatus.Suggested: return 0;
@@ -225,6 +234,9 @@ namespace YoableWPF.Managers
                     default: return 3;
                 }
             }).ThenBy(x => x.FileName).ToList();
+
+            // Update allImages to maintain sort order for filters
+            allImages = new List<ImageListItem>(sorted);
 
             // Update ListBox while preserving selection
             mainWindow.ImageListBox.SelectionChanged -= mainWindow.ImageListBox_SelectionChanged;

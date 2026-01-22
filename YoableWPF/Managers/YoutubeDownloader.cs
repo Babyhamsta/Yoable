@@ -42,15 +42,23 @@ public class YoutubeDownloader
             var video = await youtube.Videos.GetAsync(videoUrl);
             var streamManifest = await youtube.Videos.Streams.GetManifestAsync(videoUrl);
 
+            // Prefer H.264 (avc1) codec for best OpenCV compatibility
+            // AV1 and HEVC codecs often fail with OpenCV's bundled FFmpeg
             var streamInfo = streamManifest.GetVideoStreams()
                 .Where(s => s.Container == YoutubeExplode.Videos.Streams.Container.Mp4)
                 .Where(s => s.VideoCodec.Contains("avc1", StringComparison.OrdinalIgnoreCase))
                 .OrderByDescending(s => s.VideoQuality)
                 .FirstOrDefault();
 
+            // Fall back to any MP4 stream if no H.264 available
+            streamInfo ??= streamManifest.GetVideoStreams()
+                .Where(s => s.Container == YoutubeExplode.Videos.Streams.Container.Mp4)
+                .OrderByDescending(s => s.VideoQuality)
+                .FirstOrDefault();
+
             if (streamInfo == null)
             {
-                MessageBox.Show($"No video streams found for {video.Title}",
+                MessageBox.Show($"No compatible video streams found for {video.Title}",
                     "Download Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 return false;
             }
@@ -159,7 +167,12 @@ public class YoutubeDownloader
             int totalFramesToProcess = framePositions.Count;
             int processedFrames = 0;
             int currentFrameIndex = 0;
+            int frameNumber = 0;
             string framesDirectory = Path.Combine(videoDirectory, "frames");
+
+            // Generate a unique prefix for this extraction session to prevent overlaps
+            // while using padded frame numbers to maintain order
+            string sessionPrefix = Guid.NewGuid().ToString("N").Substring(0, 8);
 
             // Pre-calculate scale and crop values (they're the same for every frame)
             Mat firstFrame = new Mat();
@@ -170,9 +183,10 @@ public class YoutubeDownloader
             }
 
             double scale = Math.Max((double)FrameSize / firstFrame.Width, (double)FrameSize / firstFrame.Height);
+            // Use Ceiling to avoid truncation causing dimensions smaller than FrameSize
             var newSize = new Size(
-                (int)(firstFrame.Width * scale),
-                (int)(firstFrame.Height * scale)
+                (int)Math.Ceiling(firstFrame.Width * scale),
+                (int)Math.Ceiling(firstFrame.Height * scale)
             );
             int cropX = (newSize.Width - FrameSize) / 2;
             int cropY = (newSize.Height - FrameSize) / 2;
@@ -200,8 +214,9 @@ public class YoutubeDownloader
 
                         using (Mat cropped = new Mat(resized, roi))
                         {
-                            string frameUuid = Guid.NewGuid().ToString();
-                            string framePath = Path.Combine(framesDirectory, $"frame_{frameUuid}.jpg");
+                            // Use session prefix + padded frame number for unique names that maintain order
+                            frameNumber++;
+                            string framePath = Path.Combine(framesDirectory, $"{sessionPrefix}_frame_{frameNumber:D6}.jpg");
 
                             // Write synchronously
                             Cv2.ImWrite(framePath, cropped, params_);

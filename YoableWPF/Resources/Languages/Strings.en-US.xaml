@@ -155,6 +155,7 @@
     <system:String x:Key="Menu_ManageModels">Manage Models</system:String>
     <system:String x:Key="Menu_AutoLabelImages">Auto Label Images</system:String>
     <system:String x:Key="Menu_AutoSuggestLabels">Suggest Labels</system:String>
+    <system:String x:Key="Menu_ClearAllSuggestions">Clear All Suggestions</system:String>
     
     <!-- Main Window - Left Panel -->
     <system:String x:Key="Main_Images">Images</system:String>

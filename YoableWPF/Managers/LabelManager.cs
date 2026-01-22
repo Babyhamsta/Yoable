@@ -182,17 +182,37 @@ namespace YoableWPF.Managers
             }
         }
 
-        public void AddSuggestions(string fileName, List<SuggestedLabel> suggestions, double mergeIoUThreshold)
+        /// <summary>
+        /// Adds suggestions for a file, filtering out duplicates and overlaps with existing labels.
+        /// </summary>
+        /// <returns>The number of new suggestions actually added after filtering</returns>
+        public int AddSuggestions(string fileName, List<SuggestedLabel> suggestions, double mergeIoUThreshold)
         {
             if (suggestions == null || suggestions.Count == 0)
-                return;
+                return 0;
 
             // Prevent suggesting boxes that already exist as labels
             labelStorage.TryGetValue(fileName, out var existingLabels);
 
+            int countBefore = 0;
+            int countAfter = 0;
+
             suggestionStorage.AddOrUpdate(fileName,
-                _ => FilterSuggestions(existingLabels, new List<SuggestedLabel>(), suggestions, mergeIoUThreshold),
-                (_, existing) => FilterSuggestions(existingLabels, existing, suggestions, mergeIoUThreshold));
+                _ =>
+                {
+                    var result = FilterSuggestions(existingLabels, new List<SuggestedLabel>(), suggestions, mergeIoUThreshold);
+                    countAfter = result.Count;
+                    return result;
+                },
+                (_, existing) =>
+                {
+                    countBefore = existing.Count;
+                    var result = FilterSuggestions(existingLabels, existing, suggestions, mergeIoUThreshold);
+                    countAfter = result.Count;
+                    return result;
+                });
+
+            return Math.Max(0, countAfter - countBefore);
         }
 
         public int AcceptSuggestion(string fileName, string suggestionId)
@@ -265,6 +285,40 @@ namespace YoableWPF.Managers
             int removed = suggestions.Count;
             suggestionStorage.TryRemove(fileName, out _);
             return removed;
+        }
+
+        /// <summary>
+        /// Clears all suggestions across all images
+        /// </summary>
+        /// <returns>Total number of suggestions cleared</returns>
+        public int ClearAllSuggestions()
+        {
+            int total = 0;
+            foreach (var kvp in suggestionStorage.ToArray())
+            {
+                if (kvp.Value != null)
+                {
+                    total += kvp.Value.Count;
+                }
+            }
+            suggestionStorage.Clear();
+            return total;
+        }
+
+        /// <summary>
+        /// Gets the total count of suggestions across all images
+        /// </summary>
+        public int GetTotalSuggestionCount()
+        {
+            int total = 0;
+            foreach (var kvp in suggestionStorage.ToArray())
+            {
+                if (kvp.Value != null)
+                {
+                    total += kvp.Value.Count;
+                }
+            }
+            return total;
         }
 
         private List<SuggestedLabel> FilterSuggestions(

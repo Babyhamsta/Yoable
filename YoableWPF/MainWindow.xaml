@@ -224,6 +224,11 @@
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="16" Foreground="#FFF44336"/>
                     </MenuItem.Icon>
                 </MenuItem>
+                <MenuItem Header="{DynamicResource Menu_ClearAllSuggestions}" Click="ClearAllSuggestions_Click">
+                    <MenuItem.Icon>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="16" Foreground="#FFE57373"/>
+                    </MenuItem.Icon>
+                </MenuItem>
             </MenuItem>
             <MenuItem Header="{DynamicResource Menu_AI}">
                 <MenuItem Header="{DynamicResource Menu_ManageModels}" Click="ManageModels_Click">
