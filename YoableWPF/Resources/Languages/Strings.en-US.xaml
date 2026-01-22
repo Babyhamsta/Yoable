@@ -1,7 +1,11 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:system="clr-namespace:System;assembly=mscorlib">
-    
+
+    <!-- Language Info -->
+    <system:String x:Key="LanguageInfo_Name">English</system:String>
+    <system:String x:Key="LanguageInfo_NativeName">English</system:String>
+
     <!-- Common -->
     <system:String x:Key="Common_OK">OK</system:String>
     <system:String x:Key="Common_Cancel">Cancel</system:String>
@@ -45,6 +49,9 @@
     
     <!-- Settings Window - General Tab -->
     <system:String x:Key="Settings_Appearance">Appearance</system:String>
+    <system:String x:Key="Settings_Appearance_Section">Appearance</system:String>
+    <system:String x:Key="Settings_LabelSettings_Section">Label Settings</system:String>
+    <system:String x:Key="Settings_CrosshairSettings_Section">Crosshair Settings</system:String>
     <system:String x:Key="Settings_DarkMode">Dark Mode</system:String>
     <system:String x:Key="Settings_AccentColor">Accent Color (Hex)</system:String>
     <system:String x:Key="Settings_AccentColor_Tooltip">Enter a hexadecimal color value (e.g., #FF0000 for red)</system:String>
