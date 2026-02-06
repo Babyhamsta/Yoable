@@ -2130,7 +2130,6 @@ namespace YoableWPF
                 }
             }
         }
-
         private ImageStatus DetermineImageStatus(string fileName)
         {
             if (labelManager.SuggestionStorage.TryGetValue(fileName, out var suggestions) && suggestions.Count > 0)
@@ -2139,6 +2138,10 @@ namespace YoableWPF
             if (!labelManager.LabelStorage.TryGetValue(fileName, out var labels) || labels.Count == 0)
                 return ImageStatus.NoLabel;
 
+            //if we are working on the image, don't mark it as review
+            string currentFile = GetCurrentFileName();
+            bool isCurrentImage = string.Equals(fileName, currentFile, StringComparison.OrdinalIgnoreCase);
+            
             // Fast check for imported/AI labels
             for (int i = 0; i < labels.Count; i++)
             {
@@ -2146,7 +2149,14 @@ namespace YoableWPF
                 if (name.Length > 0 && (name[0] == 'I' || name[0] == 'A'))
                 {
                     if (name.StartsWith("Imported") || name.StartsWith("AI"))
+                    {
+                        // if it is the one we are working on, don't mark it as review
+                        if (isCurrentImage)
+                        {
+                            return ImageStatus.Verified;
+                        }
                         return ImageStatus.VerificationNeeded;
+                    }
                 }
             }
 
