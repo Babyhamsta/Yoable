@@ -349,10 +349,15 @@ namespace YoableWPF.Managers
         /// <summary>
         /// Saves the project to a new location
         /// </summary>
-        public bool SaveProjectAs(string newPath)
+        public async Task<bool> SaveProjectAsAsync(string newPath)
         {
             if (CurrentProject == null)
                 return false;
+
+            string oldProjectName = CurrentProject.ProjectName;
+            string oldProjectPath = CurrentProject.ProjectPath;
+            string oldProjectFolder = CurrentProject.ProjectFolder;
+            DateTime oldLastModified = CurrentProject.LastModified;
 
             try
             {
@@ -360,27 +365,29 @@ namespace YoableWPF.Managers
                 string newFolder = Path.GetDirectoryName(newPath);
                 string newName = Path.GetFileNameWithoutExtension(newPath);
 
-                // Create new project folder structure
                 string newProjectFolder = Path.Combine(newFolder, newName);
-                Directory.CreateDirectory(newProjectFolder);
-
                 string newLabelsFolder = Path.Combine(newProjectFolder, LABELS_FOLDER);
-                Directory.CreateDirectory(newLabelsFolder);
-
                 string newBackupFolder = Path.Combine(newProjectFolder, BACKUP_FOLDER);
-                Directory.CreateDirectory(newBackupFolder);
+                string oldLabelsFolder = Path.Combine(oldProjectFolder, LABELS_FOLDER);
 
-                // Copy all label files to new location
-                string oldLabelsFolder = Path.Combine(CurrentProject.ProjectFolder, LABELS_FOLDER);
-                if (Directory.Exists(oldLabelsFolder))
+                // Folder creation and label copying can be slow for large
+                // projects, so keep that work off the UI thread.
+                await Task.Run(() =>
                 {
-                    foreach (string file in Directory.GetFiles(oldLabelsFolder))
+                    Directory.CreateDirectory(newProjectFolder);
+                    Directory.CreateDirectory(newLabelsFolder);
+                    Directory.CreateDirectory(newBackupFolder);
+
+                    if (Directory.Exists(oldLabelsFolder))
                     {
-                        string fileName = Path.GetFileName(file);
-                        string destFile = Path.Combine(newLabelsFolder, fileName);
-                        File.Copy(file, destFile, true);
+                        foreach (string file in Directory.GetFiles(oldLabelsFolder))
+                        {
+                            string fileName = Path.GetFileName(file);
+                            string destFile = Path.Combine(newLabelsFolder, fileName);
+                            File.Copy(file, destFile, true);
+                        }
                     }
-                }
+                });
 
                 // Update project paths
                 CurrentProject.ProjectName = newName;
@@ -398,16 +405,27 @@ namespace YoableWPF.Managers
                 CurrentProject.AppCreatedLabels = updatedAppLabels;
 
                 // Save to new location
-                if (SaveProjectSync())
+                if (await SaveProjectAsync())
                 {
                     AddToRecentProjects(CurrentProject.ProjectPath);
                     return true;
                 }
 
+                // A failed save must not leave the live project pointing at a
+                // destination where no project file was created.
+                CurrentProject.ProjectName = oldProjectName;
+                CurrentProject.ProjectPath = oldProjectPath;
+                CurrentProject.ProjectFolder = oldProjectFolder;
+                CurrentProject.LastModified = oldLastModified;
                 return false;
             }
             catch (Exception ex)
             {
+                CurrentProject.ProjectName = oldProjectName;
+                CurrentProject.ProjectPath = oldProjectPath;
+                CurrentProject.ProjectFolder = oldProjectFolder;
+                CurrentProject.LastModified = oldLastModified;
+
                 CustomMessageBox.Show(
                     string.Format(LanguageManager.Instance.GetString("Msg_FailedToSaveProjectAs") ?? "Failed to save project as:\n\n{0}", ex.Message),
                     LanguageManager.Instance.GetString("Msg_SaveAsError") ?? "Save As Error",
@@ -591,10 +609,13 @@ namespace YoableWPF.Managers
                 string fileName = kvp.Key;
                 string fullPath = kvp.Value.Path;
 
+                // Store dimensions so project load can skip decoding every image header
                 CurrentProject.Images.Add(new ImageReference
                 {
                     FileName = fileName,
-                    FullPath = fullPath
+                    FullPath = fullPath,
+                    Width = kvp.Value.OriginalDimensions.Width,
+                    Height = kvp.Value.OriginalDimensions.Height
                 });
             }
 
@@ -753,13 +774,18 @@ namespace YoableWPF.Managers
                 // Set batch size for image processing (separate from UI batching)
                 mainWindow.imageManager.BatchSize = processingBatchSize;
 
-                // Build list of image paths and log missing files
-                var imagePaths = new List<string>(CurrentProject.Images.Count);
+                // Split image references: those with stored dimensions skip the expensive
+                // per-file header decode; legacy entries (0x0) fall back to decoding.
+                var knownSizeRefs = new List<Models.ImageReference>(CurrentProject.Images.Count);
+                var unknownSizePaths = new List<string>();
                 foreach (var imageRef in CurrentProject.Images)
                 {
                     if (File.Exists(imageRef.FullPath))
                     {
-                        imagePaths.Add(imageRef.FullPath);
+                        if (imageRef.Width > 0 && imageRef.Height > 0)
+                            knownSizeRefs.Add(imageRef);
+                        else
+                            unknownSizePaths.Add(imageRef.FullPath);
                     }
                     else
                     {
@@ -767,19 +793,38 @@ namespace YoableWPF.Managers
                     }
                 }
 
-                if (imagePaths.Count > 0)
+                if (knownSizeRefs.Count > 0 || unknownSizePaths.Count > 0)
                 {
-                    var imageProgress = new Progress<(int current, int total, string message)>(report =>
+                    if (knownSizeRefs.Count > 0)
                     {
-                        int overallProgress = 10 + (int)((report.current / (double)report.total) * 30);
-                        progress?.Report((overallProgress, 100, report.message));
-                    });
+                        await Task.Run(() =>
+                        {
+                            foreach (var imageRef in knownSizeRefs)
+                            {
+                                cancellationToken.ThrowIfCancellationRequested();
+                                mainWindow.imageManager.AddImageWithKnownSize(imageRef.FullPath, imageRef.GetSize());
+                            }
+                        }, cancellationToken);
 
-                    await mainWindow.imageManager.LoadImagesFromPathsAsync(
-                        imagePaths,
-                        imageProgress,
-                        cancellationToken,
-                        enableParallel);
+                        progress?.Report((unknownSizePaths.Count > 0 ? 20 : 40, 100,
+                            $"Loaded {knownSizeRefs.Count} images from project cache"));
+                    }
+
+                    if (unknownSizePaths.Count > 0)
+                    {
+                        var imageProgress = new Progress<(int current, int total, string message)>(report =>
+                        {
+                            int overallProgress = 10 + (int)((report.current / (double)report.total) * 30);
+                            progress?.Report((overallProgress, 100, report.message));
+                        });
+
+                        await mainWindow.imageManager.LoadImagesFromPathsAsync(
+                            unknownSizePaths,
+                            imageProgress,
+                            cancellationToken,
+                            enableParallel,
+                            clearExisting: knownSizeRefs.Count == 0);
+                    }
 
                     // Warn about duplicate file names that were skipped
                     var duplicates = mainWindow.imageManager.ConsumeDuplicateImageFiles();
@@ -1326,7 +1371,8 @@ namespace YoableWPF.Managers
                         }
                         else
                         {
-                            if (savedStatus == ImageStatus.Verified)
+                            if (savedStatus == ImageStatus.Verified ||
+                                mainWindow.IsAtOrBeforeManualProgress(fileName))
                             {
                                 correctedStatus = ImageStatus.Verified;
                             }

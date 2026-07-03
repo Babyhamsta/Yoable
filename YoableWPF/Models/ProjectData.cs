@@ -56,6 +56,8 @@ namespace YoableWPF.Models
         // UI State
         public Dictionary<string, ImageStatus> ImageStatuses { get; set; } = new Dictionary<string, ImageStatus>();
         public int LastSelectedImageIndex { get; set; } = -1;
+        // Inclusive filename checkpoint for the user's manual labeling progress.
+        public string ManualProgressImageFile { get; set; } = string.Empty;
         public string CurrentSortMode { get; set; } = "ByName";
         public string CurrentFilterMode { get; set; } = "All";
 

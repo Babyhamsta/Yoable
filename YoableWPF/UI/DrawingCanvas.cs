@@ -322,7 +322,14 @@ namespace YoableWPF
             bitmap.CacheOption = BitmapCacheOption.OnLoad;
             bitmap.EndInit();
 
-            Image = bitmap;
+            LoadImage(bitmap, originalDimensions);
+        }
+
+        public void LoadImage(ImageSource image, Size originalDimensions)
+        {
+            if (image == null) return;
+
+            Image = image;
             originalImageDimensions = originalDimensions;
 
             Labels.Clear();

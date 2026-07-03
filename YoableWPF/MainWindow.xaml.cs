@@ -393,6 +393,8 @@ namespace YoableWPF
             var saveFileDialog = new SaveFileDialog
             {
                 Filter = "Yoable Project Files (*.yoable)|*.yoable",
+                DefaultExt = ".yoable",
+                AddExtension = true,
                 Title = "Save Project As",
                 FileName = projectManager.CurrentProject.ProjectName
             };
@@ -410,11 +412,8 @@ namespace YoableWPF
                         projectManager.CurrentProject.Classes = projectClasses;
                     }
 
-                    // Export current state to project
-                    projectManager.ExportProjectData();
-
                     // Save to new location
-                    if (projectManager.SaveProjectAs(saveFileDialog.FileName))
+                    if (await projectManager.SaveProjectAsAsync(saveFileDialog.FileName))
                     {
                         ProjectNameText.Text = projectManager.CurrentProject.ProjectName;
                         UpdateProjectUI();
@@ -785,12 +784,24 @@ namespace YoableWPF
             MarkProjectDirty();
         }
 
-        public void ImageListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        public async void ImageListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
             if (ImageListBox.SelectedItem is ImageListItem selected &&
                 imageManager.ImagePathMap.TryGetValue(selected.FileName, out ImageManager.ImageInfo imageInfo))
             {
-                // Save existing labels
+                // Decode off the UI thread on a cache miss; a newer selection abandons this one
+                int loadGeneration = ++imageLoadGeneration;
+                var bitmap = imageManager.Cache.TryGet(imageInfo.Path);
+                if (bitmap == null)
+                {
+                    bitmap = await Task.Run(() => imageManager.Cache.GetOrLoad(imageInfo.Path));
+                    if (loadGeneration != imageLoadGeneration) return;
+                    if (bitmap == null) return; // File unreadable
+                }
+
+                // Save labels of the image currently in the canvas. Kept after the await so
+                // CurrentImagePath always matches the canvas content, even when selections
+                // change faster than images decode.
                 if (!string.IsNullOrEmpty(imageManager.CurrentImagePath))
                 {
                     labelManager.SaveLabels(imageManager.CurrentImagePath, drawingCanvas.Labels);
@@ -799,7 +810,7 @@ namespace YoableWPF
 
                 imageManager.CurrentImagePath = selected.FileName;
 
-                drawingCanvas.LoadImage(imageInfo.Path, imageInfo.OriginalDimensions);
+                drawingCanvas.LoadImage(bitmap, imageInfo.OriginalDimensions);
 
                 // Reset zoom on image change
                 drawingCanvas.ResetZoom();
@@ -843,7 +854,39 @@ namespace YoableWPF
 
                 // CRITICAL FIX: Force canvas redraw after loading labels
                 drawingCanvas.InvalidateVisual();
+
+                // Warm the cache with neighboring images for instant navigation
+                PrefetchNeighboringImages();
             }
+        }
+
+        // Bumped on every image selection so stale async decodes can be abandoned
+        private int imageLoadGeneration = 0;
+
+        private void PrefetchNeighboringImages()
+        {
+            int index = ImageListBox.SelectedIndex;
+            if (index < 0) return;
+
+            // Favor forward navigation: prefetch more items ahead than behind
+            const int aheadCount = 12;
+            const int behindCount = 4;
+
+            var paths = new List<string>(aheadCount + behindCount);
+            void AddPath(int i)
+            {
+                if (i < 0 || i >= ImageListBox.Items.Count || i == index) return;
+                if (ImageListBox.Items[i] is ImageListItem item &&
+                    imageManager.ImagePathMap.TryGetValue(item.FileName, out var info))
+                {
+                    paths.Add(info.Path);
+                }
+            }
+
+            for (int offset = 1; offset <= aheadCount; offset++) AddPath(index + offset);
+            for (int offset = 1; offset <= behindCount; offset++) AddPath(index - offset);
+
+            imageManager.Cache.Prefetch(paths);
         }
 
         private void LabelListBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
@@ -907,6 +950,67 @@ namespace YoableWPF
                 RefreshSuggestionsForCurrentImage(currentFile);
                 MarkProjectDirty();
             }
+        }
+
+        private void ChangeLabelClass_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not Button button || button.Tag is not LabelListItemView item || item.Label == null)
+                return;
+
+            ShowChangeClassMenu(item.Label, button);
+        }
+
+        private void LabelListBox_MouseDoubleClick(object sender, MouseButtonEventArgs e)
+        {
+            if (LabelListBox.SelectedItem is not LabelListItemView item || item.Label == null)
+                return;
+
+            // Open the class picker anchored on the clicked item container
+            var placement = LabelListBox.ItemContainerGenerator.ContainerFromItem(item) as UIElement ?? LabelListBox;
+            ShowChangeClassMenu(item.Label, placement);
+            e.Handled = true;
+        }
+
+        private void ShowChangeClassMenu(LabelData label, UIElement placementTarget)
+        {
+            if (label == null || projectClasses == null || projectClasses.Count == 0)
+                return;
+
+            var menu = new ContextMenu();
+
+            foreach (var cls in projectClasses)
+            {
+                var menuItem = new MenuItem
+                {
+                    Header = cls.DisplayText,
+                    IsCheckable = true,
+                    IsChecked = cls.ClassId == label.ClassId,
+                    Icon = new System.Windows.Shapes.Rectangle
+                    {
+                        Width = 12,
+                        Height = 12,
+                        Fill = cls.ColorBrush
+                    }
+                };
+
+                int targetClassId = cls.ClassId;
+                menuItem.Click += (s, args) =>
+                {
+                    if (label.ClassId == targetClassId)
+                        return;
+
+                    label.ClassId = targetClassId;
+                    uiStateManager.RefreshLabelList();
+                    drawingCanvas.InvalidateVisual();
+                    OnLabelsChanged();
+                    MarkProjectDirty();
+                };
+
+                menu.Items.Add(menuItem);
+            }
+
+            menu.PlacementTarget = placementTarget;
+            menu.IsOpen = true;
         }
 
         private void AcceptAllSuggestions_Click(object sender, RoutedEventArgs e)
@@ -2191,6 +2295,11 @@ namespace YoableWPF
             if (!labelManager.LabelStorage.TryGetValue(fileName, out var labels) || labels.Count == 0)
                 return ImageStatus.NoLabel;
 
+            // Imported/AI labels at or before the saved manual checkpoint have already
+            // been reviewed by the user and must stay verified after another import.
+            if (IsAtOrBeforeManualProgress(fileName))
+                return ImageStatus.Verified;
+
             //if we are working on the image, don't mark it as review
             string currentFile = GetCurrentFileName();
             bool isCurrentImage = string.Equals(fileName, currentFile, StringComparison.OrdinalIgnoreCase);
@@ -2214,6 +2323,75 @@ namespace YoableWPF
             }
 
             return ImageStatus.Verified;
+        }
+
+        public bool IsAtOrBeforeManualProgress(string fileName)
+        {
+            string? checkpoint = projectManager?.CurrentProject?.ManualProgressImageFile;
+            return !string.IsNullOrWhiteSpace(checkpoint) &&
+                   StringComparer.OrdinalIgnoreCase.Compare(fileName, checkpoint) <= 0;
+        }
+
+        private async void SetManualProgress_Click(object sender, RoutedEventArgs e)
+        {
+            if (projectManager?.CurrentProject == null)
+            {
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_ManualProgress_ProjectRequired") ?? "Open or create a project before setting a manual progress point.",
+                    LanguageManager.Instance.GetString("Msg_ManualProgress_Title") ?? "Manual Labeling Progress",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            if (ImageListBox.SelectedItem is not ImageListItem selected)
+            {
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_ManualProgress_SelectImage") ?? "Select an image first.",
+                    LanguageManager.Instance.GetString("Msg_ManualProgress_Title") ?? "Manual Labeling Progress",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            projectManager.CurrentProject.ManualProgressImageFile = selected.FileName;
+            await UpdateAllImageStatusesAsync();
+            uiStateManager.RefreshAllImagesList();
+            MarkProjectDirty();
+
+            CustomMessageBox.Show(
+                string.Format(LanguageManager.Instance.GetString("Msg_ManualProgress_Set") ?? "Manual progress point set to: {0}", selected.FileName),
+                LanguageManager.Instance.GetString("Msg_ManualProgress_Title") ?? "Manual Labeling Progress",
+                MessageBoxButton.OK, MessageBoxImage.Information);
+        }
+
+        private void JumpToManualProgress_Click(object sender, RoutedEventArgs e)
+        {
+            string? checkpoint = projectManager?.CurrentProject?.ManualProgressImageFile;
+            if (string.IsNullOrWhiteSpace(checkpoint))
+            {
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_ManualProgress_NotSet") ?? "No manual progress point has been set yet.",
+                    LanguageManager.Instance.GetString("Msg_ManualProgress_Title") ?? "Manual Labeling Progress",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+                return;
+            }
+
+            // Ensure the target is visible even when a status filter is active.
+            FilterAll_Click(sender, e);
+            var target = ImageListBox.Items.Cast<ImageListItem>()
+                .FirstOrDefault(item => string.Equals(item.FileName, checkpoint, StringComparison.OrdinalIgnoreCase));
+
+            if (target == null)
+            {
+                CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_ManualProgress_Missing") ?? "The progress image is not currently loaded: {0}", checkpoint),
+                    LanguageManager.Instance.GetString("Msg_ManualProgress_Title") ?? "Manual Labeling Progress",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            ImageListBox.SelectedItem = target;
+            ImageListBox.ScrollIntoView(target);
+            ImageListBox.Focus();
         }
 
         private void UpdateImageStatus(string fileName)
@@ -2625,7 +2803,20 @@ namespace YoableWPF
             {
                 if (node == ancestor)
                     return true;
-                node = VisualTreeHelper.GetParent(node) ?? (node as FrameworkElement)?.Parent;
+
+                // VisualTreeHelper.GetParent throws for non-visual nodes such as
+                // System.Windows.Documents.Run (inline text inside a TextBlock),
+                // which can appear as e.OriginalSource. Only walk the visual tree
+                // for actual Visual/Visual3D nodes; otherwise fall back to the
+                // logical tree.
+                DependencyObject parent = null;
+                if (node is Visual || node is System.Windows.Media.Media3D.Visual3D)
+                    parent = VisualTreeHelper.GetParent(node);
+
+                node = parent
+                    ?? LogicalTreeHelper.GetParent(node)
+                    ?? (node as FrameworkElement)?.Parent
+                    ?? (node as FrameworkContentElement)?.Parent;
             }
             return false;
         }

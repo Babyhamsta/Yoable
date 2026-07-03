@@ -639,12 +639,10 @@
                                       SelectionChanged="LanguageComboBox_SelectionChanged">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate>
-                                        <TextBlock>
-                                            <Run Text="{Binding NativeName}"/>
-                                            <Run Text=" (" Foreground="Gray"/>
-                                            <Run Text="{Binding Name}" Foreground="Gray"/>
-                                            <Run Text=")" Foreground="Gray"/>
-                                        </TextBlock>
+                                        <StackPanel Orientation="Horizontal">
+                                            <TextBlock Text="{Binding NativeName}"/>
+                                            <TextBlock Text="{Binding Name, StringFormat=' ({0})'}" Foreground="Gray"/>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </ComboBox.ItemTemplate>
                             </ComboBox>

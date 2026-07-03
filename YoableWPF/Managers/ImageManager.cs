@@ -18,6 +18,9 @@ namespace YoableWPF.Managers
         private ConcurrentQueue<string> duplicateImageFiles = new();
         private string currentImagePath = "";
 
+        // Decoded bitmap cache shared by the canvas and prefetcher
+        public ImageCacheManager Cache { get; } = new ImageCacheManager();
+
         // Add settings for performance
         public int BatchSize { get; set; } = 100; // Configurable batch size for processing
 
@@ -62,6 +65,7 @@ namespace YoableWPF.Managers
             // Clear collections just like original
             imagePathMap.Clear();
             imageStatuses.Clear();
+            Cache.Clear();
             while (duplicateImageFiles.TryDequeue(out _)) { }
 
             foreach (string file in files)
@@ -96,14 +100,18 @@ namespace YoableWPF.Managers
             IEnumerable<string> files,
             IProgress<(int current, int total, string message)> progress = null,
             CancellationToken cancellationToken = default,
-            bool enableParallelProcessing = true)
+            bool enableParallelProcessing = true,
+            bool clearExisting = true)
         {
             var fileArray = files?.Where(f => !string.IsNullOrWhiteSpace(f)).ToArray() ?? Array.Empty<string>();
 
-            // Clear collections
-            imagePathMap.Clear();
-            imageStatuses.Clear();
-            while (duplicateImageFiles.TryDequeue(out _)) { }
+            if (clearExisting)
+            {
+                imagePathMap.Clear();
+                imageStatuses.Clear();
+                Cache.Clear();
+                while (duplicateImageFiles.TryDequeue(out _)) { }
+            }
 
             int totalFiles = fileArray.Length;
             int processedFiles = 0;
@@ -182,6 +190,27 @@ namespace YoableWPF.Managers
             }
         }
 
+        /// <summary>
+        /// Adds an image whose dimensions are already known (e.g. stored in the project file),
+        /// skipping the expensive per-file header decode. Caller is responsible for existence checks.
+        /// </summary>
+        public bool AddImageWithKnownSize(string filePath, Size dimensions)
+        {
+            string fileName = Path.GetFileName(filePath);
+
+            if (!imagePathMap.TryAdd(fileName, new ImageInfo(filePath, dimensions)))
+            {
+                if (imagePathMap.TryGetValue(fileName, out var existing) &&
+                    !string.Equals(existing.Path, filePath, StringComparison.OrdinalIgnoreCase))
+                {
+                    duplicateImageFiles.Enqueue($"{fileName} -> {filePath}");
+                }
+                return false;
+            }
+            imageStatuses.TryAdd(fileName, ImageStatus.NoLabel);
+            return true;
+        }
+
         // Thread-safe version for parallel processing
         private bool AddImageThreadSafe(string filePath)
         {
@@ -243,6 +272,7 @@ namespace YoableWPF.Managers
         {
             imagePathMap.Clear();
             imageStatuses.Clear();
+            Cache.Clear();
             currentImagePath = "";
             while (duplicateImageFiles.TryDequeue(out _)) { }
         }

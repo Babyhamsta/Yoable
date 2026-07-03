@@ -143,7 +143,15 @@
     <system:String x:Key="Menu_ExportLabels">Экспортировать метки</system:String>
     <system:String x:Key="Menu_ClearAll">Очистить всё</system:String>
     <system:String x:Key="Menu_ClearAllSuggestions">Очистить все предложения</system:String>
+    <system:String x:Key="Menu_SetManualProgress">Отметить текущий ручной прогресс</system:String>
+    <system:String x:Key="Menu_JumpManualProgress">Перейти к ручному прогрессу</system:String>
     <system:String x:Key="Menu_AI">AI</system:String>
+    <system:String x:Key="Msg_ManualProgress_Title">Прогресс ручной разметки</system:String>
+    <system:String x:Key="Msg_ManualProgress_ProjectRequired">Откройте или создайте проект перед установкой точки прогресса.</system:String>
+    <system:String x:Key="Msg_ManualProgress_SelectImage">Сначала выберите изображение.</system:String>
+    <system:String x:Key="Msg_ManualProgress_Set">Точка ручного прогресса установлена: {0}</system:String>
+    <system:String x:Key="Msg_ManualProgress_NotSet">Точка ручного прогресса ещё не установлена.</system:String>
+    <system:String x:Key="Msg_ManualProgress_Missing">Изображение точки прогресса сейчас не загружено: {0}</system:String>
     <system:String x:Key="Menu_ManageModels">Управление моделями</system:String>
     <system:String x:Key="Menu_AutoLabelImages">Автоматическая разметка изображений</system:String>
     <system:String x:Key="Menu_AutoSuggestLabels">Автоматическое предложение меток</system:String>
@@ -176,6 +184,7 @@
     <system:String x:Key="Main_ImageLabels">Метки изображений</system:String>
     <system:String x:Key="Main_ClearImageClasses">Очистить классы изображения</system:String>
     <system:String x:Key="Main_EditClass">Редактировать класс</system:String>
+    <system:String x:Key="Main_ChangeClass">Изменить класс</system:String>
     <system:String x:Key="Main_RemoveSelectedClass">Удалить выбранный класс</system:String>
     <system:String x:Key="Main_NoImageSelected">Изображение не выбрано</system:String>
     <system:String x:Key="Main_NoLabelsToClear">Нет меток для очистки</system:String>

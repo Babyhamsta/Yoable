@@ -143,7 +143,15 @@
     <system:String x:Key="Menu_ExportLabels">ラベルをエクスポート</system:String>
     <system:String x:Key="Menu_ClearAll">すべてクリア</system:String>
     <system:String x:Key="Menu_ClearAllSuggestions">すべての提案をクリア</system:String>
+    <system:String x:Key="Menu_SetManualProgress">現在の画像を手動進捗に設定</system:String>
+    <system:String x:Key="Menu_JumpManualProgress">手動進捗へ移動</system:String>
     <system:String x:Key="Menu_AI">AI</system:String>
+    <system:String x:Key="Msg_ManualProgress_Title">手動ラベル進捗</system:String>
+    <system:String x:Key="Msg_ManualProgress_ProjectRequired">手動進捗を設定する前に、プロジェクトを開くか作成してください。</system:String>
+    <system:String x:Key="Msg_ManualProgress_SelectImage">先に画像を選択してください。</system:String>
+    <system:String x:Key="Msg_ManualProgress_Set">手動進捗を設定しました：{0}</system:String>
+    <system:String x:Key="Msg_ManualProgress_NotSet">手動進捗はまだ設定されていません。</system:String>
+    <system:String x:Key="Msg_ManualProgress_Missing">進捗画像は現在読み込まれていません：{0}</system:String>
     <system:String x:Key="Menu_ManageModels">モデルを管理</system:String>
     <system:String x:Key="Menu_AutoLabelImages">画像に自動ラベル付け</system:String>
     <system:String x:Key="Menu_AutoSuggestLabels">ラベルを自動提案</system:String>
@@ -176,6 +184,7 @@
     <system:String x:Key="Main_ImageLabels">画像ラベル</system:String>
     <system:String x:Key="Main_ClearImageClasses">画像クラスをクリア</system:String>
     <system:String x:Key="Main_EditClass">クラスを編集</system:String>
+    <system:String x:Key="Main_ChangeClass">クラスを変更</system:String>
     <system:String x:Key="Main_RemoveSelectedClass">選択したクラスを削除</system:String>
     <system:String x:Key="Main_NoImageSelected">画像が選択されていません</system:String>
     <system:String x:Key="Main_NoLabelsToClear">クリアするラベルがありません</system:String>

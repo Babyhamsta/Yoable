@@ -143,7 +143,15 @@
     <system:String x:Key="Menu_ExportLabels">匯出標籤</system:String>
     <system:String x:Key="Menu_ClearAll">清除全部</system:String>
     <system:String x:Key="Menu_ClearAllSuggestions">清除所有建議</system:String>
+    <system:String x:Key="Menu_SetManualProgress">設定目前圖片為手動進度點</system:String>
+    <system:String x:Key="Menu_JumpManualProgress">跳至手動進度點</system:String>
     <system:String x:Key="Menu_AI">AI</system:String>
+    <system:String x:Key="Msg_ManualProgress_Title">手動標註進度</system:String>
+    <system:String x:Key="Msg_ManualProgress_ProjectRequired">請先開啟或建立專案，再設定手動進度點。</system:String>
+    <system:String x:Key="Msg_ManualProgress_SelectImage">請先選擇一張圖片。</system:String>
+    <system:String x:Key="Msg_ManualProgress_Set">手動進度點已設定為：{0}</system:String>
+    <system:String x:Key="Msg_ManualProgress_NotSet">尚未設定手動進度點。</system:String>
+    <system:String x:Key="Msg_ManualProgress_Missing">目前未載入進度點圖片：{0}</system:String>
     <system:String x:Key="Menu_ManageModels">管理模型</system:String>
     <system:String x:Key="Menu_AutoLabelImages">自動標籤圖片</system:String>
     <system:String x:Key="Menu_AutoSuggestLabels">自動建議標籤</system:String>
@@ -176,6 +184,7 @@
     <system:String x:Key="Main_ImageLabels">圖片標籤</system:String>
     <system:String x:Key="Main_ClearImageClasses">清除圖片類別</system:String>
     <system:String x:Key="Main_EditClass">編輯類別</system:String>
+    <system:String x:Key="Main_ChangeClass">變更類別</system:String>
     <system:String x:Key="Main_RemoveSelectedClass">移除選取的類別</system:String>
     <system:String x:Key="Main_NoImageSelected">未選擇圖片</system:String>
     <system:String x:Key="Main_NoLabelsToClear">沒有可清除的標籤</system:String>

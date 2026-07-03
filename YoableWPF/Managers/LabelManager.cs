@@ -33,6 +33,44 @@ namespace YoableWPF.Managers
         private bool validClassIdsInitialized = false;
         private static readonly CultureInfo CommaCulture = CultureInfo.GetCultureInfo("de-DE"); // Comma decimal separator
 
+        // YOLO coordinates are commonly rounded during export.  Treat sub-pixel
+        // differences as the same box so re-importing an exported dataset is idempotent.
+        private const double ImportedLabelCoordinateTolerance = 0.01;
+
+        private static bool IsSameImportedLabel(LabelData left, LabelData right)
+        {
+            return left.ClassId == right.ClassId &&
+                   Math.Abs(left.Rect.X - right.Rect.X) <= ImportedLabelCoordinateTolerance &&
+                   Math.Abs(left.Rect.Y - right.Rect.Y) <= ImportedLabelCoordinateTolerance &&
+                   Math.Abs(left.Rect.Width - right.Rect.Width) <= ImportedLabelCoordinateTolerance &&
+                   Math.Abs(left.Rect.Height - right.Rect.Height) <= ImportedLabelCoordinateTolerance;
+        }
+
+        private static List<LabelData> MergeImportedLabels(
+            IEnumerable<LabelData> existing,
+            IEnumerable<LabelData> imported,
+            out int addedCount)
+        {
+            var merged = new List<LabelData>();
+
+            // Also collapse duplicates left behind by older versions of the importer.
+            foreach (var label in existing)
+            {
+                if (!merged.Any(candidate => IsSameImportedLabel(candidate, label)))
+                    merged.Add(label);
+            }
+
+            int countBeforeImport = merged.Count;
+            foreach (var label in imported)
+            {
+                if (!merged.Any(candidate => IsSameImportedLabel(candidate, label)))
+                    merged.Add(label);
+            }
+
+            addedCount = merged.Count - countBeforeImport;
+            return merged;
+        }
+
         /// <summary>
         /// Sets the valid class IDs from the project. Call this when project classes change.
         /// </summary>
@@ -621,7 +659,6 @@ namespace YoableWPF.Managers
                             new Rect(x, y, width, height),
                             classId);
                         newLabels.Add(label);
-                        labelsAdded++;
                     }
                     catch (FormatException)
                     {
@@ -633,16 +670,15 @@ namespace YoableWPF.Managers
                 // Add all labels at once (thread-safe)
                 if (newLabels.Count > 0)
                 {
+                    int actuallyAdded = 0;
                     labelStorage.AddOrUpdate(
                         matchingImageFile,
-                        new List<LabelData>(newLabels),
+                        _ => MergeImportedLabels(Array.Empty<LabelData>(), newLabels, out actuallyAdded),
                         (k, existing) =>
                         {
-                            var merged = new List<LabelData>(existing.Count + newLabels.Count);
-                            merged.AddRange(existing);
-                            merged.AddRange(newLabels);
-                            return merged;
+                            return MergeImportedLabels(existing, newLabels, out actuallyAdded);
                         });
+                    labelsAdded = actuallyAdded;
                 }
             }
             catch (Exception ex)
@@ -717,7 +753,6 @@ namespace YoableWPF.Managers
                             var label = new LabelData($"Imported Label {labelCount}", new Rect(x, y, width, height), classId);
                             newLabels.Add(label);
 
-                            labelsAdded++;
                         }
                         catch (FormatException)
                         {
@@ -728,16 +763,15 @@ namespace YoableWPF.Managers
 
                     if (newLabels.Count > 0)
                     {
+                        int actuallyAdded = 0;
                         labelStorage.AddOrUpdate(
                             fileName,
-                            new List<LabelData>(newLabels),
+                            _ => MergeImportedLabels(Array.Empty<LabelData>(), newLabels, out actuallyAdded),
                             (k, existing) =>
                             {
-                                var merged = new List<LabelData>(existing.Count + newLabels.Count);
-                                merged.AddRange(existing);
-                                merged.AddRange(newLabels);
-                                return merged;
+                                return MergeImportedLabels(existing, newLabels, out actuallyAdded);
                             });
+                        labelsAdded = actuallyAdded;
                     }
                 }
             }

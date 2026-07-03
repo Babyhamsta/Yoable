@@ -158,7 +158,15 @@
     <system:String x:Key="Menu_YoutubeToImages">YouTube To Images</system:String>
     <system:String x:Key="Menu_ExportLabels">Export Labels</system:String>
     <system:String x:Key="Menu_ClearAll">Clear All</system:String>
+    <system:String x:Key="Menu_SetManualProgress">Set Current as Manual Progress</system:String>
+    <system:String x:Key="Menu_JumpManualProgress">Jump to Manual Progress</system:String>
     <system:String x:Key="Menu_AI">AI</system:String>
+    <system:String x:Key="Msg_ManualProgress_Title">Manual Labeling Progress</system:String>
+    <system:String x:Key="Msg_ManualProgress_ProjectRequired">Open or create a project before setting a manual progress point.</system:String>
+    <system:String x:Key="Msg_ManualProgress_SelectImage">Select an image first.</system:String>
+    <system:String x:Key="Msg_ManualProgress_Set">Manual progress point set to: {0}</system:String>
+    <system:String x:Key="Msg_ManualProgress_NotSet">No manual progress point has been set yet.</system:String>
+    <system:String x:Key="Msg_ManualProgress_Missing">The progress image is not currently loaded: {0}</system:String>
     <system:String x:Key="Menu_ManageModels">Manage Models</system:String>
     <system:String x:Key="Menu_AutoLabelImages">Auto Label Images</system:String>
     <system:String x:Key="Menu_AutoSuggestLabels">Suggest Labels</system:String>
@@ -194,6 +202,7 @@
     <system:String x:Key="Main_Accept">Accept</system:String>
     <system:String x:Key="Main_Reject">Reject</system:String>
     <system:String x:Key="Main_EditClass">Edit class</system:String>
+    <system:String x:Key="Main_ChangeClass">Change class</system:String>
     <system:String x:Key="Main_RemoveSelectedClass">Remove selected class</system:String>
     <system:String x:Key="Main_NoImageSelected">No image selected.</system:String>
     <system:String x:Key="Main_NoLabelsToClear">No labels to clear.</system:String>
