@@ -17,6 +17,15 @@ namespace YoableWPF.Managers
         // Use thread-safe dictionary for concurrent label loading
         private ConcurrentDictionary<string, List<LabelData>> labelStorage = new();
         private ConcurrentDictionary<string, List<SuggestedLabel>> suggestionStorage = new();
+        private readonly ConcurrentDictionary<string, LabelImportCacheEntry> importedLabelCache =
+            new(StringComparer.OrdinalIgnoreCase);
+
+        private readonly record struct LabelFileStamp(long Length, long LastWriteTimeUtcTicks);
+        private sealed record LabelImportCacheEntry(
+            LabelFileStamp Stamp,
+            int ImageWidth,
+            int ImageHeight,
+            int[] ClassIds);
 
         public ConcurrentDictionary<string, List<LabelData>> LabelStorage => labelStorage;
         public ConcurrentDictionary<string, List<SuggestedLabel>> SuggestionStorage => suggestionStorage;
@@ -178,6 +187,7 @@ namespace YoableWPF.Managers
         {
             labelStorage.Clear();
             suggestionStorage.Clear();
+            importedLabelCache.Clear();
         }
 
         public bool RemoveLabels(string fileName)
@@ -580,7 +590,39 @@ namespace YoableWPF.Managers
             if (imageInfo == null)
                 return 0; // No matching image found
 
+            string cacheKey;
+            LabelFileStamp fileStamp;
+            try
+            {
+                cacheKey = Path.GetFullPath(labelFile);
+                var fileInfo = new FileInfo(cacheKey);
+                fileStamp = new LabelFileStamp(fileInfo.Length, fileInfo.LastWriteTimeUtc.Ticks);
+            }
+            catch
+            {
+                return 0;
+            }
+
+            // Repeated imports of an unchanged label file should not pay the cost of
+            // opening and parsing every line again. Preserve its class-id result so the
+            // batch API behaves the same on a cache hit.
+            int cachedImageWidth = (int)imageInfo.OriginalDimensions.Width;
+            int cachedImageHeight = (int)imageInfo.OriginalDimensions.Height;
+            if (importedLabelCache.TryGetValue(cacheKey, out var cached) &&
+                cached.Stamp == fileStamp &&
+                cached.ImageWidth == cachedImageWidth &&
+                cached.ImageHeight == cachedImageHeight)
+            {
+                if (foundClassIds != null)
+                {
+                    foreach (var classId in cached.ClassIds)
+                        foundClassIds.TryAdd(classId, true);
+                }
+                return 0;
+            }
+
             int labelsAdded = 0;
+            var fileClassIds = new HashSet<int>();
 
             try
             {
@@ -630,9 +672,9 @@ namespace YoableWPF.Managers
                         }
                         
                         // Track found class ID (before validation)
-                        if (foundClassIds != null && originalClassId >= 0)
+                        if (originalClassId >= 0)
                         {
-                            foundClassIds.TryAdd(originalClassId, true);
+                            fileClassIds.Add(originalClassId);
                         }
                         
                         // During import, keep original class ID even if it doesn't exist yet
@@ -680,6 +722,15 @@ namespace YoableWPF.Managers
                         });
                     labelsAdded = actuallyAdded;
                 }
+
+                foreach (var classId in fileClassIds)
+                    foundClassIds?.TryAdd(classId, true);
+
+                importedLabelCache[cacheKey] = new LabelImportCacheEntry(
+                    fileStamp,
+                    imgWidth,
+                    imgHeight,
+                    fileClassIds.ToArray());
             }
             catch (Exception ex)
             {

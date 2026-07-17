@@ -62,12 +62,6 @@ namespace YoableWPF.Managers
                                       .Where(IsSupportedImage)
                                       .ToArray();
 
-            // Clear collections just like original
-            imagePathMap.Clear();
-            imageStatuses.Clear();
-            Cache.Clear();
-            while (duplicateImageFiles.TryDequeue(out _)) { }
-
             foreach (string file in files)
             {
                 AddImage(file);
@@ -90,7 +84,14 @@ namespace YoableWPF.Managers
                                 .Where(IsSupportedImage)
                                 .ToArray();
 
-            await LoadImagesFromPathsAsync(files, progress, cancellationToken, enableParallelProcessing);
+            // Directory imports are incremental: images already loaded from the same
+            // unchanged file are skipped before their headers are opened.
+            await LoadImagesFromPathsAsync(
+                files,
+                progress,
+                cancellationToken,
+                enableParallelProcessing,
+                clearExisting: false);
 
             return files;
         }
@@ -159,6 +160,10 @@ namespace YoableWPF.Managers
 
             string fileName = Path.GetFileName(filePath);
 
+            if (TrySkipExistingImage(fileName, filePath))
+                return false;
+            bool isExistingFile = imagePathMap.ContainsKey(fileName);
+
             try
             {
                 using (var imageStream = File.OpenRead(filePath))
@@ -169,19 +174,15 @@ namespace YoableWPF.Managers
                         BitmapCacheOption.None);
 
                     var dimensions = new Size(decoder.Frames[0].PixelWidth, decoder.Frames[0].PixelHeight);
-                    if (!imagePathMap.TryAdd(fileName, new ImageInfo(filePath, dimensions)))
+                    var imageInfo = new ImageInfo(filePath, dimensions);
+                    if (!AddOrUpdateImage(fileName, imageInfo))
                     {
-                        if (imagePathMap.TryGetValue(fileName, out var existing) &&
-                            !string.Equals(existing.Path, filePath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            duplicateImageFiles.Enqueue($"{fileName} -> {filePath}");
-                        }
                         return false;
                     }
                     imageStatuses.TryAdd(fileName, ImageStatus.NoLabel);
                 }
 
-                return true;
+                return !isExistingFile;
             }
             catch
             {
@@ -198,17 +199,16 @@ namespace YoableWPF.Managers
         {
             string fileName = Path.GetFileName(filePath);
 
-            if (!imagePathMap.TryAdd(fileName, new ImageInfo(filePath, dimensions)))
+            if (TrySkipExistingImage(fileName, filePath))
+                return false;
+            bool isExistingFile = imagePathMap.ContainsKey(fileName);
+
+            if (!AddOrUpdateImage(fileName, new ImageInfo(filePath, dimensions)))
             {
-                if (imagePathMap.TryGetValue(fileName, out var existing) &&
-                    !string.Equals(existing.Path, filePath, StringComparison.OrdinalIgnoreCase))
-                {
-                    duplicateImageFiles.Enqueue($"{fileName} -> {filePath}");
-                }
                 return false;
             }
             imageStatuses.TryAdd(fileName, ImageStatus.NoLabel);
-            return true;
+            return !isExistingFile;
         }
 
         // Thread-safe version for parallel processing
@@ -217,6 +217,9 @@ namespace YoableWPF.Managers
             if (!File.Exists(filePath)) return false;
 
             string fileName = Path.GetFileName(filePath);
+
+            if (TrySkipExistingImage(fileName, filePath))
+                return false;
 
             try
             {
@@ -228,13 +231,9 @@ namespace YoableWPF.Managers
                         BitmapCacheOption.None);
 
                     var dimensions = new Size(decoder.Frames[0].PixelWidth, decoder.Frames[0].PixelHeight);
-                    if (!imagePathMap.TryAdd(fileName, new ImageInfo(filePath, dimensions)))
+                    var imageInfo = new ImageInfo(filePath, dimensions);
+                    if (!AddOrUpdateImage(fileName, imageInfo))
                     {
-                        if (imagePathMap.TryGetValue(fileName, out var existing) &&
-                            !string.Equals(existing.Path, filePath, StringComparison.OrdinalIgnoreCase))
-                        {
-                            duplicateImageFiles.Enqueue($"{fileName} -> {filePath}");
-                        }
                         return false;
                     }
                     imageStatuses.TryAdd(fileName, ImageStatus.NoLabel);
@@ -246,6 +245,46 @@ namespace YoableWPF.Managers
             {
                 // If we fail to read the image, don't add it
                 return false;
+            }
+        }
+
+        /// <summary>
+        /// Fast path for repeated folder imports. Returns true for an unchanged file or
+        /// for a conflicting file name, so neither case opens an image decoder.
+        /// A file changed in place is allowed through and replaces its cached dimensions.
+        /// </summary>
+        private bool TrySkipExistingImage(string fileName, string filePath)
+        {
+            if (!imagePathMap.TryGetValue(fileName, out var existing))
+                return false;
+
+            if (!string.Equals(existing.Path, filePath, StringComparison.OrdinalIgnoreCase))
+            {
+                duplicateImageFiles.Enqueue($"{fileName} -> {filePath}");
+                return true;
+            }
+
+            return existing.MatchesFile(filePath);
+        }
+
+        private bool AddOrUpdateImage(string fileName, ImageInfo imageInfo)
+        {
+            while (true)
+            {
+                if (!imagePathMap.TryGetValue(fileName, out var existing))
+                    return imagePathMap.TryAdd(fileName, imageInfo);
+
+                if (!string.Equals(existing.Path, imageInfo.Path, StringComparison.OrdinalIgnoreCase))
+                {
+                    duplicateImageFiles.Enqueue($"{fileName} -> {imageInfo.Path}");
+                    return false;
+                }
+
+                if (imagePathMap.TryUpdate(fileName, imageInfo, existing))
+                {
+                    Cache.Remove(imageInfo.Path);
+                    return true;
+                }
             }
         }
 
@@ -287,11 +326,40 @@ namespace YoableWPF.Managers
         {
             public string Path { get; set; }
             public Size OriginalDimensions { get; set; }
+            public long FileLength { get; set; }
+            public long LastWriteTimeUtcTicks { get; set; }
 
             public ImageInfo(string path, Size dimensions)
             {
                 Path = path;
                 OriginalDimensions = dimensions;
+
+                try
+                {
+                    var fileInfo = new FileInfo(path);
+                    FileLength = fileInfo.Length;
+                    LastWriteTimeUtcTicks = fileInfo.LastWriteTimeUtc.Ticks;
+                }
+                catch
+                {
+                    FileLength = -1;
+                    LastWriteTimeUtcTicks = -1;
+                }
+            }
+
+            public bool MatchesFile(string path)
+            {
+                try
+                {
+                    var fileInfo = new FileInfo(path);
+                    return FileLength >= 0 &&
+                           FileLength == fileInfo.Length &&
+                           LastWriteTimeUtcTicks == fileInfo.LastWriteTimeUtc.Ticks;
+                }
+                catch
+                {
+                    return false;
+                }
             }
         }
     }

@@ -1322,16 +1322,17 @@ namespace YoableWPF
                 var progress = CreateProgressReporter();
 
                 // Load images asynchronously
-                var files = await imageManager.LoadImagesFromDirectoryAsync(
+                await imageManager.LoadImagesFromDirectoryAsync(
                     imagesFolderPath,
                     progress,
                     tokenSource.Token,
                     Properties.Settings.Default.EnableParallelProcessing);
 
                 // Update UI in batches
-                await UpdateImageListInBatchesAsync(files, tokenSource.Token);
+                var loadedFiles = imageManager.ImagePathMap.Values.Select(image => image.Path).ToArray();
+                await UpdateImageListInBatchesAsync(loadedFiles, tokenSource.Token);
 
-                if (ImageListBox.Items.Count > 0)
+                if (ImageListBox.Items.Count > 0 && ImageListBox.SelectedItem == null)
                 {
                     ImageListBox.SelectedIndex = 0;
                 }
@@ -2006,7 +2007,7 @@ namespace YoableWPF
                 // Warn about duplicate file names that were skipped
                 ShowDuplicateImagesWarning(imageManager.ConsumeDuplicateImageFiles());
 
-                if (ImageListBox.Items.Count > 0)
+                if (ImageListBox.Items.Count > 0 && ImageListBox.SelectedItem == null)
                 {
                     ImageListBox.SelectedIndex = 0;
                 }
@@ -2040,13 +2041,27 @@ namespace YoableWPF
                 batchSize = 100;
             }
 
-            await Dispatcher.InvokeAsync(() => ImageListBox.Items.Clear());
+            // Folder imports are incremental. Keep existing UI items and only append
+            // filenames that are not already represented in the list.
+            var existingFileNames = await Dispatcher.InvokeAsync(() =>
+                ImageListBox.Items
+                    .OfType<ImageListItem>()
+                    .Select(item => item.FileName)
+                    .ToHashSet(StringComparer.OrdinalIgnoreCase));
 
-            for (int i = 0; i < files.Length; i += batchSize)
+            var filesToAdd = new List<string>();
+            foreach (var file in files)
+            {
+                string fileName = Path.GetFileName(file);
+                if (existingFileNames.Add(fileName))
+                    filesToAdd.Add(file);
+            }
+
+            for (int i = 0; i < filesToAdd.Count; i += batchSize)
             {
                 cancellationToken.ThrowIfCancellationRequested();
 
-                var batch = files.Skip(i).Take(batchSize).ToArray();
+                var batch = filesToAdd.Skip(i).Take(batchSize).ToArray();
 
                 await Dispatcher.InvokeAsync(() =>
                 {
@@ -2056,14 +2071,14 @@ namespace YoableWPF
                     foreach (string file in batch)
                     {
                         string fileName = Path.GetFileName(file);
-                        ImageListBox.Items.Add(new ImageListItem(fileName, ImageStatus.NoLabel));
+                        ImageListBox.Items.Add(new ImageListItem(fileName, imageManager.GetImageStatus(fileName)));
                     }
 
                     ImageListBox.SelectionChanged += ImageListBox_SelectionChanged;
                 });
 
                 // Update progress
-                overlayManager.UpdateMessage($"Updating UI... {Math.Min(i + batchSize, files.Length)}/{files.Length}");
+                overlayManager.UpdateMessage($"Updating UI... {Math.Min(i + batchSize, filesToAdd.Count)}/{filesToAdd.Count}");
             }
         }
 

@@ -131,6 +131,23 @@ namespace YoableWPF.Managers
             }
         }
 
+        /// <summary>
+        /// Removes a single decoded image when the source file has changed on disk.
+        /// </summary>
+        public void Remove(string imagePath)
+        {
+            if (string.IsNullOrEmpty(imagePath)) return;
+
+            lock (cacheLock)
+            {
+                if (!cacheMap.TryGetValue(imagePath, out var node)) return;
+
+                cacheMap.Remove(imagePath);
+                lruList.Remove(node);
+                currentCacheBytes -= node.Value.SizeBytes;
+            }
+        }
+
         private void Add(string imagePath, BitmapImage bitmap)
         {
             long sizeBytes = (long)bitmap.PixelWidth * bitmap.PixelHeight * 4;
