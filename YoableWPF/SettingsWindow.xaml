@@ -296,6 +296,28 @@
                             </Grid>
                             <TextBlock Text="{DynamicResource Settings_ConfidenceThreshold_Help}"
                                        Style="{StaticResource HelpText}"/>
+
+                            <Button x:Name="PerClassConfidenceButton"
+                                    Content="{DynamicResource Settings_PerClassConfidence}"
+                                    HorizontalAlignment="Left"
+                                    Padding="14,6"
+                                    Margin="0,12,0,0"
+                                    Click="PerClassConfidence_Click"/>
+                            <TextBlock x:Name="PerClassConfidenceHelpText"
+                                       Text="{DynamicResource Settings_PerClassConfidence_Help}"
+                                       Style="{StaticResource HelpText}"/>
+
+                            <CheckBox x:Name="AutoLabelOnlyUnlabeledCheckBox"
+                                      Content="{DynamicResource Settings_AI_OnlyUnlabeled}"
+                                      Margin="0,12,0,0"/>
+                            <TextBlock Text="{DynamicResource Settings_AI_OnlyUnlabeled_Help}"
+                                       Style="{StaticResource HelpText}"/>
+
+                            <CheckBox x:Name="ReplaceExistingLabelsCheckBox"
+                                      Content="{DynamicResource Settings_AI_ReplaceExisting}"
+                                      Margin="0,12,0,0"/>
+                            <TextBlock Text="{DynamicResource Settings_AI_ReplaceExisting_Help}"
+                                       Style="{StaticResource HelpText}"/>
                         </StackPanel>
                     </Border>
 
@@ -317,7 +339,85 @@
                                       SelectionChanged="DetectionModeComboBox_SelectionChanged">
                                 <ComboBoxItem Content="{DynamicResource Settings_DetectionMode_Voting}" Tag="0"/>
                                 <ComboBoxItem Content="{DynamicResource Settings_DetectionMode_Union}" Tag="1"/>
+                                <ComboBoxItem Content="{DynamicResource Settings_DetectionMode_ClassTransfer}" Tag="2"/>
                             </ComboBox>
+
+                            <!-- Class transfer: per-model roles and voting options -->
+                            <StackPanel x:Name="ClassTransferPanel" Visibility="Collapsed" Margin="0,0,0,12">
+                                <TextBlock Text="{DynamicResource Settings_ClassTransfer_Help}"
+                                           Style="{StaticResource HelpText}"
+                                           Margin="0,0,0,8"/>
+
+                                <TextBlock Text="{DynamicResource Settings_ClassTransfer_Roles}" Style="{StaticResource SettingLabel}"/>
+                                <ItemsControl x:Name="ModelRoleList" Margin="0,4,0,8">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,3">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="160"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Text="{Binding ModelName}"
+                                                           VerticalAlignment="Center"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           ToolTip="{Binding ModelName}"/>
+                                                <ComboBox Grid.Column="1"
+                                                          SelectedIndex="{Binding RoleIndex, Mode=TwoWay}">
+                                                    <ComboBoxItem Content="{DynamicResource Settings_ModelRole_Detector}"/>
+                                                    <ComboBoxItem Content="{DynamicResource Settings_ModelRole_Classifier}"/>
+                                                </ComboBox>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock x:Name="ModelRoleWarningText"
+                                           Text="{DynamicResource Settings_ClassTransfer_NeedDetector}"
+                                           Foreground="#FFE57373"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           Visibility="Collapsed"
+                                           Margin="0,0,0,8"/>
+
+                                <TextBlock Text="{DynamicResource Settings_ClassTransfer_VoteIoU}" Style="{StaticResource SettingLabel}"/>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="40"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Slider x:Name="ClassTransferIoUSlider"
+                                            Minimum="0.1"
+                                            Maximum="0.9"
+                                            Value="0.5"
+                                            TickFrequency="0.05"
+                                            TickPlacement="BottomRight"/>
+                                    <TextBlock Grid.Column="1"
+                                               Text="{Binding Value, ElementName=ClassTransferIoUSlider, StringFormat={}{0:F2}}"
+                                               VerticalAlignment="Center"
+                                               HorizontalAlignment="Right"
+                                               FontSize="12"
+                                               FontWeight="SemiBold"/>
+                                </Grid>
+
+                                <CheckBox x:Name="ClassTransferKeepUnvotedCheckBox"
+                                          Content="{DynamicResource Settings_ClassTransfer_KeepUnvoted}"/>
+                                <TextBlock Text="{DynamicResource Settings_ClassTransfer_KeepUnvoted_Help}"
+                                           Style="{StaticResource HelpText}"/>
+
+                                <CheckBox x:Name="ClassTransferTeamConsistencyCheckBox"
+                                          Content="{DynamicResource Settings_ClassTransfer_TeamConsistency}"
+                                          Margin="0,12,0,0"/>
+                                <TextBlock Text="{DynamicResource Settings_ClassTransfer_TeamConsistency_Help}"
+                                           Style="{StaticResource HelpText}"/>
+                                <Button x:Name="TeamPairingButton"
+                                        Content="{DynamicResource Settings_ClassTransfer_TeamPairing}"
+                                        HorizontalAlignment="Left"
+                                        Padding="14,6"
+                                        Margin="0,8,0,0"
+                                        Click="TeamPairing_Click"/>
+                                <TextBlock x:Name="TeamPairingHelpText"
+                                           Text="{DynamicResource Settings_ClassTransfer_TeamPairing_Help}"
+                                           Style="{StaticResource HelpText}"/>
+                            </StackPanel>
 
                             <TextBlock Text="{DynamicResource Settings_MinConsensus}" Style="{StaticResource SettingLabel}"/>
                             <Grid Margin="0,0,0,12">

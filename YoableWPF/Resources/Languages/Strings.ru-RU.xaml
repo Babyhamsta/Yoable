@@ -58,9 +58,16 @@
     <system:String x:Key="Settings_Detection_Section">Обнаружение</system:String>
     <system:String x:Key="Settings_ProcessingDevice">Устройство обработки</system:String>
     <system:String x:Key="Settings_Device_CPU">CPU</system:String>
-    <system:String x:Key="Settings_Device_GPU">GPU (CUDA)</system:String>
+    <system:String x:Key="Settings_Device_GPU">GPU (DirectML)</system:String>
     <system:String x:Key="Settings_ConfidenceThreshold">Порог уверенности</system:String>
     <system:String x:Key="Settings_ConfidenceThreshold_Help">Минимальная уверенность, необходимая для отображения обнаружений AI.</system:String>
+    <system:String x:Key="Settings_AI_OnlyUnlabeled">Авторазметка только неразмеченных изображений</system:String>
+    <system:String x:Key="Settings_AI_OnlyUnlabeled_Help">Пропускать изображения, у которых уже есть хотя бы одна подтверждённая метка.</system:String>
+    <system:String x:Key="Settings_PerClassConfidence">Пороги по классам...</system:String>
+    <system:String x:Key="Settings_PerClassConfidence_Help">Переопределите порог уверенности для отдельных классов. Неизменённые классы используют глобальное значение выше.</system:String>
+    <system:String x:Key="Settings_PerClassConfidence_NoClasses">Откройте проект с заданными классами, чтобы настроить пороги по классам.</system:String>
+    <system:String x:Key="Settings_AI_ReplaceExisting">Заменять существующие метки ИИ при разметке</system:String>
+    <system:String x:Key="Settings_AI_ReplaceExisting_Help">Если выключено, новые обнаружения добавляются к уже имеющимся на изображении меткам ИИ.</system:String>
     <system:String x:Key="Settings_EnsembleMode_Section">Ансамблевый режим</system:String>
     <system:String x:Key="Settings_NoModelsLoaded">Модели не загружены</system:String>
     <system:String x:Key="Settings_ModelLoaded_Single">Загружена 1 модель (режим одной модели)</system:String>
@@ -68,6 +75,24 @@
     <system:String x:Key="Settings_DetectionMode">Режим обнаружения</system:String>
     <system:String x:Key="Settings_DetectionMode_Voting">Режим голосования (требуется консенсус нескольких моделей)</system:String>
     <system:String x:Key="Settings_DetectionMode_Union">Режим объединения (отмечается любое обнаружение модели)</system:String>
+    <system:String x:Key="Settings_DetectionMode_ClassTransfer">Перенос класса (модели-детекторы ставят рамки, модели-классификаторы голосуют за класс)</system:String>
+    <system:String x:Key="Settings_ClassTransfer_Help">Одна точная модель ставит рамки, а другие только определяют класс каждой рамки. Идеально, когда у лучшей модели нет нужных классов, а модели со знанием классов плохо локализуют.</system:String>
+    <system:String x:Key="Settings_ClassTransfer_Roles">Роли моделей</system:String>
+    <system:String x:Key="Settings_ModelRole_Detector">Детектор (ставит рамки)</system:String>
+    <system:String x:Key="Settings_ModelRole_Classifier">Классификатор (голосует за класс)</system:String>
+    <system:String x:Key="Settings_ClassTransfer_NeedDetector">Выберите хотя бы одну модель-детектор, иначе не будет рамок для сохранения.</system:String>
+    <system:String x:Key="Settings_ClassTransfer_VoteIoU">Порог перекрытия для голосования (IoU)</system:String>
+    <system:String x:Key="Settings_ClassTransfer_KeepUnvoted">Сохранять рамки, не распознанные ни одним классификатором</system:String>
+    <system:String x:Key="Settings_ClassTransfer_KeepUnvoted_Help">Если включено, рамка детектора без голосов классификаторов сохраняется и помечается первым разрешённым классом, чтобы вы лишь исправили класс, а не рисовали рамку заново. Если выключено, такие рамки отбрасываются.</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamConsistency">Согласовывать команду тела с головой внутри него</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamConsistency_Help">Когда рамка головы и охватывающая её рамка тела расходятся по команде, побеждает более уверенная, а другая исправляется. Требуются пары классов ниже.</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamPairing">Пары команд...</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamPairing_Help">Свяжите каждый класс тела с классом головы той же команды (например, тело полиции с головой полиции).</system:String>
+    <system:String x:Key="TeamPairing_Title">Пары команд</system:String>
+    <system:String x:Key="TeamPairing_Subtitle">Свяжите класс тела с классом головы той же команды. Используется для согласования классификации тела и головы.</system:String>
+    <system:String x:Key="TeamPairing_Body">Класс тела</system:String>
+    <system:String x:Key="TeamPairing_Head">Класс головы</system:String>
+    <system:String x:Key="TeamPairing_AddPair">Добавить пару</system:String>
     <system:String x:Key="Settings_MinConsensus">Минимальный консенсус</system:String>
     <system:String x:Key="Settings_ConsensusIoU">Порог консенсуса IoU</system:String>
     <system:String x:Key="Settings_EnsembleIoU">Финальный порог ансамбля IoU</system:String>
@@ -166,7 +191,15 @@
     <system:String x:Key="Main_FilterReview">Проверка</system:String>
     <system:String x:Key="Main_FilterNone">Нет</system:String>
     <system:String x:Key="Main_FilterDone">Готово</system:String>
+    <system:String x:Key="Main_FilterAiLabels">Метки AI</system:String>
     <system:String x:Key="Main_FilterByClass">Фильтр по классу</system:String>
+    <system:String x:Key="Main_FilterModeInclude">Содержит</system:String>
+    <system:String x:Key="Main_FilterModeAll">Все</system:String>
+    <system:String x:Key="Main_FilterModeOnly">Только</system:String>
+    <system:String x:Key="Main_FilterModeExclude">Исключить</system:String>
+    <system:String x:Key="Main_FilterSelectAll">Выбрать все</system:String>
+    <system:String x:Key="Main_FilterClear">Очистить</system:String>
+    <system:String x:Key="Main_FilterInvert">Инвертировать</system:String>
     <system:String x:Key="Main_StatusReview">ПРОВЕРКА</system:String>
     <system:String x:Key="Main_StatusNoLabel">БЕЗ МЕТКИ</system:String>
     <system:String x:Key="Main_StatusVerified">ПОДТВЕРЖДЕНО</system:String>
@@ -192,6 +225,12 @@
     <system:String x:Key="Main_ConfirmClear">Подтвердить очистку</system:String>
     <system:String x:Key="Main_Error">Ошибка</system:String>
     <system:String x:Key="Main_Information">Информация</system:String>
+    <system:String x:Key="Main_OpenImageLocation">Открыть расположение файла изображения</system:String>
+    <system:String x:Key="Main_OpenLabelLocation">Открыть расположение файла меток</system:String>
+    <system:String x:Key="Main_DeleteImage">Удалить изображение</system:String>
+    <system:String x:Key="Main_ConfirmDeleteImage">Переместить «{0}» и файл его меток в корзину и удалить из проекта?</system:String>
+    <system:String x:Key="Main_NoLabelFileOnDisk">Для этого изображения ещё нет файла меток на диске. Сначала сохраните или экспортируйте проект.</system:String>
+    <system:String x:Key="Main_DeleteImageFailed">Изображение удалено из проекта, но некоторые файлы не удалось удалить:&#x0a;&#x0a;{0}</system:String>
 
     <!-- Propagation Dialog -->
     <system:String x:Key="Propagation_Title">Распространение меток</system:String>
@@ -340,6 +379,8 @@
     <system:String x:Key="Msg_SingleModel">одна модель</system:String>
     <system:String x:Key="Msg_EnsembleModels">ансамбль ({0} моделей)</system:String>
     <system:String x:Key="Msg_ProcessImagesPrompt">Обработать {0} изображений с использованием {1} обнаружения?</system:String>
+    <system:String x:Key="Msg_OnlyUnlabeledSummary">Будут обработаны только неразмеченные изображения; размеченных изображений будет пропущено: {0}.</system:String>
+    <system:String x:Key="Msg_NoUnlabeledImages">Нет неразмеченных изображений для обработки.</system:String>
     <system:String x:Key="Msg_ManyModelsWarning">Примечание: Обработка с большим количеством моделей может занять значительное время.</system:String>
     <system:String x:Key="Msg_StartDetection">Начать обнаружение</system:String>
     <system:String x:Key="Msg_UsingModels"> с использованием {0} моделей</system:String>
@@ -396,15 +437,19 @@
     <system:String x:Key="Msg_ModelAlreadyLoadedTitle">Модель уже загружена</system:String>
     <system:String x:Key="Msg_GPUInitFailed">Ошибка инициализации GPU: {0}&#x0a;Переключение на CPU.</system:String>
     <system:String x:Key="Msg_GPUWarning">Предупреждение GPU</system:String>
+    <system:String x:Key="Msg_DirectMLUnsupported">Этот GPU или текущий драйвер не поддерживает DirectML.</system:String>
     <system:String x:Key="Msg_ModelInitFailed">Не удалось инициализировать модель: {0}</system:String>
     <system:String x:Key="Msg_UnsupportedModel">Не удалось определить формат модели YOLO или неподдерживаемый тип модели.&#x0a;&#x0a;Поддерживаемые форматы:&#x0a;- YOLOv5: [batch, detections, 5+classes]&#x0a;- YOLOv8: [batch, 4+classes, detections]&#x0a;&#x0a;Примечание: Модели сегментации не поддерживаются.</system:String>
     <system:String x:Key="Msg_UnsupportedModelTitle">Неподдерживаемая модель</system:String>
     <system:String x:Key="Msg_ModelLoadedSuccess">Модель '{0}' успешно загружена.&#x0a;Формат: {1}&#x0a;Классы: {2}&#x0a;Обнаружения: {3}&#x0a;Размер входа: {4}x{4}&#x0a;Всего моделей: {5}</system:String>
     <system:String x:Key="Msg_ModelLoaded">Модель загружена</system:String>
     <system:String x:Key="Msg_ErrorLoadingModel">Ошибка загрузки модели: {0}</system:String>
+    <system:String x:Key="Msg_ReloadingModelsForDevice">Повторная загрузка моделей ИИ для выбранного устройства...</system:String>
     <system:String x:Key="Msg_YouTube_NoCompatibleStream">Не найдено совместимых видеопотоков для {0}</system:String>
     <system:String x:Key="Msg_YouTube_DownloadError">Ошибка загрузки</system:String>
     <system:String x:Key="Msg_AutoLabelComplete">Автоматическая разметка завершена{0}.&#x0a;Всего обнаружений: {1}</system:String>
+    <system:String x:Key="Msg_AutoLabelScopeComplete">Обработано: {0}; пропущено размеченных: {1}.</system:String>
+    <system:String x:Key="Msg_AutoLabelFailedImages">Не удалось обработать или найти изображений: {0}.</system:String>
 
     <!-- Status Bar -->
     <system:String x:Key="Status_NoProject">Нет проекта</system:String>
@@ -423,10 +468,10 @@
 
     <!-- Mapping Dialog -->
     <system:String x:Key="Mapping_Title">Настройка сопоставления классов модели</system:String>
-    <system:String x:Key="Mapping_Description">Пожалуйста, выберите соответствующий класс проекта для каждого класса модели</system:String>
+    <system:String x:Key="Mapping_Description">Отметьте все классы проекта, в которые может отображаться каждый класс модели</system:String>
     <system:String x:Key="Mapping_LoadClassFile">Загрузить файл классов</system:String>
     <system:String x:Key="Mapping_ModelID">ID модели: {0}</system:String>
-    <system:String x:Key="Mapping_InfoFormat">Модель: {0}&#x0a;Количество классов: {1}&#x0a;Количество классов проекта: {2}&#x0a;Подсказка: Выберите 'nan (не обнаружено)' чтобы пропустить обнаружение этого класса</system:String>
+    <system:String x:Key="Mapping_InfoFormat">Модель: {0}&#x0a;Количество классов: {1}&#x0a;Количество классов проекта: {2}&#x0a;Подсказка: отметьте 'nan (не обнаружено)', чтобы пропустить класс. Несколько отметок задают набор классов, которым может быть присвоено обнаружение.</system:String>
     <system:String x:Key="Mapping_WarningGeneric">⚠ Предупреждение: Файл классов не найден, отображаются общие имена классов.&#x0a;Пожалуйста, нажмите кнопку 'Загрузить файл классов' в правом верхнем углу, чтобы вручную загрузить правильные имена классов.</system:String>
     <system:String x:Key="Mapping_SelectClassFile">Выбрать файл классов</system:String>
     <system:String x:Key="Mapping_ClassFileEmpty">Файл классов пуст или имеет неправильный формат.</system:String>
@@ -453,5 +498,134 @@
     <system:String x:Key="ModelManager_ClearModels">Очистить модели</system:String>
     <system:String x:Key="ModelManager_NeedProjectClasses">Сначала создайте классы в проекте, а затем настройте сопоставление классов модели.&#x0a;&#x0a;Вы можете добавить классы в области «Classes» на правой панели.</system:String>
     <system:String x:Key="ModelManager_NeedProjectClassesTitle">Требуются классы проекта</system:String>
+
+    <!-- Duplicate image review -->
+    <system:String x:Key="Main_TabAnnotate">Разметка</system:String>
+    <system:String x:Key="Main_TabDuplicates">Дубликаты</system:String>
+    <system:String x:Key="Duplicate_Title">Дубликаты изображений</system:String>
+    <system:String x:Key="Duplicate_Scan">Сканировать снова</system:String>
+    <system:String x:Key="Duplicate_NoScan">Найти дубликаты изображений в текущем проекте.</system:String>
+    <system:String x:Key="Duplicate_Scanning">Сканирование изображений...</system:String>
+    <system:String x:Key="Duplicate_NoImages">Для сканирования добавьте не менее двух изображений.</system:String>
+    <system:String x:Key="Duplicate_NoMatches">Дубликаты изображений не найдены.</system:String>
+    <system:String x:Key="Duplicate_ScanFailed">Не удалось найти дубликаты изображений.</system:String>
+    <system:String x:Key="Duplicate_Resolved">Все дубликаты обработаны.</system:String>
+    <system:String x:Key="Duplicate_Summary">Осталось групп: {0}, лишних изображений: {1}</system:String>
+    <system:String x:Key="Duplicate_GroupProgress">Группа {0} из {1}</system:String>
+    <system:String x:Key="Duplicate_LabelCount">Меток: {0}</system:String>
+    <system:String x:Key="Duplicate_KeepLeft">Оставить левое изображение и метки</system:String>
+    <system:String x:Key="Duplicate_KeepRight">Оставить правое изображение и метки</system:String>
+    <system:String x:Key="Duplicate_RemoveFailed">Не удалось удалить дубликат из проекта.</system:String>
+    <system:String x:Key="Duplicate_AllGroups">Все группы дубликатов</system:String>
+    <system:String x:Key="Duplicate_PreviousGroup">Предыдущая группа</system:String>
+    <system:String x:Key="Duplicate_NextGroup">Следующая группа</system:String>
+    <system:String x:Key="Duplicate_GroupTitle">Группа {0}</system:String>
+    <system:String x:Key="Duplicate_ExtraCount">Лишних изображений: {0}</system:String>
+
+    <!-- Center ROI crop -->
+    <system:String x:Key="Main_TabRoiCrop">Центральная ROI</system:String>
+    <system:String x:Key="Roi_Title">Обрезка центральной ROI</system:String>
+    <system:String x:Key="Roi_OutputSize">Размер в пикселях</system:String>
+    <system:String x:Key="Roi_Scope">Применить к</system:String>
+    <system:String x:Key="Roi_AllImages">Всем изображениям проекта</system:String>
+    <system:String x:Key="Roi_CurrentImage">Текущему изображению</system:String>
+    <system:String x:Key="Roi_OutputFolder">Папка вывода</system:String>
+    <system:String x:Key="Roi_Apply">Создать обрезки 640 x 640</system:String>
+    <system:String x:Key="Roi_RemoveSmall">Удалить изображения меньше 640 пкс</system:String>
+    <system:String x:Key="Roi_RemoveSmallConfirm">Найдено изображений, ширина или высота которых меньше 640 пикселей: {0}. Удалить их и их метки из проекта? Исходные файлы останутся на диске.</system:String>
+    <system:String x:Key="Roi_RemoveSmallComplete">Из проекта удалено изображений недостаточного размера и их меток: {0}.</system:String>
+    <system:String x:Key="Roi_NoSmallImages">В проекте нет изображений с шириной или высотой меньше 640 пикселей.</system:String>
+    <system:String x:Key="Roi_Preview">Предпросмотр центральной ROI</system:String>
+    <system:String x:Key="Roi_NoPreview">Нет изображения для предпросмотра</system:String>
+    <system:String x:Key="Roi_InvalidSize">Недопустимый размер ROI.</system:String>
+    <system:String x:Key="Roi_Confirm">Обрезать центральную область {0} x {1} пикселей и обновить метки?</system:String>
+    <system:String x:Key="Roi_Processing">Обрезка изображений...</system:String>
+    <system:String x:Key="Roi_Progress">{0} / {1} - {2}</system:String>
+    <system:String x:Key="Roi_Complete">Обрезано изображений: {0}, удалено меток: {1}, обрезано меток: {2}, пропущено изображений: {3}.</system:String>
+    <system:String x:Key="Roi_Cancelled">Обрезка ROI отменена.</system:String>
+    <system:String x:Key="Roi_ProjectRequired">Перед обрезкой откройте или создайте проект.</system:String>
+    <system:String x:Key="Roi_Failed">Не удалось обрезать ROI.</system:String>
+    <system:String x:Key="Roi_NoImages">Нет изображений для обрезки.</system:String>
+
+    <system:String x:Key="Menu_AILabelCurrentImage">AI-разметка текущего изображения</system:String>
+    <system:String x:Key="AIClassConfidence_Title">Порог для каждого класса</system:String>
+    <system:String x:Key="AIClassConfidence_Subtitle">Задайте минимальную уверенность для каждого класса, используемую при разметке ИИ.</system:String>
+    <system:String x:Key="AIClassConfidence_Class">Класс</system:String>
+    <system:String x:Key="AIClassConfidence_Threshold">Минимальная уверенность</system:String>
+    <system:String x:Key="AIClassConfidence_Reset">Сбросить к общему значению</system:String>
+    <system:String x:Key="AIClassConfidence_Running">Выполняется AI-распознавание текущего изображения...</system:String>
+    <system:String x:Key="AIClassConfidence_Complete">Разметка текущего изображения завершена. Обнаружено объектов: {0}.</system:String>
+    <system:String x:Key="AIClassConfidence_Failed">Не удалось разметить текущее изображение: {0}</system:String>
+    <system:String x:Key="Duplicate_AutoResolvedSummary">Устранено автоматически: {0}</system:String>
+    <system:String x:Key="Duplicate_AutoResolvedOnly">Из проекта автоматически удалено дубликатов с одинаковыми изображениями и метками: {0}.</system:String>
+    <system:String x:Key="Duplicate_OpenEdit">Проверить</system:String>
+    <system:String x:Key="Duplicate_OpenEditFailed">Не удалось открыть изображение для редактирования.</system:String>
+
+
+    <!-- Training Dataset Export -->
+    <system:String x:Key="Menu_ExportTrainingDataset">Экспорт обучающего набора...</system:String>
+    <system:String x:Key="TrainingExport_Title">Экспорт обучающего набора</system:String>
+    <system:String x:Key="TrainingExport_Subtitle">Скопировать изображения и метки в структуру папок YOLO train/val/test с файлом data.yaml, готовым для обучения.</system:String>
+    <system:String x:Key="TrainingExport_OutputFolder">Папка вывода</system:String>
+    <system:String x:Key="TrainingExport_Browse">Обзор...</system:String>
+    <system:String x:Key="TrainingExport_SplitRatios">Доли разбиения (%)</system:String>
+    <system:String x:Key="TrainingExport_Train">Обучение</system:String>
+    <system:String x:Key="TrainingExport_Val">Валидация</system:String>
+    <system:String x:Key="TrainingExport_Test">Тест</system:String>
+    <system:String x:Key="TrainingExport_SumFormat">Итого: {0}% (должно быть 100%)</system:String>
+    <system:String x:Key="TrainingExport_Seed">Случайное зерно</system:String>
+    <system:String x:Key="TrainingExport_IncludeBackground">Включить изображения без меток как фоновые образцы</system:String>
+    <system:String x:Key="TrainingExport_VerifiedOnly">Экспортировать только проверенные изображения</system:String>
+    <system:String x:Key="Msg_ExportingTrainingDataset">Экспорт обучающего набора...</system:String>
+    <system:String x:Key="Msg_TrainingDatasetExported">Обучающий набор экспортирован.&#10;Обучение: {0}   Валидация: {1}   Тест: {2}&#10;Пропущено: {3}</system:String>
+    <system:String x:Key="Msg_NoImagesToExport">Нет изображений для экспорта.</system:String>
+    <system:String x:Key="Msg_NoClassesToExport">Определите хотя бы один класс перед экспортом обучающего набора.</system:String>
+
+    <!-- Dataset Statistics -->
+    <system:String x:Key="Main_TabStats">Статистика</system:String>
+    <system:String x:Key="Stats_Title">Статистика набора данных</system:String>
+    <system:String x:Key="Stats_Subtitle">Баланс классов, размеры рамок и статус проверки текущего проекта.</system:String>
+    <system:String x:Key="Stats_Refresh">Обновить</system:String>
+    <system:String x:Key="Stats_Empty">Изображения не загружены.</system:String>
+    <system:String x:Key="Stats_TotalImages">Всего изображений</system:String>
+    <system:String x:Key="Stats_LabeledImages">С разметкой</system:String>
+    <system:String x:Key="Stats_UnlabeledImages">Без разметки</system:String>
+    <system:String x:Key="Stats_TotalBoxes">Всего рамок</system:String>
+    <system:String x:Key="Stats_AvgBoxes">Рамок на изображение</system:String>
+    <system:String x:Key="Stats_ClassBalance">Баланс классов</system:String>
+    <system:String x:Key="Stats_SizeDistribution">Распределение размеров рамок</system:String>
+    <system:String x:Key="Stats_SizeSmall">Малые (&lt;1% площади)</system:String>
+    <system:String x:Key="Stats_SizeMedium">Средние (1-5%)</system:String>
+    <system:String x:Key="Stats_SizeLarge">Большие (&gt;5%)</system:String>
+    <system:String x:Key="Stats_ReviewStatus">Статус проверки</system:String>
+    <system:String x:Key="Stats_Verified">Проверено</system:String>
+    <system:String x:Key="Stats_NeedsReview">Требует проверки</system:String>
+    <system:String x:Key="Stats_Suggested">Предложено</system:String>
+    <system:String x:Key="Stats_NoLabelStatus">Без метки</system:String>
+
+    <!-- Data Augmentation -->
+    <system:String x:Key="Menu_DataAugmentation">Аугментация данных...</system:String>
+    <system:String x:Key="Aug_Title">Аугментация данных</system:String>
+    <system:String x:Key="Aug_Subtitle">Создание аугментированных копий изображений и меток для обучения. При отражении координаты рамок пересчитываются, другие эффекты меняют только пиксели.</system:String>
+    <system:String x:Key="Aug_OutputFolder">Папка вывода</system:String>
+    <system:String x:Key="Aug_Browse">Обзор...</system:String>
+    <system:String x:Key="Aug_Scope">Область</system:String>
+    <system:String x:Key="Aug_ScopeAll">Все изображения</system:String>
+    <system:String x:Key="Aug_ScopeCurrent">Текущее изображение</system:String>
+    <system:String x:Key="Aug_Variants">Вариантов на изображение</system:String>
+    <system:String x:Key="Aug_Seed">Случайное зерно</system:String>
+    <system:String x:Key="Aug_Augmentations">Аугментации</system:String>
+    <system:String x:Key="Aug_Flip">Горизонтальное отражение</system:String>
+    <system:String x:Key="Aug_Brightness">Яркость / контраст</system:String>
+    <system:String x:Key="Aug_Hsv">Оттенок / насыщенность</system:String>
+    <system:String x:Key="Aug_Noise">Гауссов шум</system:String>
+    <system:String x:Key="Aug_Blur">Размытие</system:String>
+    <system:String x:Key="Aug_OutputOptions">Параметры вывода</system:String>
+    <system:String x:Key="Aug_IncludeOriginals">Включить оригинальные изображения</system:String>
+    <system:String x:Key="Aug_LabeledOnly">Аугментировать только размеченные изображения</system:String>
+    <system:String x:Key="Aug_NeedAugmentation">Включите хотя бы одну аугментацию.</system:String>
+    <system:String x:Key="Msg_Augmenting">Аугментация изображений...</system:String>
+    <system:String x:Key="Msg_AugmentationComplete">Аугментация завершена.&#10;Исходных изображений: {0}&#10;Создано изображений: {1}&#10;Пропущено: {2}</system:String>
+    <system:String x:Key="Msg_AugmentationFailed">Ошибка аугментации: {0}</system:String>
 
 </ResourceDictionary>

@@ -58,9 +58,16 @@
     <system:String x:Key="Settings_Detection_Section">检测</system:String>
     <system:String x:Key="Settings_ProcessingDevice">处理设备</system:String>
     <system:String x:Key="Settings_Device_CPU">CPU</system:String>
-    <system:String x:Key="Settings_Device_GPU">GPU (CUDA)</system:String>
+    <system:String x:Key="Settings_Device_GPU">GPU (DirectML)</system:String>
     <system:String x:Key="Settings_ConfidenceThreshold">置信度阈值</system:String>
     <system:String x:Key="Settings_ConfidenceThreshold_Help">显示 AI 检测所需的最低置信度。</system:String>
+    <system:String x:Key="Settings_AI_OnlyUnlabeled">只自动标注无标注图片</system:String>
+    <system:String x:Key="Settings_AI_OnlyUnlabeled_Help">跳过已有一个或多个确认标注的图片。</system:String>
+    <system:String x:Key="Settings_PerClassConfidence">各类别阈值设置…</system:String>
+    <system:String x:Key="Settings_PerClassConfidence_Help">为个别类别覆盖置信度阈值。未调整的类别会沿用上方的全局滑块数值。</system:String>
+    <system:String x:Key="Settings_PerClassConfidence_NoClasses">请先打开已定义类别的项目，才能设置各类别阈值。</system:String>
+    <system:String x:Key="Settings_AI_ReplaceExisting">标注时替换已有的 AI 标注</system:String>
+    <system:String x:Key="Settings_AI_ReplaceExisting_Help">关闭时，新的检测结果会与图片上已有的 AI 标注并存。</system:String>
     <system:String x:Key="Settings_EnsembleMode_Section">集成模式</system:String>
     <system:String x:Key="Settings_NoModelsLoaded">未加载模型</system:String>
     <system:String x:Key="Settings_ModelLoaded_Single">已加载 1 个模型（单一模型模式）</system:String>
@@ -68,6 +75,24 @@
     <system:String x:Key="Settings_DetectionMode">检测模式</system:String>
     <system:String x:Key="Settings_DetectionMode_Voting">投票模式（需要多个模型共识）</system:String>
     <system:String x:Key="Settings_DetectionMode_Union">联合模式（任何模型检测到即标记）</system:String>
+    <system:String x:Key="Settings_DetectionMode_ClassTransfer">分类转移（定位模型出框，分类模型投票决定类别）</system:String>
+    <system:String x:Key="Settings_ClassTransfer_Help">用一个定位准的模型负责画框，其他模型只负责判断每个框的类别。适合你最好的模型缺少所需类别、而懂类别的模型定位又不准的情况。</system:String>
+    <system:String x:Key="Settings_ClassTransfer_Roles">模型角色</system:String>
+    <system:String x:Key="Settings_ModelRole_Detector">定位者（负责画框）</system:String>
+    <system:String x:Key="Settings_ModelRole_Classifier">分类者（投票决定类别）</system:String>
+    <system:String x:Key="Settings_ClassTransfer_NeedDetector">请至少选一个定位者模型，否则没有框可以保留。</system:String>
+    <system:String x:Key="Settings_ClassTransfer_VoteIoU">投票重叠阈值 (IoU)</system:String>
+    <system:String x:Key="Settings_ClassTransfer_KeepUnvoted">保留没有任何分类者识别到的框</system:String>
+    <system:String x:Key="Settings_ClassTransfer_KeepUnvoted_Help">开启时，没有分类者投票的定位框会保留，并标成它允许列表中的第一个类别，你只需修改类别而不用重画框。关闭时则直接舍弃这类框。</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamConsistency">让身体的阵营与其头部一致</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamConsistency_Help">当头框与包住它的身体框阵营不一致时，以置信度较高的一方为准修正另一方。需要下方的类别配对。</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamPairing">阵营配对设置…</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamPairing_Help">把每个身体类别与同一队的头类别配对（例如：警身体 配 警头）。</system:String>
+    <system:String x:Key="TeamPairing_Title">阵营配对</system:String>
+    <system:String x:Key="TeamPairing_Subtitle">把身体类别与同一队的头类别配对，用来维持身体与头部分类的一致性。</system:String>
+    <system:String x:Key="TeamPairing_Body">身体类别</system:String>
+    <system:String x:Key="TeamPairing_Head">头类别</system:String>
+    <system:String x:Key="TeamPairing_AddPair">新增配对</system:String>
     <system:String x:Key="Settings_MinConsensus">所需最低共识</system:String>
     <system:String x:Key="Settings_ConsensusIoU">共识 IoU 阈值</system:String>
     <system:String x:Key="Settings_EnsembleIoU">最终集成 IoU 阈值</system:String>
@@ -166,7 +191,15 @@
     <system:String x:Key="Main_FilterReview">审查</system:String>
     <system:String x:Key="Main_FilterNone">无</system:String>
     <system:String x:Key="Main_FilterDone">已完成</system:String>
+    <system:String x:Key="Main_FilterAiLabels">AI 标注</system:String>
     <system:String x:Key="Main_FilterByClass">依类别筛选</system:String>
+    <system:String x:Key="Main_FilterModeInclude">包含</system:String>
+    <system:String x:Key="Main_FilterModeAll">同时</system:String>
+    <system:String x:Key="Main_FilterModeOnly">只有</system:String>
+    <system:String x:Key="Main_FilterModeExclude">排除</system:String>
+    <system:String x:Key="Main_FilterSelectAll">全选</system:String>
+    <system:String x:Key="Main_FilterClear">全不选</system:String>
+    <system:String x:Key="Main_FilterInvert">反选</system:String>
     <system:String x:Key="Main_StatusReview">审查</system:String>
     <system:String x:Key="Main_StatusNoLabel">无标签</system:String>
     <system:String x:Key="Main_StatusVerified">已验证</system:String>
@@ -192,6 +225,12 @@
     <system:String x:Key="Main_ConfirmClear">确认清除</system:String>
     <system:String x:Key="Main_Error">错误</system:String>
     <system:String x:Key="Main_Information">信息</system:String>
+    <system:String x:Key="Main_OpenImageLocation">打开图片文件位置</system:String>
+    <system:String x:Key="Main_OpenLabelLocation">打开标签文件位置</system:String>
+    <system:String x:Key="Main_DeleteImage">删除图片</system:String>
+    <system:String x:Key="Main_ConfirmDeleteImage">确定要将“{0}”及其标签文件移到回收站，并从项目中移除吗？</system:String>
+    <system:String x:Key="Main_NoLabelFileOnDisk">此图片在磁盘上尚无标签文件。请先保存或导出项目。</system:String>
+    <system:String x:Key="Main_DeleteImageFailed">图片已从项目移除，但以下文件无法删除：&#x0a;&#x0a;{0}</system:String>
 
     <!-- Propagation Dialog -->
     <system:String x:Key="Propagation_Title">标签传播</system:String>
@@ -340,6 +379,8 @@
     <system:String x:Key="Msg_SingleModel">单一模型</system:String>
     <system:String x:Key="Msg_EnsembleModels">集成（{0} 个模型）</system:String>
     <system:String x:Key="Msg_ProcessImagesPrompt">使用 {1} 检测处理 {0} 张图片？</system:String>
+    <system:String x:Key="Msg_OnlyUnlabeledSummary">只处理无标注图片；将跳过 {0} 张已有标注的图片。</system:String>
+    <system:String x:Key="Msg_NoUnlabeledImages">没有可处理的无标注图片。</system:String>
     <system:String x:Key="Msg_ManyModelsWarning">注意：使用多个模型进行处理可能需要较长时间。</system:String>
     <system:String x:Key="Msg_StartDetection">开始检测</system:String>
     <system:String x:Key="Msg_UsingModels"> 使用 {0} 个模型</system:String>
@@ -396,15 +437,19 @@
     <system:String x:Key="Msg_ModelAlreadyLoadedTitle">模型已加载</system:String>
     <system:String x:Key="Msg_GPUInitFailed">GPU 初始化失败：{0}&#x0a;回退到 CPU。</system:String>
     <system:String x:Key="Msg_GPUWarning">GPU 警告</system:String>
+    <system:String x:Key="Msg_DirectMLUnsupported">此 GPU 或当前驱动程序不支持 DirectML。</system:String>
     <system:String x:Key="Msg_ModelInitFailed">模型初始化失败：{0}</system:String>
     <system:String x:Key="Msg_UnsupportedModel">无法检测 YOLO 模型格式或不支持的模型类型。&#x0a;&#x0a;支持的格式：&#x0a;- YOLOv5: [batch, detections, 5+classes]&#x0a;- YOLOv8: [batch, 4+classes, detections]&#x0a;&#x0a;注意：不支持分割模型。</system:String>
     <system:String x:Key="Msg_UnsupportedModelTitle">不支持的模型</system:String>
     <system:String x:Key="Msg_ModelLoadedSuccess">模型 '{0}' 加载成功。&#x0a;格式：{1}&#x0a;类别：{2}&#x0a;检测：{3}&#x0a;输入尺寸：{4}x{4}&#x0a;模型总数：{5}</system:String>
     <system:String x:Key="Msg_ModelLoaded">模型已加载</system:String>
     <system:String x:Key="Msg_ErrorLoadingModel">加载模型时出错：{0}</system:String>
+    <system:String x:Key="Msg_ReloadingModelsForDevice">正在为所选设备重新加载 AI 模型...</system:String>
     <system:String x:Key="Msg_YouTube_NoCompatibleStream">未找到 {0} 的兼容视频流</system:String>
     <system:String x:Key="Msg_YouTube_DownloadError">下载错误</system:String>
     <system:String x:Key="Msg_AutoLabelComplete">自动标注完成{0}。&#x0a;总检测数：{1}</system:String>
+    <system:String x:Key="Msg_AutoLabelScopeComplete">已处理：{0}；已跳过有标注图片：{1}。</system:String>
+    <system:String x:Key="Msg_AutoLabelFailedImages">有 {0} 张图片处理失败或文件不存在。</system:String>
 
     <!-- Status Bar -->
     <system:String x:Key="Status_NoProject">无项目</system:String>
@@ -423,10 +468,10 @@
 
     <!-- Mapping Dialog -->
     <system:String x:Key="Mapping_Title">配置模型类别映射</system:String>
-    <system:String x:Key="Mapping_Description">请为模型的每个类别选择对应的项目类别</system:String>
+    <system:String x:Key="Mapping_Description">请勾选模型每个类别允许对应到的项目类别</system:String>
     <system:String x:Key="Mapping_LoadClassFile">加载类别文件</system:String>
     <system:String x:Key="Mapping_ModelID">模型 ID: {0}</system:String>
-    <system:String x:Key="Mapping_InfoFormat">模型: {0}&#x0a;类别数量: {1}&#x0a;项目类别数量: {2}&#x0a;提示: 选择 'nan (不检测)' 可跳过该类别的检测</system:String>
+    <system:String x:Key="Mapping_InfoFormat">模型: {0}&#x0a;类别数量: {1}&#x0a;项目类别数量: {2}&#x0a;提示: 勾选 'nan (不检测)' 可跳过该类别。勾选多个类别代表声明该检测允许被分类成哪几类。</system:String>
     <system:String x:Key="Mapping_WarningGeneric">⚠ 警告: 未找到类别文件，显示通用类别名称。&#x0a;请点击右上角「加载类别文件」按钮手动加载正确的类别名称。</system:String>
     <system:String x:Key="Mapping_SelectClassFile">选择类别文件</system:String>
     <system:String x:Key="Mapping_ClassFileEmpty">类别文件为空或格式不正确。</system:String>
@@ -453,5 +498,134 @@
     <system:String x:Key="ModelManager_ClearModels">清除模型</system:String>
     <system:String x:Key="ModelManager_NeedProjectClasses">请先在项目中创建类别，然后再配置模型类别映射。&#x0a;&#x0a;您可以在右侧面板的「Classes」区域添加类别。</system:String>
     <system:String x:Key="ModelManager_NeedProjectClassesTitle">需要项目类别</system:String>
+
+    <!-- Duplicate image review -->
+    <system:String x:Key="Main_TabAnnotate">图片标注</system:String>
+    <system:String x:Key="Main_TabDuplicates">重复图片</system:String>
+    <system:String x:Key="Duplicate_Title">重复图片</system:String>
+    <system:String x:Key="Duplicate_Scan">重新扫描</system:String>
+    <system:String x:Key="Duplicate_NoScan">扫描当前项目中的重复图片。</system:String>
+    <system:String x:Key="Duplicate_Scanning">正在扫描图片...</system:String>
+    <system:String x:Key="Duplicate_NoImages">至少添加两张图片后才能扫描。</system:String>
+    <system:String x:Key="Duplicate_NoMatches">没有找到重复图片。</system:String>
+    <system:String x:Key="Duplicate_ScanFailed">无法扫描重复图片。</system:String>
+    <system:String x:Key="Duplicate_Resolved">所有重复图片均已处理完成。</system:String>
+    <system:String x:Key="Duplicate_Summary">剩余 {0} 组重复图片，共 {1} 张多余图片</system:String>
+    <system:String x:Key="Duplicate_GroupProgress">第 {0} 组，共 {1} 组</system:String>
+    <system:String x:Key="Duplicate_LabelCount">{0} 个标注</system:String>
+    <system:String x:Key="Duplicate_KeepLeft">保留左侧图片与标注</system:String>
+    <system:String x:Key="Duplicate_KeepRight">保留右侧图片与标注</system:String>
+    <system:String x:Key="Duplicate_RemoveFailed">无法从项目中移除重复图片。</system:String>
+    <system:String x:Key="Duplicate_AllGroups">全部重复分组</system:String>
+    <system:String x:Key="Duplicate_PreviousGroup">上一组</system:String>
+    <system:String x:Key="Duplicate_NextGroup">下一组</system:String>
+    <system:String x:Key="Duplicate_GroupTitle">第 {0} 组</system:String>
+    <system:String x:Key="Duplicate_ExtraCount">{0} 张多余图片</system:String>
+
+    <!-- Center ROI crop -->
+    <system:String x:Key="Main_TabRoiCrop">中心 ROI</system:String>
+    <system:String x:Key="Roi_Title">中心 ROI 裁切</system:String>
+    <system:String x:Key="Roi_OutputSize">输出像素尺寸</system:String>
+    <system:String x:Key="Roi_Scope">应用范围</system:String>
+    <system:String x:Key="Roi_AllImages">项目内全部图片</system:String>
+    <system:String x:Key="Roi_CurrentImage">当前图片</system:String>
+    <system:String x:Key="Roi_OutputFolder">输出文件夹</system:String>
+    <system:String x:Key="Roi_Apply">创建 640 x 640 裁切图片</system:String>
+    <system:String x:Key="Roi_RemoveSmall">移除小于 640 px 的图片</system:String>
+    <system:String x:Key="Roi_RemoveSmallConfirm">找到 {0} 张宽度或高度小于 640 像素的图片。要从项目中移除这些图片及其标注吗？硬盘上的原始文件会保留。</system:String>
+    <system:String x:Key="Roi_RemoveSmallComplete">已从项目中移除 {0} 张尺寸不足的图片及其标注。</system:String>
+    <system:String x:Key="Roi_NoSmallImages">项目中没有宽度或高度小于 640 像素的图片。</system:String>
+    <system:String x:Key="Roi_Preview">中心 ROI 预览</system:String>
+    <system:String x:Key="Roi_NoPreview">没有可预览的图片</system:String>
+    <system:String x:Key="Roi_InvalidSize">ROI 尺寸无效。</system:String>
+    <system:String x:Key="Roi_Confirm">要创建正中央 {0} x {1} 像素裁切图片并更新标注吗？</system:String>
+    <system:String x:Key="Roi_Processing">正在裁切图片...</system:String>
+    <system:String x:Key="Roi_Progress">{0} / {1} - {2}</system:String>
+    <system:String x:Key="Roi_Complete">已裁切 {0} 张图片、移除 {1} 个标注、裁短 {2} 个标注、跳过 {3} 张图片。</system:String>
+    <system:String x:Key="Roi_Cancelled">已取消 ROI 裁切。</system:String>
+    <system:String x:Key="Roi_ProjectRequired">请先打开或创建项目再裁切图片。</system:String>
+    <system:String x:Key="Roi_Failed">ROI 裁切失败。</system:String>
+    <system:String x:Key="Roi_NoImages">没有可裁切的图片。</system:String>
+
+    <system:String x:Key="Menu_AILabelCurrentImage">AI 标记当前图片</system:String>
+    <system:String x:Key="AIClassConfidence_Title">各类别置信度</system:String>
+    <system:String x:Key="AIClassConfidence_Subtitle">设置 AI 标记时，每个类别需要达到的最低置信度。</system:String>
+    <system:String x:Key="AIClassConfidence_Class">类别</system:String>
+    <system:String x:Key="AIClassConfidence_Threshold">最低置信度</system:String>
+    <system:String x:Key="AIClassConfidence_Reset">重置为全局值</system:String>
+    <system:String x:Key="AIClassConfidence_Running">正在对当前图片执行 AI 检测...</system:String>
+    <system:String x:Key="AIClassConfidence_Complete">当前图片标记完成，共检测到 {0} 个对象。</system:String>
+    <system:String x:Key="AIClassConfidence_Failed">当前图片标记失败：{0}</system:String>
+    <system:String x:Key="Duplicate_AutoResolvedSummary">已自动处理：{0}</system:String>
+    <system:String x:Key="Duplicate_AutoResolvedOnly">已从项目自动移除 {0} 张图片与标记均相同的重复图片。</system:String>
+    <system:String x:Key="Duplicate_OpenEdit">检查 / 修改</system:String>
+    <system:String x:Key="Duplicate_OpenEditFailed">无法打开图片进行修改。</system:String>
+
+
+    <!-- Training Dataset Export -->
+    <system:String x:Key="Menu_ExportTrainingDataset">导出训练数据集...</system:String>
+    <system:String x:Key="TrainingExport_Title">导出训练数据集</system:String>
+    <system:String x:Key="TrainingExport_Subtitle">将图片和标签复制为 YOLO 的 train/val/test 文件夹结构,并生成可直接用于训练的 data.yaml。</system:String>
+    <system:String x:Key="TrainingExport_OutputFolder">输出文件夹</system:String>
+    <system:String x:Key="TrainingExport_Browse">浏览...</system:String>
+    <system:String x:Key="TrainingExport_SplitRatios">切分比例 (%)</system:String>
+    <system:String x:Key="TrainingExport_Train">训练</system:String>
+    <system:String x:Key="TrainingExport_Val">验证</system:String>
+    <system:String x:Key="TrainingExport_Test">测试</system:String>
+    <system:String x:Key="TrainingExport_SumFormat">合计:{0}%(必须等于 100%)</system:String>
+    <system:String x:Key="TrainingExport_Seed">随机种子</system:String>
+    <system:String x:Key="TrainingExport_IncludeBackground">将无标签图片作为背景样本纳入</system:String>
+    <system:String x:Key="TrainingExport_VerifiedOnly">仅导出已验证的图片</system:String>
+    <system:String x:Key="Msg_ExportingTrainingDataset">正在导出训练数据集...</system:String>
+    <system:String x:Key="Msg_TrainingDatasetExported">训练数据集已导出。&#10;训练:{0}   验证:{1}   测试:{2}&#10;已跳过:{3}</system:String>
+    <system:String x:Key="Msg_NoImagesToExport">没有可导出的图片。</system:String>
+    <system:String x:Key="Msg_NoClassesToExport">导出训练数据集前请至少定义一个类别。</system:String>
+
+    <!-- Dataset Statistics -->
+    <system:String x:Key="Main_TabStats">数据集统计</system:String>
+    <system:String x:Key="Stats_Title">数据集统计</system:String>
+    <system:String x:Key="Stats_Subtitle">当前项目的类别平衡、框大小分布与审查状态。</system:String>
+    <system:String x:Key="Stats_Refresh">刷新</system:String>
+    <system:String x:Key="Stats_Empty">尚未加载图片。</system:String>
+    <system:String x:Key="Stats_TotalImages">图片总数</system:String>
+    <system:String x:Key="Stats_LabeledImages">已标注</system:String>
+    <system:String x:Key="Stats_UnlabeledImages">未标注</system:String>
+    <system:String x:Key="Stats_TotalBoxes">框总数</system:String>
+    <system:String x:Key="Stats_AvgBoxes">平均每图框数</system:String>
+    <system:String x:Key="Stats_ClassBalance">类别平衡</system:String>
+    <system:String x:Key="Stats_SizeDistribution">框大小分布</system:String>
+    <system:String x:Key="Stats_SizeSmall">小 (&lt;1% 面积)</system:String>
+    <system:String x:Key="Stats_SizeMedium">中 (1-5%)</system:String>
+    <system:String x:Key="Stats_SizeLarge">大 (&gt;5%)</system:String>
+    <system:String x:Key="Stats_ReviewStatus">审查状态</system:String>
+    <system:String x:Key="Stats_Verified">已验证</system:String>
+    <system:String x:Key="Stats_NeedsReview">待审查</system:String>
+    <system:String x:Key="Stats_Suggested">建议</system:String>
+    <system:String x:Key="Stats_NoLabelStatus">无标签</system:String>
+
+    <!-- Data Augmentation -->
+    <system:String x:Key="Menu_DataAugmentation">数据增强...</system:String>
+    <system:String x:Key="Aug_Title">数据增强</system:String>
+    <system:String x:Key="Aug_Subtitle">为训练生成增强后的图片与标签副本。翻转会重映框坐标,其他效果只改变像素。</system:String>
+    <system:String x:Key="Aug_OutputFolder">输出文件夹</system:String>
+    <system:String x:Key="Aug_Browse">浏览...</system:String>
+    <system:String x:Key="Aug_Scope">范围</system:String>
+    <system:String x:Key="Aug_ScopeAll">所有图片</system:String>
+    <system:String x:Key="Aug_ScopeCurrent">当前图片</system:String>
+    <system:String x:Key="Aug_Variants">每张图变体数</system:String>
+    <system:String x:Key="Aug_Seed">随机种子</system:String>
+    <system:String x:Key="Aug_Augmentations">增强项目</system:String>
+    <system:String x:Key="Aug_Flip">水平翻转</system:String>
+    <system:String x:Key="Aug_Brightness">亮度 / 对比度</system:String>
+    <system:String x:Key="Aug_Hsv">色相 / 饱和度</system:String>
+    <system:String x:Key="Aug_Noise">高斯噪声</system:String>
+    <system:String x:Key="Aug_Blur">模糊</system:String>
+    <system:String x:Key="Aug_OutputOptions">输出选项</system:String>
+    <system:String x:Key="Aug_IncludeOriginals">包含原始图片</system:String>
+    <system:String x:Key="Aug_LabeledOnly">只增强已标注的图片</system:String>
+    <system:String x:Key="Aug_NeedAugmentation">请至少启用一项增强。</system:String>
+    <system:String x:Key="Msg_Augmenting">正在增强图片...</system:String>
+    <system:String x:Key="Msg_AugmentationComplete">增强完成。&#10;来源图片:{0}&#10;生成图片:{1}&#10;已跳过:{2}</system:String>
+    <system:String x:Key="Msg_AugmentationFailed">增强失败:{0}</system:String>
 
 </ResourceDictionary>

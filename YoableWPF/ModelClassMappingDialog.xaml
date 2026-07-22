@@ -128,27 +128,40 @@
                                                VerticalAlignment="Center"
                                                Foreground="#FF9C27B0"/>
 
-                                    <!-- Project Class ComboBox -->
-                                    <ComboBox Grid.Column="2"
-                                              ItemsSource="{Binding ProjectClasses}"
-                                              SelectedItem="{Binding SelectedProjectClass, Mode=TwoWay}"
-                                              DisplayMemberPath="Name"
-                                              MinWidth="200"
-                                              Margin="16,0,0,0">
-                                        <ComboBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <StackPanel Orientation="Horizontal">
-                                                    <Border Width="4" 
-                                                            Height="16" 
-                                                            Background="{Binding ColorBrush}"
-                                                            CornerRadius="2"
-                                                            Margin="0,0,8,0"
-                                                            VerticalAlignment="Center"/>
-                                                    <TextBlock Text="{Binding DisplayText}"/>
-                                                </StackPanel>
-                                            </DataTemplate>
-                                        </ComboBox.ItemTemplate>
-                                    </ComboBox>
+                                    <!-- Allowed project classes (tick none to exclude the class) -->
+                                    <StackPanel Grid.Column="2"
+                                                MinWidth="240"
+                                                Margin="16,0,0,0">
+                                        <ItemsControl ItemsSource="{Binding ProjectClasses}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <WrapPanel Orientation="Horizontal"/>
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <CheckBox IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                              Margin="0,2,14,2"
+                                                              VerticalContentAlignment="Center">
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <Border Width="4"
+                                                                    Height="16"
+                                                                    Background="{Binding ColorBrush}"
+                                                                    CornerRadius="2"
+                                                                    Margin="0,0,6,0"
+                                                                    VerticalAlignment="Center"/>
+                                                            <TextBlock Text="{Binding DisplayText}"/>
+                                                        </StackPanel>
+                                                    </CheckBox>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Text="{Binding SelectionSummary}"
+                                                   FontSize="11"
+                                                   Foreground="Gray"
+                                                   TextWrapping="Wrap"
+                                                   Margin="0,4,0,0"/>
+                                    </StackPanel>
                                 </Grid>
                             </Border>
                         </DataTemplate>

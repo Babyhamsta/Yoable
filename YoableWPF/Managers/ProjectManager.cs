@@ -600,8 +600,13 @@ namespace YoableWPF.Managers
             CurrentProject.SuggestedLabels.Clear();
             CurrentProject.LoadedModelPaths ??= new List<string>();
             CurrentProject.ModelClassMappings ??= new Dictionary<string, Dictionary<int, int>>();
+            CurrentProject.ModelClassMappingSets ??= new Dictionary<string, Dictionary<int, List<int>>>();
+            CurrentProject.ModelRoles ??= new Dictionary<string, int>();
             CurrentProject.LoadedModelPaths.Clear();
+            // The legacy map is never written back; clearing it drops it from the saved project.
             CurrentProject.ModelClassMappings.Clear();
+            CurrentProject.ModelClassMappingSets.Clear();
+            CurrentProject.ModelRoles.Clear();
 
             // Export images
             foreach (var kvp in mainWindow.imageManager.ImagePathMap)
@@ -684,10 +689,13 @@ namespace YoableWPF.Managers
                 {
                     CurrentProject.LoadedModelPaths.Add(model.ModelPath);
 
-                    if (model.ClassMapping != null && model.ClassMapping.Count > 0)
+                    if (model.ClassMapping != null)
                     {
-                        CurrentProject.ModelClassMappings[model.ModelPath] = new Dictionary<int, int>(model.ClassMapping);
+                        CurrentProject.ModelClassMappingSets[model.ModelPath] =
+                            YoloAI.CloneClassMapping(model.ClassMapping);
                     }
+
+                    CurrentProject.ModelRoles[model.ModelPath] = (int)model.Role;
                 }
             }
 
@@ -938,6 +946,9 @@ namespace YoableWPF.Managers
 
                 progress?.Report((95, 100, "Restoring models..."));
 
+                // Projects saved before multi-target mappings store them in the legacy field.
+                CurrentProject.MigrateLegacyModelClassMappings();
+
                 // Restore loaded models
                 if (CurrentProject.LoadedModelPaths != null && CurrentProject.LoadedModelPaths.Count > 0 && mainWindow.yoloAI != null)
                 {
@@ -954,10 +965,16 @@ namespace YoableWPF.Managers
                                     if (loadedModel != null)
                                     {
                                         // Restore saved mapping if available
-                                        if (CurrentProject.ModelClassMappings != null && 
-                                            CurrentProject.ModelClassMappings.TryGetValue(modelPath, out var savedMapping))
+                                        if (CurrentProject.ModelClassMappingSets != null &&
+                                            CurrentProject.ModelClassMappingSets.TryGetValue(modelPath, out var savedMapping))
                                         {
-                                            loadedModel.ClassMapping = new Dictionary<int, int>(savedMapping);
+                                            loadedModel.ClassMapping = YoloAI.CloneClassMapping(savedMapping);
+                                        }
+
+                                        if (CurrentProject.ModelRoles != null &&
+                                            CurrentProject.ModelRoles.TryGetValue(modelPath, out int savedRole))
+                                        {
+                                            loadedModel.Role = (ModelRole)savedRole;
                                         }
                                     }
                                 }

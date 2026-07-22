@@ -25,10 +25,16 @@ namespace YoableWPF
         public ProjectManager projectManager;
         private UIStateManager uiStateManager;
         private PropagationManager propagationManager;
+        private readonly RoiCropManager roiCropManager = new();
+        private readonly DatasetExportManager datasetExportManager = new();
+        private readonly DatasetStatisticsManager datasetStatisticsManager = new();
+        private readonly AugmentationManager augmentationManager = new();
 
         // Class management
         private List<LabelClass> projectClasses = new List<LabelClass>();
         public IReadOnlyList<LabelClass> ProjectClasses => projectClasses;
+        // Suppresses class-filter re-application while several checkboxes are toggled at once.
+        private bool suppressClassFilterApply;
 
         // External Managers/Handlers (unchanged)
         public YoloAI yoloAI;
@@ -70,6 +76,19 @@ namespace YoableWPF
             labelManager = new LabelManager();
             uiStateManager = new UIStateManager(this);
             propagationManager = new PropagationManager(labelManager, imageManager);
+            DuplicateImageReview.Initialize(
+                imageManager,
+                labelManager,
+                RemoveDuplicateImageFromProject,
+                OpenDuplicateImageForEditing,
+                () => ProjectClasses);
+            RoiCropReview.Initialize(
+                GetRoiCropPreviewAsync,
+                ApplyCenterRoiCropAsync,
+                FindImagesSmallerThan,
+                RemoveSmallImagesFromProject);
+            DatasetStats.Initialize(
+                () => datasetStatisticsManager.Compute(imageManager, labelManager, projectClasses));
 
             // Apply batch size settings from user preferences
             imageManager.BatchSize = Properties.Settings.Default.ProcessingBatchSize;
@@ -99,6 +118,515 @@ namespace YoableWPF
 
             // Subscribe to language changes
             LanguageManager.Instance.LanguageChanged += LanguageManager_LanguageChanged;
+        }
+
+        private async void MainWorkspaceTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (e.Source == MainWorkspaceTabs && DuplicateImagesTab.IsSelected)
+            {
+                if (!string.IsNullOrWhiteSpace(imageManager.CurrentImagePath))
+                {
+                    labelManager.SaveLabels(
+                        imageManager.CurrentImagePath,
+                        drawingCanvas.Labels);
+                }
+                await DuplicateImageReview.EnsureScannedAsync();
+            }
+            else if (e.Source == MainWorkspaceTabs && RoiCropTab.IsSelected)
+                await RoiCropReview.RefreshPreviewAsync();
+            else if (e.Source == MainWorkspaceTabs && DatasetStatsTab.IsSelected)
+            {
+                if (!string.IsNullOrWhiteSpace(imageManager.CurrentImagePath))
+                {
+                    labelManager.SaveLabels(
+                        imageManager.CurrentImagePath,
+                        drawingCanvas.Labels);
+                }
+                DatasetStats.Refresh();
+            }
+        }
+
+        private bool RemoveDuplicateImageFromProject(string fileName)
+        {
+            return RemoveImagesFromProject(new[] { fileName }) == 1;
+        }
+
+        private bool OpenDuplicateImageForEditing(string fileName)
+        {
+            ImageListItem? targetItem = ImageListBox.Items
+                .OfType<ImageListItem>()
+                .FirstOrDefault(item => string.Equals(
+                    item.FileName,
+                    fileName,
+                    StringComparison.OrdinalIgnoreCase));
+            if (targetItem == null)
+                return false;
+
+            MainWorkspaceTabs.SelectedItem = ImageAnnotationTab;
+            if (!ReferenceEquals(ImageListBox.SelectedItem, targetItem) ||
+                !string.Equals(
+                    imageManager.CurrentImagePath,
+                    fileName,
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                ImageListBox.SelectedItem = null;
+                ImageListBox.SelectedItem = targetItem;
+            }
+
+            ImageListBox.ScrollIntoView(targetItem);
+            ImageListBox.Focus();
+            return true;
+        }
+
+        private IReadOnlyList<string> FindImagesSmallerThan(int minimumWidth, int minimumHeight)
+        {
+            return imageManager.ImagePathMap
+                .Where(pair =>
+                    pair.Value.OriginalDimensions.Width < minimumWidth ||
+                    pair.Value.OriginalDimensions.Height < minimumHeight)
+                .Select(pair => pair.Key)
+                .OrderBy(fileName => fileName, StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+        }
+
+        private int RemoveSmallImagesFromProject(IReadOnlyCollection<string> fileNames)
+        {
+            int removedCount = RemoveImagesFromProject(fileNames);
+            if (removedCount > 0)
+                DuplicateImageReview.InvalidateResults();
+            return removedCount;
+        }
+
+        private int RemoveImagesFromProject(IReadOnlyCollection<string> fileNames)
+        {
+            if (fileNames.Count == 0)
+                return 0;
+
+            var requestedNames = new HashSet<string>(
+                fileNames,
+                StringComparer.OrdinalIgnoreCase);
+            string currentFileName = imageManager.CurrentImagePath;
+            string? selectedFileName = (ImageListBox.SelectedItem as ImageListItem)?.FileName;
+            int selectedIndex = ImageListBox.SelectedIndex;
+            var removedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            foreach (string fileName in requestedNames)
+            {
+                if (!imageManager.RemoveImage(fileName))
+                    continue;
+
+                removedNames.Add(fileName);
+                labelManager.RemoveLabels(fileName);
+                uiStateManager.RemoveImage(fileName);
+            }
+
+            if (removedNames.Count == 0)
+                return 0;
+
+            ImageListBox.SelectionChanged -= ImageListBox_SelectionChanged;
+            try
+            {
+                for (int index = ImageListBox.Items.Count - 1; index >= 0; index--)
+                {
+                    if (ImageListBox.Items[index] is ImageListItem item &&
+                        removedNames.Contains(item.FileName))
+                    {
+                        ImageListBox.Items.RemoveAt(index);
+                    }
+                }
+            }
+            finally
+            {
+                ImageListBox.SelectionChanged += ImageListBox_SelectionChanged;
+            }
+
+            if (projectManager?.CurrentProject != null)
+            {
+                var project = projectManager.CurrentProject;
+                project.Images.RemoveAll(image => removedNames.Contains(image.FileName));
+                foreach (string fileName in removedNames)
+                {
+                    project.ImageStatuses.Remove(fileName);
+                    project.AppCreatedLabels.Remove(fileName);
+                    project.ImportedLabelPaths.Remove(fileName);
+                    project.SuggestedLabels.Remove(fileName);
+                }
+            }
+
+            bool removedDisplayedImage = removedNames.Contains(currentFileName) ||
+                                         (!string.IsNullOrWhiteSpace(selectedFileName) &&
+                                          removedNames.Contains(selectedFileName));
+            if (removedDisplayedImage)
+            {
+                drawingCanvas.Image = null!;
+                drawingCanvas.Labels.Clear();
+                drawingCanvas.SuggestedLabels.Clear();
+                LabelListBox.ItemsSource = null;
+
+                if (ImageListBox.Items.Count > 0)
+                {
+                    int nextIndex = Math.Min(Math.Max(selectedIndex, 0), ImageListBox.Items.Count - 1);
+                    ImageListBox.SelectedIndex = nextIndex;
+                }
+            }
+
+            uiStateManager.UpdateStatusCounts();
+            MarkProjectDirty();
+            return removedNames.Count;
+        }
+
+        // Right-clicking an image should target that image, so select the item under the cursor
+        // before its context menu opens. Right-clicking empty space suppresses the menu.
+        private void ImageListBox_PreviewMouseRightButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            DependencyObject? source = e.OriginalSource as DependencyObject;
+            while (source != null && source is not ListBoxItem)
+                source = VisualTreeHelper.GetParent(source);
+
+            if (source is ListBoxItem container)
+                container.IsSelected = true;
+            else
+                e.Handled = true;
+        }
+
+        // Safety net: never show the image context menu when there is no image to act on.
+        private void ImageListContextMenu_Opened(object sender, RoutedEventArgs e)
+        {
+            if (ImageListBox.SelectedItem is not ImageListItem)
+                ImageListContextMenu.IsOpen = false;
+        }
+
+        private ImageListItem? GetSelectedImageItem()
+        {
+            return ImageListBox.SelectedItem as ImageListItem;
+        }
+
+        private void OpenImageLocation_Click(object sender, RoutedEventArgs e)
+        {
+            ImageListItem? item = GetSelectedImageItem();
+            if (item == null)
+                return;
+
+            if (!imageManager.ImagePathMap.TryGetValue(item.FileName, out var info))
+                return;
+
+            RevealInExplorer(info.Path);
+        }
+
+        private void OpenLabelLocation_Click(object sender, RoutedEventArgs e)
+        {
+            ImageListItem? item = GetSelectedImageItem();
+            if (item == null)
+                return;
+
+            string? labelPath = ResolveLabelFilePath(item.FileName);
+            if (labelPath == null)
+            {
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Main_NoLabelFileOnDisk") ??
+                        "No label file exists on disk yet for this image. Save or export the project first.",
+                    LanguageManager.Instance.GetString("Main_Information") ?? "Information",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            RevealInExplorer(labelPath);
+        }
+
+        private void DeleteImage_Click(object sender, RoutedEventArgs e)
+        {
+            ImageListItem? item = GetSelectedImageItem();
+            if (item == null)
+                return;
+
+            var confirm = CustomMessageBox.Show(
+                string.Format(
+                    LanguageManager.Instance.GetString("Main_ConfirmDeleteImage") ??
+                        "Move '{0}' and its label file to the Recycle Bin and remove it from the project?",
+                    item.FileName),
+                LanguageManager.Instance.GetString("Msg_ConfirmDeletion") ?? "Confirm Deletion",
+                MessageBoxButton.YesNo,
+                MessageBoxImage.Warning);
+            if (confirm != MessageBoxResult.Yes)
+                return;
+
+            // Resolve the on-disk paths before removing the image clears its project entries.
+            string? imagePath = imageManager.ImagePathMap.TryGetValue(item.FileName, out var info)
+                ? info.Path
+                : null;
+            string? labelPath = ResolveLabelFilePath(item.FileName);
+
+            // Removing from the project also releases the cached bitmap so the file is not locked.
+            RemoveImagesFromProject(new[] { item.FileName });
+
+            var errors = new List<string>();
+            TryRecycleFile(imagePath, errors);
+            TryRecycleFile(labelPath, errors);
+
+            if (errors.Count > 0)
+            {
+                CustomMessageBox.Show(
+                    string.Format(
+                        LanguageManager.Instance.GetString("Main_DeleteImageFailed") ??
+                            "The image was removed from the project, but some files could not be deleted:\n\n{0}",
+                        string.Join("\n", errors)),
+                    LanguageManager.Instance.GetString("Main_Error") ?? "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+        }
+
+        // Resolves the label .txt file on disk for an image, or null if none exists yet.
+        private string? ResolveLabelFilePath(string fileName)
+        {
+            var project = projectManager?.CurrentProject;
+            if (project != null)
+            {
+                if (project.ImportedLabelPaths.TryGetValue(fileName, out var importedPath) &&
+                    File.Exists(importedPath))
+                {
+                    return importedPath;
+                }
+
+                if (!string.IsNullOrEmpty(project.ProjectFolder))
+                {
+                    if (project.AppCreatedLabels.TryGetValue(fileName, out var relativePath))
+                    {
+                        string appLabelPath = Path.Combine(project.ProjectFolder, relativePath);
+                        if (File.Exists(appLabelPath))
+                            return appLabelPath;
+                    }
+
+                    string conventionalPath = Path.Combine(
+                        project.ProjectFolder,
+                        "labels",
+                        Path.GetFileNameWithoutExtension(fileName) + ".txt");
+                    if (File.Exists(conventionalPath))
+                        return conventionalPath;
+                }
+            }
+
+            // Fall back to a label file sitting next to the image (common for imported datasets).
+            if (imageManager.ImagePathMap.TryGetValue(fileName, out var info))
+            {
+                string? imageDir = Path.GetDirectoryName(info.Path);
+                if (!string.IsNullOrEmpty(imageDir))
+                {
+                    string siblingPath = Path.Combine(
+                        imageDir,
+                        Path.GetFileNameWithoutExtension(fileName) + ".txt");
+                    if (File.Exists(siblingPath))
+                        return siblingPath;
+                }
+            }
+
+            return null;
+        }
+
+        // Opens Windows Explorer with the given file selected, or its folder when the file is missing.
+        private void RevealInExplorer(string path)
+        {
+            try
+            {
+                if (File.Exists(path))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = "explorer.exe",
+                        Arguments = $"/select,\"{path}\"",
+                        UseShellExecute = true
+                    });
+                    return;
+                }
+
+                string? directory = Path.GetDirectoryName(path);
+                if (!string.IsNullOrEmpty(directory) && Directory.Exists(directory))
+                {
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = directory,
+                        UseShellExecute = true
+                    });
+                    return;
+                }
+
+                CustomMessageBox.Show(
+                    string.Format(
+                        LanguageManager.Instance.GetString("Msg_FileNotFound") ?? "File not found: {0}",
+                        path),
+                    LanguageManager.Instance.GetString("Main_Information") ?? "Information",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                CustomMessageBox.Show(
+                    string.Format(
+                        LanguageManager.Instance.GetString("Msg_ErrorOccurred") ?? "An error occurred: {0}",
+                        ex.Message),
+                    LanguageManager.Instance.GetString("Main_Error") ?? "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+        }
+
+        private static void TryRecycleFile(string? path, List<string> errors)
+        {
+            if (string.IsNullOrEmpty(path))
+                return;
+
+            try
+            {
+                if (File.Exists(path))
+                {
+                    Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(
+                        path,
+                        Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs,
+                        Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+                }
+            }
+            catch (Exception ex)
+            {
+                errors.Add($"{Path.GetFileName(path)}: {ex.Message}");
+            }
+        }
+
+        private async Task<RoiCropPreviewData?> GetRoiCropPreviewAsync()
+        {
+            string? fileName = (ImageListBox.SelectedItem as ImageListItem)?.FileName;
+            if (string.IsNullOrWhiteSpace(fileName))
+                fileName = imageManager.CurrentImagePath;
+            if (string.IsNullOrWhiteSpace(fileName))
+                fileName = imageManager.ImagePathMap.Keys.FirstOrDefault();
+
+            if (string.IsNullOrWhiteSpace(fileName) ||
+                !imageManager.ImagePathMap.TryGetValue(fileName, out var imageInfo))
+            {
+                return null;
+            }
+
+            var bitmap = imageManager.Cache.TryGet(imageInfo.Path) ??
+                         await Task.Run(() => imageManager.Cache.GetOrLoad(imageInfo.Path));
+            if (bitmap == null)
+                return null;
+
+            return new RoiCropPreviewData(
+                bitmap,
+                imageInfo.OriginalDimensions,
+                fileName);
+        }
+
+        private async Task<RoiCropBatchResult> ApplyCenterRoiCropAsync(
+            int cropWidth,
+            int cropHeight,
+            RoiCropScope scope,
+            IProgress<(int current, int total, string fileName)> progress,
+            CancellationToken cancellationToken)
+        {
+            if (projectManager?.IsProjectOpen != true ||
+                string.IsNullOrWhiteSpace(projectManager.CurrentProject?.ProjectFolder))
+            {
+                throw new InvalidOperationException(
+                    LanguageManager.Instance.GetString("Roi_ProjectRequired") ??
+                    "Open or create a project before cropping images.");
+            }
+
+            if (!string.IsNullOrWhiteSpace(imageManager.CurrentImagePath))
+                labelManager.SaveLabels(imageManager.CurrentImagePath, drawingCanvas.Labels);
+
+            IEnumerable<KeyValuePair<string, ImageManager.ImageInfo>> selectedImages =
+                imageManager.ImagePathMap.ToArray();
+            if (scope == RoiCropScope.CurrentImage)
+            {
+                string? currentFileName = (ImageListBox.SelectedItem as ImageListItem)?.FileName;
+                if (string.IsNullOrWhiteSpace(currentFileName))
+                    currentFileName = imageManager.CurrentImagePath;
+
+                selectedImages = imageManager.ImagePathMap
+                    .Where(pair => string.Equals(
+                        pair.Key,
+                        currentFileName,
+                        StringComparison.OrdinalIgnoreCase))
+                    .ToArray();
+            }
+
+            var sourceItems = selectedImages
+                .Select(pair => new RoiCropSourceItem(
+                    pair.Key,
+                    pair.Value.Path,
+                    labelManager.GetLabels(pair.Key),
+                    labelManager.GetSuggestions(pair.Key)))
+                .ToArray();
+
+            if (sourceItems.Length == 0)
+                throw new InvalidOperationException(
+                    LanguageManager.Instance.GetString("Roi_NoImages") ??
+                    "No images are available to crop.");
+
+            string outputDirectory = Path.Combine(
+                projectManager.CurrentProject.ProjectFolder,
+                "roi_images");
+            var result = await roiCropManager.CropBatchAsync(
+                sourceItems,
+                outputDirectory,
+                cropWidth,
+                cropHeight,
+                progress,
+                cancellationToken);
+
+            foreach (var processed in result.ProcessedItems)
+            {
+                imageManager.ReplaceImage(
+                    processed.FileName,
+                    processed.OutputPath,
+                    processed.OutputSize);
+                labelManager.SaveLabels(processed.FileName, processed.Labels);
+                labelManager.SaveSuggestions(processed.FileName, processed.Suggestions);
+
+                var imageReference = projectManager.CurrentProject.Images.FirstOrDefault(image =>
+                    string.Equals(
+                        image.FileName,
+                        processed.FileName,
+                        StringComparison.OrdinalIgnoreCase));
+                if (imageReference != null)
+                {
+                    imageReference.FullPath = processed.OutputPath;
+                    imageReference.Width = processed.OutputSize.Width;
+                    imageReference.Height = processed.OutputSize.Height;
+                }
+
+                // The transformed labels now belong to the project, not the original
+                // external Roboflow label file.
+                projectManager.CurrentProject.ImportedLabelPaths.Remove(processed.FileName);
+
+                ImageStatus status = DetermineImageStatus(processed.FileName);
+                imageManager.UpdateImageStatusValue(processed.FileName, status);
+                if (uiStateManager.TryGetFromCache(processed.FileName, out var imageItem))
+                    imageItem.Status = status;
+            }
+
+            if (result.ProcessedItems.Count > 0)
+            {
+                uiStateManager.UpdateStatusCounts();
+                DuplicateImageReview.InvalidateResults();
+
+                string? selectedFileName = (ImageListBox.SelectedItem as ImageListItem)?.FileName;
+                bool refreshSelectedImage = result.ProcessedItems.Any(item => string.Equals(
+                    item.FileName,
+                    selectedFileName,
+                    StringComparison.OrdinalIgnoreCase));
+                if (refreshSelectedImage && ImageListBox.SelectedItem is ImageListItem selectedItem)
+                {
+                    imageManager.CurrentImagePath = "";
+                    ImageListBox.SelectedItem = null;
+                    ImageListBox.SelectedItem = selectedItem;
+                }
+
+                MarkProjectDirty();
+            }
+
+            return result;
         }
 
         private void LanguageManager_LanguageChanged(object sender, EventArgs e)
@@ -559,13 +1087,13 @@ namespace YoableWPF
             RefreshClassList();
 
             // Restore model class mappings from project
-            if (projectManager?.CurrentProject?.ModelClassMappings != null && yoloAI != null)
+            if (projectManager?.CurrentProject?.ModelClassMappingSets != null && yoloAI != null)
             {
                 foreach (var model in yoloAI.GetLoadedModels())
                 {
-                    if (projectManager.CurrentProject.ModelClassMappings.TryGetValue(model.ModelPath, out var savedMapping))
+                    if (projectManager.CurrentProject.ModelClassMappingSets.TryGetValue(model.ModelPath, out var savedMapping))
                     {
-                        model.ClassMapping = new Dictionary<int, int>(savedMapping);
+                        model.ClassMapping = YoloAI.CloneClassMapping(savedMapping);
                     }
                 }
             }
@@ -1461,6 +1989,185 @@ namespace YoableWPF
             }
         }
 
+        private async void ExportTrainingDataset_Click(object sender, RoutedEventArgs e)
+        {
+            if (imageManager.ImagePathMap.IsEmpty)
+            {
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_NoImagesToExport") ?? "There are no images to export.",
+                    LanguageManager.Instance.GetString("Msg_Error") ?? "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            if (projectClasses == null || !projectClasses.Any(c => c.ClassId >= 0))
+            {
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_NoClassesToExport") ?? "Define at least one class before exporting a training dataset.",
+                    LanguageManager.Instance.GetString("Msg_Error") ?? "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            var dialog = new TrainingExportDialog(
+                Properties.Settings.Default.LastTrainingExportDirectory,
+                (int)Math.Round(Properties.Settings.Default.TrainingSplitTrain),
+                (int)Math.Round(Properties.Settings.Default.TrainingSplitVal),
+                (int)Math.Round(Properties.Settings.Default.TrainingSplitTest),
+                Properties.Settings.Default.TrainingSplitSeed)
+            {
+                Owner = this
+            };
+
+            if (dialog.ShowDialog() != true || dialog.Options == null)
+                return;
+
+            var options = dialog.Options;
+
+            // Persist choices for next time.
+            Properties.Settings.Default.LastTrainingExportDirectory = options.OutputDirectory;
+            Properties.Settings.Default.TrainingSplitTrain = options.TrainRatio * 100;
+            Properties.Settings.Default.TrainingSplitVal = options.ValRatio * 100;
+            Properties.Settings.Default.TrainingSplitTest = options.TestRatio * 100;
+            Properties.Settings.Default.TrainingSplitSeed = options.Seed;
+            Properties.Settings.Default.Save();
+
+            await RunTrainingExportAsync(options);
+        }
+
+        private async Task RunTrainingExportAsync(TrainingExportOptions options)
+        {
+            var tokenSource = new CancellationTokenSource();
+            overlayManager.ShowOverlayWithProgress(
+                LanguageManager.Instance.GetString("Msg_ExportingTrainingDataset") ?? "Exporting training dataset...",
+                tokenSource);
+
+            try
+            {
+                var progress = CreateProgressReporter();
+
+                var result = await datasetExportManager.ExportAsync(
+                    options,
+                    imageManager,
+                    labelManager,
+                    projectClasses,
+                    progress,
+                    tokenSource.Token);
+
+                overlayManager.HideOverlay();
+
+                string template = LanguageManager.Instance.GetString("Msg_TrainingDatasetExported")
+                    ?? "Training dataset exported.\nTrain: {0}  Val: {1}  Test: {2}\nSkipped: {3}";
+                CustomMessageBox.Show(
+                    string.Format(template, result.TrainCount, result.ValCount, result.TestCount, result.SkippedCount),
+                    LanguageManager.Instance.GetString("Msg_ExportComplete") ?? "Export Complete",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (OperationCanceledException)
+            {
+                overlayManager.HideOverlay();
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_ExportCanceled") ?? "Export canceled.",
+                    LanguageManager.Instance.GetString("Msg_Canceled") ?? "Canceled",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                overlayManager.HideOverlay();
+                CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_ExportFailed") ?? "Export failed: {0}", ex.Message),
+                    LanguageManager.Instance.GetString("Msg_Error") ?? "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private async void DataAugmentation_Click(object sender, RoutedEventArgs e)
+        {
+            if (imageManager.ImagePathMap.IsEmpty)
+            {
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_NoImagesToExport") ?? "There are no images to export.",
+                    LanguageManager.Instance.GetString("Msg_Error") ?? "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            string currentFile = GetCurrentFileName();
+            string defaultOutputDirectory = Properties.Settings.Default.LastAugmentationDirectory;
+            if (string.IsNullOrWhiteSpace(defaultOutputDirectory))
+            {
+                ImageManager.ImageInfo sourceInfo = null;
+                if (!string.IsNullOrEmpty(currentFile))
+                    imageManager.ImagePathMap.TryGetValue(currentFile, out sourceInfo);
+
+                sourceInfo ??= imageManager.ImagePathMap.Values.FirstOrDefault();
+                defaultOutputDirectory = sourceInfo == null
+                    ? string.Empty
+                    : Path.GetDirectoryName(sourceInfo.Path) ?? string.Empty;
+            }
+
+            var dialog = new AugmentationDialog(
+                defaultOutputDirectory,
+                Properties.Settings.Default.AugmentationVariants,
+                Properties.Settings.Default.AugmentationSeed,
+                !string.IsNullOrEmpty(currentFile))
+            {
+                Owner = this
+            };
+
+            if (dialog.ShowDialog() != true || dialog.Options == null)
+                return;
+
+            var options = dialog.Options;
+
+            Properties.Settings.Default.LastAugmentationDirectory = options.OutputDirectory;
+            Properties.Settings.Default.AugmentationVariants = options.VariantsPerImage;
+            Properties.Settings.Default.AugmentationSeed = options.Seed;
+            Properties.Settings.Default.Save();
+
+            await RunAugmentationAsync(options, currentFile);
+        }
+
+        private async Task RunAugmentationAsync(AugmentationOptions options, string currentFile)
+        {
+            var tokenSource = new CancellationTokenSource();
+            overlayManager.ShowOverlayWithProgress(
+                LanguageManager.Instance.GetString("Msg_Augmenting") ?? "Augmenting images...",
+                tokenSource);
+
+            try
+            {
+                var progress = CreateProgressReporter();
+                var result = await augmentationManager.AugmentAsync(
+                    options, imageManager, labelManager, currentFile, progress, tokenSource.Token);
+
+                overlayManager.HideOverlay();
+
+                string template = LanguageManager.Instance.GetString("Msg_AugmentationComplete")
+                    ?? "Augmentation complete.\nSource images: {0}\nGenerated images: {1}\nSkipped: {2}";
+                CustomMessageBox.Show(
+                    string.Format(template, result.SourceImages, result.GeneratedImages, result.SkippedImages),
+                    LanguageManager.Instance.GetString("Msg_ExportComplete") ?? "Export Complete",
+                    MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            catch (OperationCanceledException)
+            {
+                overlayManager.HideOverlay();
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_ExportCanceled") ?? "Export canceled.",
+                    LanguageManager.Instance.GetString("Msg_Canceled") ?? "Canceled",
+                    MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch (Exception ex)
+            {
+                overlayManager.HideOverlay();
+                CustomMessageBox.Show(
+                    string.Format(LanguageManager.Instance.GetString("Msg_AugmentationFailed") ?? "Augmentation failed: {0}", ex.Message),
+                    LanguageManager.Instance.GetString("Msg_Error") ?? "Error",
+                    MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
         private async Task UpdateAllImageStatusesAsync()
         {
             var cancellationToken = new CancellationTokenSource();
@@ -1548,10 +2255,115 @@ namespace YoableWPF
             MarkProjectDirty();
         }
 
+        /// <summary>
+        /// Project team pairings as (body, head) class-id tuples for the inference engine,
+        /// or null when none are configured.
+        /// </summary>
+        private IReadOnlyList<(int BodyClassId, int HeadClassId)> GetClassTeamPairs()
+        {
+            var pairs = projectManager?.CurrentProject?.ClassTeamPairs;
+            if (pairs == null || pairs.Count == 0)
+                return null;
+
+            return pairs
+                .Where(pair => pair.BodyClassId >= 0 && pair.HeadClassId >= 0)
+                .Select(pair => (pair.BodyClassId, pair.HeadClassId))
+                .ToList();
+        }
+
         private void ManageModels_Click(object sender, RoutedEventArgs e)
         {
-            var savedMappings = projectManager?.CurrentProject?.ModelClassMappings;
+            var savedMappings = projectManager?.CurrentProject?.ModelClassMappingSets;
             yoloAI.OpenModelManager(projectClasses, savedMappings);
+        }
+
+        private async void AILabelCurrentImage_Click(object sender, RoutedEventArgs e)
+        {
+            if (yoloAI.GetLoadedModelsCount() == 0)
+            {
+                var loadResult = CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Msg_NoModelsLoaded") ??
+                    "No models loaded. Would you like to load models now?",
+                    LanguageManager.Instance.GetString("Msg_NoModels") ?? "No Models",
+                    MessageBoxButton.YesNo,
+                    MessageBoxImage.Question);
+
+                if (loadResult == MessageBoxResult.Yes)
+                    ManageModels_Click(sender, e);
+
+                return;
+            }
+
+            string currentFileName = GetCurrentFileName();
+            if (string.IsNullOrEmpty(currentFileName) ||
+                !imageManager.ImagePathMap.TryGetValue(currentFileName, out var imageEntry) ||
+                !File.Exists(imageEntry.Path))
+            {
+                CustomMessageBox.Show(
+                    LanguageManager.Instance.GetString("Main_NoImageSelected") ??
+                    "No image selected.",
+                    LanguageManager.Instance.GetString("Main_Error") ?? "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            // Thresholds are configured up-front in Settings > AI, so labeling runs immediately.
+            Dictionary<int, float> confidenceThresholds =
+                projectManager?.CurrentProject?.AIClassConfidenceThresholds ??
+                new Dictionary<int, float>();
+            var teamPairs = GetClassTeamPairs();
+
+            labelManager.SaveLabels(currentFileName, drawingCanvas.Labels);
+            overlayManager.ShowOverlay(
+                LanguageManager.Instance.GetString("AIClassConfidence_Running") ??
+                "Running AI detection on the current image...");
+
+            try
+            {
+                List<(Rectangle box, int classId)> detections = await Task.Run(() =>
+                {
+                    using Bitmap image = new Bitmap(imageEntry.Path);
+                    return yoloAI.RunInferenceWithClasses(image, confidenceThresholds, teamPairs);
+                });
+
+                if (Properties.Settings.Default.AIReplaceExistingLabels)
+                    labelManager.ReplaceAILabels(currentFileName, detections);
+                else
+                    labelManager.AddAILabels(currentFileName, detections);
+
+                drawingCanvas.Labels = labelManager.GetLabels(currentFileName);
+                drawingCanvas.SelectedLabel = null;
+                drawingCanvas.SelectedLabels.Clear();
+                uiStateManager.RefreshLabelList();
+                drawingCanvas.InvalidateVisual();
+                OnLabelsChanged();
+
+                CustomMessageBox.Show(
+                    string.Format(
+                        LanguageManager.Instance.GetString("AIClassConfidence_Complete") ??
+                        "Current image labeling complete. Added {0} detection(s).",
+                        detections.Count),
+                    LanguageManager.Instance.GetString("Msg_AILabels") ?? "AI Labels",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"Current image AI labeling failed: {ex}");
+                CustomMessageBox.Show(
+                    string.Format(
+                        LanguageManager.Instance.GetString("AIClassConfidence_Failed") ??
+                        "Failed to label the current image: {0}",
+                        ex.Message),
+                    LanguageManager.Instance.GetString("Main_Error") ?? "Error",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+            }
+            finally
+            {
+                overlayManager.HideOverlay();
+            }
         }
 
         private async void AutoLabelImages_Click(object sender, RoutedEventArgs e)
@@ -1574,8 +2386,42 @@ namespace YoableWPF
             string processingMode = modelCount == 1 ?
                 (LanguageManager.Instance.GetString("Msg_SingleModel") ?? "single model") :
                 string.Format(LanguageManager.Instance.GetString("Msg_EnsembleModels") ?? "ensemble ({0} models)", modelCount);
+            processingMode = $"{processingMode}, {yoloAI.GetExecutionProviderSummary()}";
+
+            if (!string.IsNullOrWhiteSpace(imageManager.CurrentImagePath))
+                labelManager.SaveLabels(imageManager.CurrentImagePath, drawingCanvas.Labels);
+
+            bool onlyUnlabeled = Properties.Settings.Default.AIAutoLabelOnlyUnlabeled;
+            var imagesToProcess = imageManager.ImagePathMap
+                .Where(pair => !onlyUnlabeled || labelManager.GetLabels(pair.Key).Count == 0)
+                .Select(pair => (FileName: pair.Key, ImagePath: pair.Value.Path))
+                .ToArray();
+            int skippedLabeledImages = imageManager.ImagePathMap.Count - imagesToProcess.Length;
+
+            if (imagesToProcess.Length == 0)
+            {
+                string emptyMessage = onlyUnlabeled
+                    ? LanguageManager.Instance.GetString("Msg_NoUnlabeledImages") ??
+                      "There are no unlabeled images to process."
+                    : LanguageManager.Instance.GetString("Main_NoImageSelected") ??
+                      "No images loaded.";
+                CustomMessageBox.Show(
+                    emptyMessage,
+                    LanguageManager.Instance.GetString("Msg_AILabels") ?? "AI Labels",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                return;
+            }
+
+            string scopeMessage = onlyUnlabeled
+                ? "\n\n" + string.Format(
+                    LanguageManager.Instance.GetString("Msg_OnlyUnlabeledSummary") ??
+                    "Only unlabeled images will be processed; {0} labeled image(s) will be skipped.",
+                    skippedLabeledImages)
+                : "";
             var continueResult = CustomMessageBox.Show(
-                string.Format(LanguageManager.Instance.GetString("Msg_ProcessImagesPrompt") ?? "Process {0} images using {1} detection?", imageManager.ImagePathMap.Count, processingMode) +
+                string.Format(LanguageManager.Instance.GetString("Msg_ProcessImagesPrompt") ?? "Process {0} images using {1} detection?", imagesToProcess.Length, processingMode) +
+                scopeMessage +
                 (modelCount > 3 ? "\n\n" + (LanguageManager.Instance.GetString("Msg_ManyModelsWarning") ?? "Note: Processing with many models may take considerable time.") : ""),
                 LanguageManager.Instance.GetString("Msg_StartDetection") ?? "Start Detection",
                 MessageBoxButton.YesNo,
@@ -1585,65 +2431,96 @@ namespace YoableWPF
 
             // Store current selection
             var currentSelection = ImageListBox.SelectedItem as ImageListItem;
+            var teamPairs = GetClassTeamPairs();
 
             CancellationTokenSource tokenSource = new CancellationTokenSource();
             overlayManager.ShowOverlayWithProgress($"Running AI Detections ({processingMode})...", tokenSource);
 
             int totalDetections = 0;
-            int totalImages = imageManager.ImagePathMap.Count;
+            int totalImages = imagesToProcess.Length;
+            int completedImages = 0;
             int processedImages = 0;
-
-            await Task.Run(() =>
+            int failedImages = 0;
+            // DirectML serializes the actual GPU Run call behind a single lock, so extra workers
+            // do not run inference in parallel. Their value is keeping CPU-side preprocessing
+            // (decode, resize, tensor build) far enough ahead that the GPU rarely waits for the
+            // next image. A few workers per model input covers even the ensemble case; cap it so
+            // memory (one decoded bitmap + float buffer per worker) stays bounded.
+            int workerCount = yoloAI.UsesDirectMl
+                ? Math.Min(totalImages, Math.Clamp(Environment.ProcessorCount / 2, 3, 6))
+                : Math.Min(totalImages, Math.Clamp(Environment.ProcessorCount / 2, 2, 8));
+            var parallelOptions = new ParallelOptions
             {
-                foreach (var imagePath in imageManager.ImagePathMap.Values)
-                {
-                    if (tokenSource.Token.IsCancellationRequested) break;
+                CancellationToken = tokenSource.Token,
+                MaxDegreeOfParallelism = Math.Max(1, workerCount)
+            };
 
-                    if (!File.Exists(imagePath.Path))
+            try
+            {
+                await Parallel.ForEachAsync(imagesToProcess, parallelOptions, (imageEntry, cancellationToken) =>
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+
+                    try
                     {
-                        Dispatcher.Invoke(() =>
+                        if (!File.Exists(imageEntry.ImagePath))
                         {
-                            CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_FileNotFound") ?? "File not found: {0}", imagePath.Path), LanguageManager.Instance.GetString("Msg_Error") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Warning);
+                            Interlocked.Increment(ref failedImages);
+                            return ValueTask.CompletedTask;
+                        }
+
+                        using Bitmap image = new Bitmap(imageEntry.ImagePath);
+
+                        var boxesWithClasses = yoloAI.RunInferenceWithClasses(image, null, teamPairs);
+                        labelManager.AddAILabels(imageEntry.FileName, boxesWithClasses);
+                        Interlocked.Add(ref totalDetections, boxesWithClasses.Count);
+                        Interlocked.Increment(ref processedImages);
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"AI labeling failed for {imageEntry.FileName}: {ex.Message}");
+                        Interlocked.Increment(ref failedImages);
+                    }
+                    finally
+                    {
+                        int completed = Interlocked.Increment(ref completedImages);
+                        _ = Dispatcher.BeginInvoke(() =>
+                        {
+                            overlayManager.UpdateProgress((completed * 100) / totalImages);
+                            overlayManager.UpdateMessage(
+                                $"Processing image {completed}/{totalImages} ({processingMode}, {workerCount} workers)...");
                         });
-                        continue;
                     }
 
-                    using Bitmap image = new Bitmap(imagePath.Path);
-                    string fileName = Path.GetFileName(imagePath.Path);
+                    return ValueTask.CompletedTask;
+                });
+            }
+            catch (OperationCanceledException)
+            {
+                Debug.WriteLine("AI auto-labeling was cancelled.");
+            }
+            finally
+            {
+                overlayManager.HideOverlay();
+                tokenSource.Dispose();
+            }
 
-                    // Use inference method with ClassId
-                    var boxesWithClasses = yoloAI.RunInferenceWithClasses(image);
-                    labelManager.AddAILabels(fileName, boxesWithClasses);
-                    totalDetections += boxesWithClasses.Count;
+            string currentFileName = GetCurrentFileName();
+            if (!string.IsNullOrEmpty(currentFileName) &&
+                imagesToProcess.Any(item => string.Equals(
+                    item.FileName,
+                    currentFileName,
+                    StringComparison.OrdinalIgnoreCase)))
+            {
+                drawingCanvas.Labels = labelManager.GetLabels(currentFileName);
+                uiStateManager.RefreshLabelList();
+                drawingCanvas.InvalidateVisual();
+            }
 
-                    // Only update UI if this is the current image
-                    Dispatcher.Invoke(() =>
-                    {
-                        if (drawingCanvas != null && drawingCanvas.Image != null &&
-                            drawingCanvas.Image.ToString().Contains(fileName))
-                        {
-                            drawingCanvas.Labels = labelManager.GetLabels(fileName);
-                            uiStateManager.RefreshLabelList();
-                            drawingCanvas.InvalidateVisual();
-                        }
-                    });
-
-                    processedImages++;
-                    Dispatcher.Invoke(() =>
-                    {
-                        overlayManager.UpdateProgress((processedImages * 100) / totalImages);
-                        overlayManager.UpdateMessage($"Processing image {processedImages}/{totalImages} ({processingMode})...");
-                    });
-                }
-            }, tokenSource.Token);
-
-            overlayManager.HideOverlay();
             await UpdateAllImageStatusesAsync();
 
             Dispatcher.Invoke(() =>
             {
-                uiStateManager.RefreshAllImagesList(); // Refresh for filtering
-
                 // Restore selection if it was lost
                 if (ImageListBox.SelectedItem == null)
                 {
@@ -1653,10 +2530,32 @@ namespace YoableWPF
                 OnLabelsChanged();
 
                 string modeInfo = modelCount == 1 ? "" : string.Format(LanguageManager.Instance.GetString("Msg_UsingModels") ?? " using {0} models", modelCount);
-                CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_AutoLabelComplete") ?? "Auto-labeling complete{0}.\nTotal detections: {1}", modeInfo, totalDetections),
+                string completionMessage = string.Format(
+                    LanguageManager.Instance.GetString("Msg_AutoLabelComplete") ??
+                    "Auto-labeling complete{0}.\nTotal detections: {1}",
+                    modeInfo,
+                    totalDetections);
+                if (onlyUnlabeled)
+                {
+                    completionMessage += "\n" + string.Format(
+                        LanguageManager.Instance.GetString("Msg_AutoLabelScopeComplete") ??
+                        "Processed: {0}; skipped labeled: {1}.",
+                        processedImages,
+                        skippedLabeledImages);
+                }
+                if (failedImages > 0)
+                {
+                    completionMessage += "\n" + string.Format(
+                        LanguageManager.Instance.GetString("Msg_AutoLabelFailedImages") ??
+                        "{0} image(s) failed or were missing.",
+                        failedImages);
+                }
+
+                CustomMessageBox.Show(completionMessage,
                     LanguageManager.Instance.GetString("Msg_AILabels") ?? "AI Labels", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                MarkProjectDirty();
+                if (processedImages > 0)
+                    MarkProjectDirty();
             });
         }
 
@@ -2249,23 +3148,12 @@ namespace YoableWPF
         {
             try
             {
-                // Only real classes (skip the "nan"/ -1 placeholder), ordered by ClassId.
-                var classes = projectClasses
-                    .Where(c => c.ClassId >= 0)
-                    .OrderBy(c => c.ClassId)
-                    .ToList();
+                // Shared with the training-dataset export so both produce identical class ordering.
+                // Skips the "nan"/ -1 placeholder and fills id gaps with class_N.
+                var names = DatasetExportManager.BuildClassNames(projectClasses);
 
-                if (classes.Count == 0)
+                if (names.Length == 0)
                     return;
-
-                // Build a contiguous name list indexed by ClassId so that line index == id.
-                int maxClassId = classes.Max(c => c.ClassId);
-                var names = new string[maxClassId + 1];
-                for (int i = 0; i < names.Length; i++)
-                    names[i] = $"class_{i}"; // placeholder for any gap in ids
-
-                foreach (var c in classes)
-                    names[c.ClassId] = string.IsNullOrWhiteSpace(c.Name) ? $"class_{c.ClassId}" : c.Name.Trim();
 
                 // classes.txt
                 System.IO.File.WriteAllLines(
@@ -2882,7 +3770,8 @@ namespace YoableWPF
         private void FilterAll_Click(object sender, RoutedEventArgs e)
         {
             uiStateManager.UpdateFilterButtonStyles(
-                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton, FilterVerifiedButton,
+                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton,
+                FilterVerifiedButton, FilterAiLabelsButton,
                 activeButton: FilterAllButton);
             uiStateManager.FilterImagesByStatus(null);
         }
@@ -2890,7 +3779,8 @@ namespace YoableWPF
         private void FilterReview_Click(object sender, RoutedEventArgs e)
         {
             uiStateManager.UpdateFilterButtonStyles(
-                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton, FilterVerifiedButton,
+                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton,
+                FilterVerifiedButton, FilterAiLabelsButton,
                 activeButton: FilterReviewButton);
             uiStateManager.FilterImagesByStatus(ImageStatus.VerificationNeeded);
         }
@@ -2898,7 +3788,8 @@ namespace YoableWPF
         private void FilterSuggested_Click(object sender, RoutedEventArgs e)
         {
             uiStateManager.UpdateFilterButtonStyles(
-                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton, FilterVerifiedButton,
+                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton,
+                FilterVerifiedButton, FilterAiLabelsButton,
                 activeButton: FilterSuggestedButton);
             uiStateManager.FilterImagesByStatus(ImageStatus.Suggested);
         }
@@ -2906,7 +3797,8 @@ namespace YoableWPF
         private void FilterNoLabel_Click(object sender, RoutedEventArgs e)
         {
             uiStateManager.UpdateFilterButtonStyles(
-                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton, FilterVerifiedButton,
+                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton,
+                FilterVerifiedButton, FilterAiLabelsButton,
                 activeButton: FilterNoLabelButton);
             uiStateManager.FilterImagesByStatus(ImageStatus.NoLabel);
         }
@@ -2914,17 +3806,48 @@ namespace YoableWPF
         private void FilterVerified_Click(object sender, RoutedEventArgs e)
         {
             uiStateManager.UpdateFilterButtonStyles(
-                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton, FilterVerifiedButton,
+                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton,
+                FilterVerifiedButton, FilterAiLabelsButton,
                 activeButton: FilterVerifiedButton);
             uiStateManager.FilterImagesByStatus(ImageStatus.Verified);
         }
 
-        private void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
+        private void FilterAiLabels_Click(object sender, RoutedEventArgs e)
         {
-            var settingsWindow = new SettingsWindow(yoloAI);
+            uiStateManager.UpdateFilterButtonStyles(
+                FilterAllButton, FilterReviewButton, FilterSuggestedButton, FilterNoLabelButton,
+                FilterVerifiedButton, FilterAiLabelsButton,
+                activeButton: FilterAiLabelsButton);
+            uiStateManager.FilterImagesWithAiLabels();
+        }
+
+        private async void SettingsMenuItem_Click(object sender, RoutedEventArgs e)
+        {
+            bool previousUseGpu = Properties.Settings.Default.UseGPU;
+            var settingsWindow = new SettingsWindow(
+                yoloAI,
+                projectClasses,
+                projectManager?.CurrentProject?.AIClassConfidenceThresholds,
+                projectManager?.CurrentProject?.ClassTeamPairs);
             settingsWindow.Owner = this;
             if (settingsWindow.ShowDialog() == true)
             {
+                if (settingsWindow.ClassConfidenceThresholdsChanged &&
+                    projectManager?.CurrentProject != null)
+                {
+                    projectManager.CurrentProject.AIClassConfidenceThresholds =
+                        new Dictionary<int, float>(settingsWindow.ClassConfidenceThresholds);
+                    MarkProjectDirty();
+                }
+
+                if (settingsWindow.ClassTeamPairsChanged &&
+                    projectManager?.CurrentProject != null)
+                {
+                    projectManager.CurrentProject.ClassTeamPairs =
+                        settingsWindow.ClassTeamPairs;
+                    MarkProjectDirty();
+                }
+
                 // Settings were saved, reapply batch sizes
                 imageManager.BatchSize = Properties.Settings.Default.ProcessingBatchSize;
                 labelManager.LabelLoadBatchSize = Properties.Settings.Default.LabelLoadBatchSize;
@@ -2934,6 +3857,57 @@ namespace YoableWPF
                 {
                     hotkeyManager.Clear();
                     LoadHotkeys();
+                }
+
+                bool processingDeviceChanged =
+                    previousUseGpu != Properties.Settings.Default.UseGPU;
+                bool providerDoesNotMatchSetting = Properties.Settings.Default.UseGPU
+                    ? !yoloAI.AllModelsUseDirectMl
+                    : yoloAI.UsesDirectMl;
+                if ((processingDeviceChanged || providerDoesNotMatchSetting) &&
+                    yoloAI.GetLoadedModelsCount() > 0)
+                {
+                    overlayManager.ShowOverlay(
+                        LanguageManager.Instance.GetString("Msg_ReloadingModelsForDevice") ??
+                        "Reloading AI models for the selected device...");
+
+                    ExecutionProviderReloadResult reloadResult;
+                    string reloadError;
+                    try
+                    {
+                        (reloadResult, reloadError) = await Task.Run(() =>
+                        {
+                            var result = yoloAI.ReloadExecutionProviders(out string error);
+                            return (result, error);
+                        });
+                    }
+                    finally
+                    {
+                        overlayManager.HideOverlay();
+                    }
+
+                    if (reloadResult == ExecutionProviderReloadResult.Failed)
+                    {
+                        CustomMessageBox.Show(
+                            string.Format(
+                                LanguageManager.Instance.GetString("Msg_ModelInitFailed") ??
+                                "Failed to initialize model: {0}",
+                                reloadError),
+                            LanguageManager.Instance.GetString("Msg_Error") ?? "Error",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Error);
+                    }
+                    else if (reloadResult == ExecutionProviderReloadResult.FallbackToCpu)
+                    {
+                        CustomMessageBox.Show(
+                            string.Format(
+                                LanguageManager.Instance.GetString("Msg_GPUInitFailed") ??
+                                "GPU initialization failed: {0}\nFalling back to CPU.",
+                                reloadError),
+                            LanguageManager.Instance.GetString("Msg_GPUWarning") ?? "GPU Warning",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
                 }
 
                 // Update the UI to reflect any changes
@@ -3049,38 +4023,104 @@ namespace YoableWPF
         /// </summary>
         private void ClassFilterCheckBox_Changed(object sender, RoutedEventArgs e)
         {
-            // Get all checked class IDs
-            var checkedClassIds = new HashSet<int>();
-            
+            ApplyClassFilter();
+        }
+
+        /// <summary>
+        /// Handles switching between the Include / Only class-filter modes.
+        /// </summary>
+        private void ClassFilterMode_Changed(object sender, RoutedEventArgs e)
+        {
+            ApplyClassFilter();
+        }
+
+        private ClassFilterMode GetClassFilterMode()
+        {
+            if (ClassFilterModeOnly?.IsChecked == true)
+                return ClassFilterMode.Only;
+            if (ClassFilterModeAll?.IsChecked == true)
+                return ClassFilterMode.All;
+            if (ClassFilterModeExclude?.IsChecked == true)
+                return ClassFilterMode.Exclude;
+            return ClassFilterMode.Include;
+        }
+
+        private IEnumerable<CheckBox> GetClassFilterCheckBoxes()
+        {
+            if (ClassFilterCheckBoxPanel == null)
+                yield break;
+
             foreach (var container in ClassFilterCheckBoxPanel.Children.OfType<StackPanel>())
             {
                 var stackPanel = container.Children.OfType<StackPanel>().FirstOrDefault();
-                if (stackPanel != null)
-                {
-                    var checkBox = stackPanel.Children.OfType<CheckBox>().FirstOrDefault();
-                    if (checkBox != null && checkBox.IsChecked == true && checkBox.Tag is int classId)
-                    {
-                        checkedClassIds.Add(classId);
-                    }
-                }
+                var checkBox = stackPanel?.Children.OfType<CheckBox>().FirstOrDefault();
+                if (checkBox != null)
+                    yield return checkBox;
+            }
+        }
+
+        // Bulk-sets every class checkbox with the filter re-applied only once at the end.
+        private void SetAllClassCheckBoxes(Func<CheckBox, bool> valueSelector)
+        {
+            var boxes = GetClassFilterCheckBoxes().ToList();
+            if (boxes.Count == 0)
+                return;
+
+            suppressClassFilterApply = true;
+            foreach (var box in boxes)
+                box.IsChecked = valueSelector(box);
+            suppressClassFilterApply = false;
+
+            ApplyClassFilter();
+        }
+
+        private void ClassFilterSelectAll_Click(object sender, RoutedEventArgs e) =>
+            SetAllClassCheckBoxes(_ => true);
+
+        private void ClassFilterClear_Click(object sender, RoutedEventArgs e) =>
+            SetAllClassCheckBoxes(_ => false);
+
+        private void ClassFilterInvert_Click(object sender, RoutedEventArgs e) =>
+            SetAllClassCheckBoxes(box => box.IsChecked != true);
+
+        /// <summary>
+        /// Applies the current class-filter selection and mode to the image list.
+        /// </summary>
+        private void ApplyClassFilter()
+        {
+            if (suppressClassFilterApply)
+                return;
+
+            // The mode radio's Checked fires during XAML init before the class checkboxes are
+            // populated; bail out so we don't clear the list with an empty selection.
+            if (ClassFilterCheckBoxPanel == null || ClassFilterCheckBoxPanel.Children.Count == 0)
+                return;
+
+            var checkedClassIds = new HashSet<int>();
+            foreach (var container in ClassFilterCheckBoxPanel.Children.OfType<StackPanel>())
+            {
+                var stackPanel = container.Children.OfType<StackPanel>().FirstOrDefault();
+                var checkBox = stackPanel?.Children.OfType<CheckBox>().FirstOrDefault();
+                if (checkBox != null && checkBox.IsChecked == true && checkBox.Tag is int classId)
+                    checkedClassIds.Add(classId);
             }
 
-            // Apply filter
+            ClassFilterMode mode = GetClassFilterMode();
+
             if (checkedClassIds.Count == 0)
             {
-                // If no classes are selected, show nothing
+                // Nothing selected: show no images.
                 ImageListBox.Items.Clear();
                 uiStateManager.UpdateStatusCounts();
             }
-            else if (checkedClassIds.Count == projectClasses.Count)
+            else if (mode == ClassFilterMode.Include && checkedClassIds.Count == projectClasses.Count)
             {
-                // If all classes are selected, show all images (no class filter)
+                // Include + every class selected is equivalent to no class filter (show all images).
                 uiStateManager.FilterImagesByClasses(null);
             }
             else
             {
-                // Filter by selected classes
-                uiStateManager.FilterImagesByClasses(checkedClassIds);
+                uiStateManager.FilterImagesByClasses(checkedClassIds, mode);
             }
         }
 
@@ -3212,6 +4252,7 @@ namespace YoableWPF
 
                         // Remove the merged class
                         projectClasses.Remove(classToEdit);
+                        projectManager?.CurrentProject?.AIClassConfidenceThresholds?.Remove(sourceClassId);
 
                         // If current class was the merged one, switch to target class
                         if (drawingCanvas.CurrentClassId == sourceClassId)
@@ -3338,6 +4379,7 @@ namespace YoableWPF
             
             // Remove the class
             projectClasses.Remove(classToRemove);
+            projectManager?.CurrentProject?.AIClassConfidenceThresholds?.Remove(classToRemove.ClassId);
             
             // If current drawing class was removed, switch to first class
             if (drawingCanvas.CurrentClassId == classToRemove.ClassId)

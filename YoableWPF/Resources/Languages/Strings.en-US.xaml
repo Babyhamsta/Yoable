@@ -86,9 +86,16 @@
     <system:String x:Key="Settings_Detection_Section">Detection</system:String>
     <system:String x:Key="Settings_ProcessingDevice">Processing Device</system:String>
     <system:String x:Key="Settings_Device_CPU">CPU</system:String>
-    <system:String x:Key="Settings_Device_GPU">GPU (CUDA)</system:String>
+    <system:String x:Key="Settings_Device_GPU">GPU (DirectML)</system:String>
     <system:String x:Key="Settings_ConfidenceThreshold">Confidence Threshold</system:String>
     <system:String x:Key="Settings_ConfidenceThreshold_Help">Minimum confidence required to display AI detections.</system:String>
+    <system:String x:Key="Settings_AI_OnlyUnlabeled">Only auto-label unlabeled images</system:String>
+    <system:String x:Key="Settings_AI_OnlyUnlabeled_Help">Skip every image that already has one or more confirmed labels.</system:String>
+    <system:String x:Key="Settings_PerClassConfidence">Per-Class Thresholds...</system:String>
+    <system:String x:Key="Settings_PerClassConfidence_Help">Override the confidence threshold for individual classes. Classes left at the global value follow the slider above.</system:String>
+    <system:String x:Key="Settings_PerClassConfidence_NoClasses">Open a project with defined classes to set per-class thresholds.</system:String>
+    <system:String x:Key="Settings_AI_ReplaceExisting">Replace existing AI labels when labeling</system:String>
+    <system:String x:Key="Settings_AI_ReplaceExisting_Help">When off, new detections are added alongside the AI labels already on the image.</system:String>
     <system:String x:Key="Settings_EnsembleMode_Section">Ensemble Mode</system:String>
     <system:String x:Key="Settings_NoModelsLoaded">No models loaded</system:String>
     <system:String x:Key="Settings_ModelLoaded_Single">1 model loaded (single model mode)</system:String>
@@ -96,6 +103,24 @@
     <system:String x:Key="Settings_DetectionMode">Detection Mode</system:String>
     <system:String x:Key="Settings_DetectionMode_Voting">Voting Mode (requires consensus from multiple models)</system:String>
     <system:String x:Key="Settings_DetectionMode_Union">Union Mode (any model detection is marked)</system:String>
+    <system:String x:Key="Settings_DetectionMode_ClassTransfer">Class Transfer (detector models place boxes, classifier models vote on the class)</system:String>
+    <system:String x:Key="Settings_ClassTransfer_Help">Use one accurate model to place the boxes and other models only to decide each box's class. Ideal when your best model lacks the classes you need, while models that know the classes localize poorly.</system:String>
+    <system:String x:Key="Settings_ClassTransfer_Roles">Model roles</system:String>
+    <system:String x:Key="Settings_ModelRole_Detector">Detector (places boxes)</system:String>
+    <system:String x:Key="Settings_ModelRole_Classifier">Classifier (votes on class)</system:String>
+    <system:String x:Key="Settings_ClassTransfer_NeedDetector">Select at least one detector model, otherwise there are no boxes to keep.</system:String>
+    <system:String x:Key="Settings_ClassTransfer_VoteIoU">Vote overlap threshold (IoU)</system:String>
+    <system:String x:Key="Settings_ClassTransfer_KeepUnvoted">Keep boxes no classifier recognized</system:String>
+    <system:String x:Key="Settings_ClassTransfer_KeepUnvoted_Help">When on, a detector box with no classifier vote is kept and labeled with its first allowed class, so you only fix the class instead of redrawing the box. When off, such boxes are discarded.</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamConsistency">Keep a body's team consistent with the head inside it</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamConsistency_Help">When a head box and the body box around it disagree on team, the higher-confidence one wins and the other is corrected. Needs the class pairings below.</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamPairing">Team pairings...</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamPairing_Help">Pair each body class with the head class of the same team (e.g. police body with police head).</system:String>
+    <system:String x:Key="TeamPairing_Title">Team Pairings</system:String>
+    <system:String x:Key="TeamPairing_Subtitle">Pair a body class with the head class of the same team. Used to keep body and head classifications consistent.</system:String>
+    <system:String x:Key="TeamPairing_Body">Body class</system:String>
+    <system:String x:Key="TeamPairing_Head">Head class</system:String>
+    <system:String x:Key="TeamPairing_AddPair">Add pair</system:String>
     <system:String x:Key="Settings_MinConsensus">Minimum Consensus Required</system:String>
     <system:String x:Key="Settings_ConsensusIoU">Consensus IoU Threshold</system:String>
     <system:String x:Key="Settings_EnsembleIoU">Final Ensemble IoU Threshold</system:String>
@@ -183,7 +208,15 @@
     <system:String x:Key="Main_FilterSuggested">Suggested</system:String>
     <system:String x:Key="Main_FilterNone">None</system:String>
     <system:String x:Key="Main_FilterDone">Done</system:String>
+    <system:String x:Key="Main_FilterAiLabels">AI Labels</system:String>
     <system:String x:Key="Main_FilterByClass">Filter by Class</system:String>
+    <system:String x:Key="Main_FilterModeInclude">Include</system:String>
+    <system:String x:Key="Main_FilterModeAll">All</system:String>
+    <system:String x:Key="Main_FilterModeOnly">Only</system:String>
+    <system:String x:Key="Main_FilterModeExclude">Exclude</system:String>
+    <system:String x:Key="Main_FilterSelectAll">Select all</system:String>
+    <system:String x:Key="Main_FilterClear">Clear</system:String>
+    <system:String x:Key="Main_FilterInvert">Invert</system:String>
     <system:String x:Key="Main_StatusReview">REVIEW</system:String>
     <system:String x:Key="Main_StatusSuggested">SUGGESTED</system:String>
     <system:String x:Key="Main_StatusNoLabel">NO LABEL</system:String>
@@ -210,6 +243,12 @@
     <system:String x:Key="Main_ConfirmClear">Confirm Clear</system:String>
     <system:String x:Key="Main_Error">Error</system:String>
     <system:String x:Key="Main_Information">Information</system:String>
+    <system:String x:Key="Main_OpenImageLocation">Open Image File Location</system:String>
+    <system:String x:Key="Main_OpenLabelLocation">Open Label File Location</system:String>
+    <system:String x:Key="Main_DeleteImage">Delete Image</system:String>
+    <system:String x:Key="Main_ConfirmDeleteImage">Move '{0}' and its label file to the Recycle Bin and remove it from the project?</system:String>
+    <system:String x:Key="Main_NoLabelFileOnDisk">No label file exists on disk yet for this image. Save or export the project first.</system:String>
+    <system:String x:Key="Main_DeleteImageFailed">The image was removed from the project, but some files could not be deleted:&#x0a;&#x0a;{0}</system:String>
     
     <!-- Main Window - Status Bar -->
     <system:String x:Key="Status_NoProject">No Project</system:String>
@@ -251,10 +290,10 @@
     
     <!-- Model Class Mapping Dialog -->
     <system:String x:Key="Mapping_Title">Configure Model Class Mapping</system:String>
-    <system:String x:Key="Mapping_Description">Please select the corresponding project class for each model class</system:String>
+    <system:String x:Key="Mapping_Description">Tick every project class each model class is allowed to map to</system:String>
     <system:String x:Key="Mapping_LoadClassFile">Load Class File</system:String>
     <system:String x:Key="Mapping_ModelID">Model ID: {0}</system:String>
-    <system:String x:Key="Mapping_InfoFormat">Model: {0}&#x0a;Number of Classes: {1}&#x0a;Number of Project Classes: {2}&#x0a;Hint: Select 'nan (not detected)' to skip detection for this class</system:String>
+    <system:String x:Key="Mapping_InfoFormat">Model: {0}&#x0a;Number of Classes: {1}&#x0a;Number of Project Classes: {2}&#x0a;Hint: tick 'nan (not detected)' to skip a class. Ticking several classes declares the set a detection may be classified as.</system:String>
     <system:String x:Key="Mapping_WarningGeneric">⚠ Warning: Class file not found, displaying generic class names.&#x0a;Please click the 'Load Class File' button in the top right corner to manually load the correct class names.</system:String>
     <system:String x:Key="Mapping_SelectClassFile">Select Class File</system:String>
     <system:String x:Key="Mapping_ClassFileEmpty">Class file is empty or incorrectly formatted.</system:String>
@@ -406,6 +445,8 @@
     <system:String x:Key="Msg_SingleModel">single model</system:String>
     <system:String x:Key="Msg_EnsembleModels">ensemble ({0} models)</system:String>
     <system:String x:Key="Msg_ProcessImagesPrompt">Process {0} images using {1} detection?</system:String>
+    <system:String x:Key="Msg_OnlyUnlabeledSummary">Only unlabeled images will be processed; {0} labeled image(s) will be skipped.</system:String>
+    <system:String x:Key="Msg_NoUnlabeledImages">There are no unlabeled images to process.</system:String>
     <system:String x:Key="Msg_ManyModelsWarning">Note: Processing with many models may take considerable time.</system:String>
     <system:String x:Key="Msg_StartDetection">Start Detection</system:String>
     <system:String x:Key="Msg_UsingModels"> using {0} models</system:String>
@@ -462,15 +503,19 @@
     <system:String x:Key="Msg_ModelAlreadyLoadedTitle">Model Already Loaded</system:String>
     <system:String x:Key="Msg_GPUInitFailed">GPU initialization failed: {0}\nFalling back to CPU.</system:String>
     <system:String x:Key="Msg_GPUWarning">GPU Warning</system:String>
+    <system:String x:Key="Msg_DirectMLUnsupported">This GPU or its current driver does not support DirectML.</system:String>
     <system:String x:Key="Msg_ModelInitFailed">Failed to initialize model: {0}</system:String>
     <system:String x:Key="Msg_UnsupportedModel">Failed to detect YOLO model format or unsupported model type.\n\nSupported formats:\n- YOLOv5: [batch, detections, 5+classes]\n- YOLOv8: [batch, 4+classes, detections]\n\nNote: Segmentation models are not supported.</system:String>
     <system:String x:Key="Msg_UnsupportedModelTitle">Unsupported Model</system:String>
     <system:String x:Key="Msg_ModelLoadedSuccess">Model '{0}' loaded successfully.\nFormat: {1}\nClasses: {2}\nDetections: {3}\nInput Size: {4}x{4}\nTotal models: {5}</system:String>
     <system:String x:Key="Msg_ModelLoaded">Model Loaded</system:String>
     <system:String x:Key="Msg_ErrorLoadingModel">Error loading model: {0}</system:String>
+    <system:String x:Key="Msg_ReloadingModelsForDevice">Reloading AI models for the selected device...</system:String>
     <system:String x:Key="Msg_YouTube_NoCompatibleStream">No compatible video streams found for {0}</system:String>
     <system:String x:Key="Msg_YouTube_DownloadError">Download Error</system:String>
     <system:String x:Key="Msg_AutoLabelComplete">Auto-labeling complete{0}.\nTotal detections: {1}</system:String>
+    <system:String x:Key="Msg_AutoLabelScopeComplete">Processed: {0}; skipped labeled: {1}.</system:String>
+    <system:String x:Key="Msg_AutoLabelFailedImages">{0} image(s) failed or were missing.</system:String>
 
     <!-- Import Labels and Image Dialog -->
     <system:String x:Key="Dialog_ImportLabelsAndImage_Title">Import Labels &amp; Images</system:String>
@@ -490,6 +535,135 @@
     <system:String x:Key="Dialog_ImportLabelsAndImage_InvalidImagesPath">Please select a valid images folder.</system:String>
     <system:String x:Key="Dialog_ImportLabelsAndImage_InvalidLabelsPath">Please select a valid labels folder.</system:String>
     
+    <!-- Duplicate image review -->
+    <system:String x:Key="Main_TabAnnotate">Annotate</system:String>
+    <system:String x:Key="Main_TabDuplicates">Duplicate Images</system:String>
+    <system:String x:Key="Duplicate_Title">Duplicate Images</system:String>
+    <system:String x:Key="Duplicate_Scan">Scan Again</system:String>
+    <system:String x:Key="Duplicate_NoScan">Scan the current project for duplicate images.</system:String>
+    <system:String x:Key="Duplicate_Scanning">Scanning images...</system:String>
+    <system:String x:Key="Duplicate_NoImages">Add at least two images before scanning.</system:String>
+    <system:String x:Key="Duplicate_NoMatches">No duplicate images found.</system:String>
+    <system:String x:Key="Duplicate_ScanFailed">Could not scan duplicate images.</system:String>
+    <system:String x:Key="Duplicate_Resolved">All duplicate images have been resolved.</system:String>
+    <system:String x:Key="Duplicate_Summary">{0} duplicate group(s), {1} extra image(s) remaining</system:String>
+    <system:String x:Key="Duplicate_GroupProgress">Group {0} of {1}</system:String>
+    <system:String x:Key="Duplicate_LabelCount">{0} label(s)</system:String>
+    <system:String x:Key="Duplicate_KeepLeft">Keep Left Image + Labels</system:String>
+    <system:String x:Key="Duplicate_KeepRight">Keep Right Image + Labels</system:String>
+    <system:String x:Key="Duplicate_RemoveFailed">The duplicate image could not be removed from the project.</system:String>
+    <system:String x:Key="Duplicate_AllGroups">All Duplicate Groups</system:String>
+    <system:String x:Key="Duplicate_PreviousGroup">Previous group</system:String>
+    <system:String x:Key="Duplicate_NextGroup">Next group</system:String>
+    <system:String x:Key="Duplicate_GroupTitle">Group {0}</system:String>
+    <system:String x:Key="Duplicate_ExtraCount">{0} extra image(s)</system:String>
+
+    <!-- Center ROI crop -->
+    <system:String x:Key="Main_TabRoiCrop">Center ROI</system:String>
+    <system:String x:Key="Roi_Title">Center ROI Crop</system:String>
+    <system:String x:Key="Roi_OutputSize">Output pixel size</system:String>
+    <system:String x:Key="Roi_Scope">Apply to</system:String>
+    <system:String x:Key="Roi_AllImages">All project images</system:String>
+    <system:String x:Key="Roi_CurrentImage">Current image</system:String>
+    <system:String x:Key="Roi_OutputFolder">Output folder</system:String>
+    <system:String x:Key="Roi_Apply">Create 640 x 640 Crops</system:String>
+    <system:String x:Key="Roi_RemoveSmall">Remove Images Under 640 px</system:String>
+    <system:String x:Key="Roi_RemoveSmallConfirm">Found {0} image(s) with a width or height under 640 pixels. Remove them and their labels from this project? Original files will remain on disk.</system:String>
+    <system:String x:Key="Roi_RemoveSmallComplete">Removed {0} undersized image(s) and their labels from the project.</system:String>
+    <system:String x:Key="Roi_NoSmallImages">No project images have a width or height under 640 pixels.</system:String>
+    <system:String x:Key="Roi_Preview">Center ROI Preview</system:String>
+    <system:String x:Key="Roi_NoPreview">No image available</system:String>
+    <system:String x:Key="Roi_InvalidSize">The ROI size is invalid.</system:String>
+    <system:String x:Key="Roi_Confirm">Create centered {0} x {1} pixel crops and update labels?</system:String>
+    <system:String x:Key="Roi_Processing">Cropping images...</system:String>
+    <system:String x:Key="Roi_Progress">{0} / {1} - {2}</system:String>
+    <system:String x:Key="Roi_Complete">Cropped {0} image(s), removed {1} label(s), clipped {2} label(s), skipped {3} image(s).</system:String>
+    <system:String x:Key="Roi_Cancelled">ROI crop cancelled.</system:String>
+    <system:String x:Key="Roi_ProjectRequired">Open or create a project before cropping images.</system:String>
+    <system:String x:Key="Roi_Failed">ROI crop failed.</system:String>
+    <system:String x:Key="Roi_NoImages">No images are available to crop.</system:String>
+
+    <system:String x:Key="Menu_AILabelCurrentImage">AI Label Current Image</system:String>
+    <system:String x:Key="AIClassConfidence_Title">Per-Class Confidence</system:String>
+    <system:String x:Key="AIClassConfidence_Subtitle">Set the minimum confidence for each class used by AI labeling.</system:String>
+    <system:String x:Key="AIClassConfidence_Class">Class</system:String>
+    <system:String x:Key="AIClassConfidence_Threshold">Minimum confidence</system:String>
+    <system:String x:Key="AIClassConfidence_Reset">Reset to global value</system:String>
+    <system:String x:Key="AIClassConfidence_Running">Running AI detection on the current image...</system:String>
+    <system:String x:Key="AIClassConfidence_Complete">Current image labeling complete. Detected {0} object(s).</system:String>
+    <system:String x:Key="AIClassConfidence_Failed">Failed to label the current image: {0}</system:String>
+    <system:String x:Key="Duplicate_AutoResolvedSummary">Automatically resolved: {0}</system:String>
+    <system:String x:Key="Duplicate_AutoResolvedOnly">Automatically removed {0} duplicate image(s) with identical labels from the project.</system:String>
+    <system:String x:Key="Duplicate_OpenEdit">Inspect / Edit</system:String>
+    <system:String x:Key="Duplicate_OpenEditFailed">Could not open the image for editing.</system:String>
+
+
+    <!-- Training Dataset Export -->
+    <system:String x:Key="Menu_ExportTrainingDataset">Export Training Dataset...</system:String>
+    <system:String x:Key="TrainingExport_Title">Export Training Dataset</system:String>
+    <system:String x:Key="TrainingExport_Subtitle">Copy images and labels into a YOLO train/val/test folder structure with a data.yaml ready for training.</system:String>
+    <system:String x:Key="TrainingExport_OutputFolder">Output folder</system:String>
+    <system:String x:Key="TrainingExport_Browse">Browse...</system:String>
+    <system:String x:Key="TrainingExport_SplitRatios">Split ratios (%)</system:String>
+    <system:String x:Key="TrainingExport_Train">Train</system:String>
+    <system:String x:Key="TrainingExport_Val">Validation</system:String>
+    <system:String x:Key="TrainingExport_Test">Test</system:String>
+    <system:String x:Key="TrainingExport_SumFormat">Total: {0}% (must equal 100%)</system:String>
+    <system:String x:Key="TrainingExport_Seed">Random seed</system:String>
+    <system:String x:Key="TrainingExport_IncludeBackground">Include unlabeled images as background samples</system:String>
+    <system:String x:Key="TrainingExport_VerifiedOnly">Only export verified images</system:String>
+    <system:String x:Key="Msg_ExportingTrainingDataset">Exporting training dataset...</system:String>
+    <system:String x:Key="Msg_TrainingDatasetExported">Training dataset exported.&#10;Train: {0}   Val: {1}   Test: {2}&#10;Skipped: {3}</system:String>
+    <system:String x:Key="Msg_NoImagesToExport">There are no images to export.</system:String>
+    <system:String x:Key="Msg_NoClassesToExport">Define at least one class before exporting a training dataset.</system:String>
+
+    <!-- Dataset Statistics -->
+    <system:String x:Key="Main_TabStats">Dataset Stats</system:String>
+    <system:String x:Key="Stats_Title">Dataset Statistics</system:String>
+    <system:String x:Key="Stats_Subtitle">Class balance, box sizes and review status for the current project.</system:String>
+    <system:String x:Key="Stats_Refresh">Refresh</system:String>
+    <system:String x:Key="Stats_Empty">No images loaded.</system:String>
+    <system:String x:Key="Stats_TotalImages">Total images</system:String>
+    <system:String x:Key="Stats_LabeledImages">Labeled</system:String>
+    <system:String x:Key="Stats_UnlabeledImages">Unlabeled</system:String>
+    <system:String x:Key="Stats_TotalBoxes">Total boxes</system:String>
+    <system:String x:Key="Stats_AvgBoxes">Avg boxes / image</system:String>
+    <system:String x:Key="Stats_ClassBalance">Class balance</system:String>
+    <system:String x:Key="Stats_SizeDistribution">Box size distribution</system:String>
+    <system:String x:Key="Stats_SizeSmall">Small (&lt;1% area)</system:String>
+    <system:String x:Key="Stats_SizeMedium">Medium (1-5%)</system:String>
+    <system:String x:Key="Stats_SizeLarge">Large (&gt;5%)</system:String>
+    <system:String x:Key="Stats_ReviewStatus">Review status</system:String>
+    <system:String x:Key="Stats_Verified">Verified</system:String>
+    <system:String x:Key="Stats_NeedsReview">Needs review</system:String>
+    <system:String x:Key="Stats_Suggested">Suggested</system:String>
+    <system:String x:Key="Stats_NoLabelStatus">No label</system:String>
+
+    <!-- Data Augmentation -->
+    <system:String x:Key="Menu_DataAugmentation">Data Augmentation...</system:String>
+    <system:String x:Key="Aug_Title">Data Augmentation</system:String>
+    <system:String x:Key="Aug_Subtitle">Generate augmented image and label copies for training. Boxes are remapped on flip; other effects change only pixels.</system:String>
+    <system:String x:Key="Aug_OutputFolder">Output folder</system:String>
+    <system:String x:Key="Aug_Browse">Browse...</system:String>
+    <system:String x:Key="Aug_Scope">Scope</system:String>
+    <system:String x:Key="Aug_ScopeAll">All images</system:String>
+    <system:String x:Key="Aug_ScopeCurrent">Current image</system:String>
+    <system:String x:Key="Aug_Variants">Variants per image</system:String>
+    <system:String x:Key="Aug_Seed">Random seed</system:String>
+    <system:String x:Key="Aug_Augmentations">Augmentations</system:String>
+    <system:String x:Key="Aug_Flip">Horizontal flip</system:String>
+    <system:String x:Key="Aug_Brightness">Brightness / contrast</system:String>
+    <system:String x:Key="Aug_Hsv">Hue / saturation</system:String>
+    <system:String x:Key="Aug_Noise">Gaussian noise</system:String>
+    <system:String x:Key="Aug_Blur">Blur</system:String>
+    <system:String x:Key="Aug_OutputOptions">Output options</system:String>
+    <system:String x:Key="Aug_IncludeOriginals">Include original images</system:String>
+    <system:String x:Key="Aug_LabeledOnly">Only augment labeled images</system:String>
+    <system:String x:Key="Aug_NeedAugmentation">Enable at least one augmentation.</system:String>
+    <system:String x:Key="Msg_Augmenting">Augmenting images...</system:String>
+    <system:String x:Key="Msg_AugmentationComplete">Augmentation complete.&#10;Source images: {0}&#10;Generated images: {1}&#10;Skipped: {2}</system:String>
+    <system:String x:Key="Msg_AugmentationFailed">Augmentation failed: {0}</system:String>
+
 </ResourceDictionary>
 
 

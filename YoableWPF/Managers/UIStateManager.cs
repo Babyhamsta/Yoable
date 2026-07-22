@@ -38,6 +38,8 @@ namespace YoableWPF.Managers
         private static readonly SolidColorBrush GreenActive = CreateFrozenBrush(0xFF, 0x81, 0xC7, 0x84);
         private static readonly SolidColorBrush BlueInactive = CreateFrozenBrush(0x44, 0x64, 0xB5, 0xF6);
         private static readonly SolidColorBrush BlueActive = CreateFrozenBrush(0xFF, 0x64, 0xB5, 0xF6);
+        private static readonly SolidColorBrush PurpleInactive = CreateFrozenBrush(0x44, 0xBA, 0x68, 0xC8);
+        private static readonly SolidColorBrush PurpleActive = CreateFrozenBrush(0xFF, 0xBA, 0x68, 0xC8);
         private static readonly SolidColorBrush DefaultLabelBrush = CreateFrozenBrush(0xFF, 0xE5, 0x73, 0x73);
 
         public UIStateManager(MainWindow mainWindow)
@@ -320,6 +322,52 @@ namespace YoableWPF.Managers
             UpdateStatusCounts();
         }
 
+        public void FilterImagesWithAiLabels()
+        {
+            if (allImages == null || allImages.Count == 0)
+            {
+                allImages = mainWindow.ImageListBox.Items
+                    .Cast<ImageListItem>()
+                    .ToList();
+            }
+
+            var selectedItem = mainWindow.ImageListBox.SelectedItem as ImageListItem;
+            mainWindow.ImageListBox.SelectionChanged -= mainWindow.ImageListBox_SelectionChanged;
+            mainWindow.ImageListBox.Items.Clear();
+
+            foreach (var item in allImages)
+            {
+                if (mainWindow.labelManager.LabelStorage.TryGetValue(item.FileName, out var labels) &&
+                    labels.Any(label => label.Name.StartsWith(
+                        "AI Label",
+                        StringComparison.OrdinalIgnoreCase)))
+                {
+                    mainWindow.ImageListBox.Items.Add(item);
+                }
+            }
+
+            if (selectedItem != null)
+            {
+                for (int index = 0; index < mainWindow.ImageListBox.Items.Count; index++)
+                {
+                    if (mainWindow.ImageListBox.Items[index] is ImageListItem item &&
+                        string.Equals(item.FileName, selectedItem.FileName, StringComparison.OrdinalIgnoreCase))
+                    {
+                        mainWindow.ImageListBox.SelectedIndex = index;
+                        mainWindow.ImageListBox.ScrollIntoView(item);
+                        break;
+                    }
+                }
+            }
+            else if (mainWindow.ImageListBox.Items.Count > 0)
+            {
+                mainWindow.ImageListBox.SelectedIndex = 0;
+            }
+
+            mainWindow.ImageListBox.SelectionChanged += mainWindow.ImageListBox_SelectionChanged;
+            UpdateStatusCounts();
+        }
+
         public void RefreshAllImagesList()
         {
             // Refresh the complete list of images (call this when images are added/removed)
@@ -330,11 +378,20 @@ namespace YoableWPF.Managers
             }
         }
 
+        public void RemoveImage(string fileName)
+        {
+            allImages.RemoveAll(item => string.Equals(
+                item.FileName,
+                fileName,
+                StringComparison.OrdinalIgnoreCase));
+            imageListItemCache.Remove(fileName);
+        }
+
         /// <summary>
         /// Filters images by selected class IDs. Shows images that contain at least one label with a selected class.
         /// </summary>
         /// <param name="selectedClassIds">Set of class IDs to filter by. If null, shows all images.</param>
-        public void FilterImagesByClasses(HashSet<int> selectedClassIds)
+        public void FilterImagesByClasses(HashSet<int> selectedClassIds, ClassFilterMode mode = ClassFilterMode.Include)
         {
             // Store all images if not already stored
             if (allImages == null || allImages.Count == 0)
@@ -361,22 +418,29 @@ namespace YoableWPF.Managers
             }
             else
             {
-                // Filter images that contain at least one label with a selected class
+                // Filter images by the selected classes according to the chosen mode.
+                //   Include: image has at least one label whose class is selected (OR).
+                //   All:     image contains every selected class at least once (AND).
+                //   Only:    every label in the image is one of the selected classes.
+                //   Exclude: image contains none of the selected classes.
+                // Images with no labels are never shown when a class filter is active.
                 foreach (var item in allImages)
                 {
-                    // Check if this image has labels with any of the selected classes
-                    if (mainWindow.labelManager.LabelStorage.TryGetValue(item.FileName, out var labels))
+                    if (mainWindow.labelManager.LabelStorage.TryGetValue(item.FileName, out var labels) &&
+                        labels.Count > 0)
                     {
-                        bool hasSelectedClass = labels.Any(label => selectedClassIds.Contains(label.ClassId));
-                        if (hasSelectedClass)
+                        bool matches = mode switch
+                        {
+                            ClassFilterMode.Only => labels.All(label => selectedClassIds.Contains(label.ClassId)),
+                            ClassFilterMode.All => selectedClassIds.All(classId => labels.Any(label => label.ClassId == classId)),
+                            ClassFilterMode.Exclude => !labels.Any(label => selectedClassIds.Contains(label.ClassId)),
+                            _ => labels.Any(label => selectedClassIds.Contains(label.ClassId)),
+                        };
+
+                        if (matches)
                         {
                             mainWindow.ImageListBox.Items.Add(item);
                         }
-                    }
-                    else
-                    {
-                        // If image has no labels, don't show it when filtering by class
-                        // (unless we want to show images with no labels, but that doesn't make sense for class filtering)
                     }
                 }
             }
@@ -410,6 +474,7 @@ namespace YoableWPF.Managers
             Button suggestedButton,
             Button noLabelButton,
             Button verifiedButton,
+            Button aiLabelsButton,
             Button activeButton = null)
         {
             // Define colors once
@@ -444,6 +509,9 @@ namespace YoableWPF.Managers
 
             verifiedButton.Background = activeButton == verifiedButton ? GreenActive : GreenInactive;
             verifiedButton.Foreground = activeButton == verifiedButton ? white : greenFore;
+
+            aiLabelsButton.Background = activeButton == aiLabelsButton ? PurpleActive : PurpleInactive;
+            aiLabelsButton.Foreground = activeButton == aiLabelsButton ? white : PurpleActive;
         }
     }
 }

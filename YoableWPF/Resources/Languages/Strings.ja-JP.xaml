@@ -58,9 +58,16 @@
     <system:String x:Key="Settings_Detection_Section">検出</system:String>
     <system:String x:Key="Settings_ProcessingDevice">処理デバイス</system:String>
     <system:String x:Key="Settings_Device_CPU">CPU</system:String>
-    <system:String x:Key="Settings_Device_GPU">GPU (CUDA)</system:String>
+    <system:String x:Key="Settings_Device_GPU">GPU (DirectML)</system:String>
     <system:String x:Key="Settings_ConfidenceThreshold">信頼度しきい値</system:String>
     <system:String x:Key="Settings_ConfidenceThreshold_Help">AI検出を表示するために必要な最小信頼度。</system:String>
+    <system:String x:Key="Settings_AI_OnlyUnlabeled">未ラベル画像のみ自動ラベル付け</system:String>
+    <system:String x:Key="Settings_AI_OnlyUnlabeled_Help">確定済みラベルが 1 件以上ある画像をすべてスキップします。</system:String>
+    <system:String x:Key="Settings_PerClassConfidence">クラス別しきい値設定…</system:String>
+    <system:String x:Key="Settings_PerClassConfidence_Help">個々のクラスの信頼度しきい値を上書きします。調整していないクラスは上のグローバル値に従います。</system:String>
+    <system:String x:Key="Settings_PerClassConfidence_NoClasses">クラス別しきい値を設定するには、クラスが定義されたプロジェクトを開いてください。</system:String>
+    <system:String x:Key="Settings_AI_ReplaceExisting">ラベル付け時に既存の AI ラベルを置き換える</system:String>
+    <system:String x:Key="Settings_AI_ReplaceExisting_Help">オフの場合、新しい検出結果は画像上の既存の AI ラベルに追加されます。</system:String>
     <system:String x:Key="Settings_EnsembleMode_Section">アンサンブルモード</system:String>
     <system:String x:Key="Settings_NoModelsLoaded">モデルが読み込まれていません</system:String>
     <system:String x:Key="Settings_ModelLoaded_Single">1つのモデルが読み込まれました（単一モデルモード）</system:String>
@@ -68,6 +75,24 @@
     <system:String x:Key="Settings_DetectionMode">検出モード</system:String>
     <system:String x:Key="Settings_DetectionMode_Voting">投票モード（複数モデルのコンセンサスが必要）</system:String>
     <system:String x:Key="Settings_DetectionMode_Union">統合モード（いずれかのモデルが検出したらマーク）</system:String>
+    <system:String x:Key="Settings_DetectionMode_ClassTransfer">クラス転送（検出モデルが枠を配置し、分類モデルがクラスを投票）</system:String>
+    <system:String x:Key="Settings_ClassTransfer_Help">位置精度の高いモデルに枠の配置を任せ、他のモデルには各枠のクラス判定だけを任せます。最良のモデルに必要なクラスがなく、クラスを知っているモデルの位置精度が低い場合に最適です。</system:String>
+    <system:String x:Key="Settings_ClassTransfer_Roles">モデルの役割</system:String>
+    <system:String x:Key="Settings_ModelRole_Detector">検出（枠を配置）</system:String>
+    <system:String x:Key="Settings_ModelRole_Classifier">分類（クラスを投票）</system:String>
+    <system:String x:Key="Settings_ClassTransfer_NeedDetector">検出モデルを少なくとも1つ選択してください。そうしないと保持する枠がありません。</system:String>
+    <system:String x:Key="Settings_ClassTransfer_VoteIoU">投票の重なりしきい値 (IoU)</system:String>
+    <system:String x:Key="Settings_ClassTransfer_KeepUnvoted">どの分類モデルも認識しなかった枠を残す</system:String>
+    <system:String x:Key="Settings_ClassTransfer_KeepUnvoted_Help">オンの場合、分類の投票がない検出枠を残し、許可リストの最初のクラスを付与します。枠を描き直す代わりにクラスを直すだけで済みます。オフの場合、そのような枠は破棄されます。</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamConsistency">体のチームを内側の頭と一致させる</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamConsistency_Help">頭の枠とそれを囲む体の枠でチームが食い違う場合、信頼度の高い方を優先してもう一方を修正します。下のクラスペアが必要です。</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamPairing">チームのペア設定…</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamPairing_Help">各体クラスを同じチームの頭クラスとペアにします（例：警察の体と警察の頭）。</system:String>
+    <system:String x:Key="TeamPairing_Title">チームのペア</system:String>
+    <system:String x:Key="TeamPairing_Subtitle">体クラスを同じチームの頭クラスとペアにします。体と頭の分類の一貫性を保つために使います。</system:String>
+    <system:String x:Key="TeamPairing_Body">体クラス</system:String>
+    <system:String x:Key="TeamPairing_Head">頭クラス</system:String>
+    <system:String x:Key="TeamPairing_AddPair">ペアを追加</system:String>
     <system:String x:Key="Settings_MinConsensus">必要な最小コンセンサス</system:String>
     <system:String x:Key="Settings_ConsensusIoU">コンセンサス IoU しきい値</system:String>
     <system:String x:Key="Settings_EnsembleIoU">最終アンサンブル IoU しきい値</system:String>
@@ -166,7 +191,15 @@
     <system:String x:Key="Main_FilterReview">レビュー</system:String>
     <system:String x:Key="Main_FilterNone">なし</system:String>
     <system:String x:Key="Main_FilterDone">完了</system:String>
+    <system:String x:Key="Main_FilterAiLabels">AI ラベル</system:String>
     <system:String x:Key="Main_FilterByClass">クラスでフィルター</system:String>
+    <system:String x:Key="Main_FilterModeInclude">含む</system:String>
+    <system:String x:Key="Main_FilterModeAll">すべて</system:String>
+    <system:String x:Key="Main_FilterModeOnly">のみ</system:String>
+    <system:String x:Key="Main_FilterModeExclude">除外</system:String>
+    <system:String x:Key="Main_FilterSelectAll">全選択</system:String>
+    <system:String x:Key="Main_FilterClear">全解除</system:String>
+    <system:String x:Key="Main_FilterInvert">反転</system:String>
     <system:String x:Key="Main_StatusReview">レビュー</system:String>
     <system:String x:Key="Main_StatusNoLabel">ラベルなし</system:String>
     <system:String x:Key="Main_StatusVerified">確認済み</system:String>
@@ -192,6 +225,12 @@
     <system:String x:Key="Main_ConfirmClear">クリアの確認</system:String>
     <system:String x:Key="Main_Error">エラー</system:String>
     <system:String x:Key="Main_Information">情報</system:String>
+    <system:String x:Key="Main_OpenImageLocation">画像ファイルの場所を開く</system:String>
+    <system:String x:Key="Main_OpenLabelLocation">ラベルファイルの場所を開く</system:String>
+    <system:String x:Key="Main_DeleteImage">画像を削除</system:String>
+    <system:String x:Key="Main_ConfirmDeleteImage">「{0}」とそのラベルファイルをごみ箱に移動し、プロジェクトから削除しますか？</system:String>
+    <system:String x:Key="Main_NoLabelFileOnDisk">この画像のラベルファイルはまだディスク上に存在しません。先にプロジェクトを保存またはエクスポートしてください。</system:String>
+    <system:String x:Key="Main_DeleteImageFailed">画像はプロジェクトから削除されましたが、一部のファイルを削除できませんでした：&#x0a;&#x0a;{0}</system:String>
 
     <!-- Propagation Dialog -->
     <system:String x:Key="Propagation_Title">ラベル伝播</system:String>
@@ -340,6 +379,8 @@
     <system:String x:Key="Msg_SingleModel">単一モデル</system:String>
     <system:String x:Key="Msg_EnsembleModels">アンサンブル（{0} モデル）</system:String>
     <system:String x:Key="Msg_ProcessImagesPrompt">{1} 検出を使用して {0} 枚の画像を処理しますか？</system:String>
+    <system:String x:Key="Msg_OnlyUnlabeledSummary">未ラベル画像のみ処理し、ラベル済み画像 {0} 枚をスキップします。</system:String>
+    <system:String x:Key="Msg_NoUnlabeledImages">処理できる未ラベル画像はありません。</system:String>
     <system:String x:Key="Msg_ManyModelsWarning">注意: 多数のモデルでの処理にはかなりの時間がかかる場合があります。</system:String>
     <system:String x:Key="Msg_StartDetection">検出を開始</system:String>
     <system:String x:Key="Msg_UsingModels"> {0} モデルを使用</system:String>
@@ -396,15 +437,19 @@
     <system:String x:Key="Msg_ModelAlreadyLoadedTitle">モデルは既に読み込み済み</system:String>
     <system:String x:Key="Msg_GPUInitFailed">GPU の初期化に失敗しました: {0}&#x0a;CPU にフォールバックします。</system:String>
     <system:String x:Key="Msg_GPUWarning">GPU 警告</system:String>
+    <system:String x:Key="Msg_DirectMLUnsupported">この GPU または現在のドライバーは DirectML をサポートしていません。</system:String>
     <system:String x:Key="Msg_ModelInitFailed">モデルの初期化に失敗しました: {0}</system:String>
     <system:String x:Key="Msg_UnsupportedModel">YOLO モデル形式を検出できないか、サポートされていないモデルタイプです。&#x0a;&#x0a;サポートされている形式:&#x0a;- YOLOv5: [batch, detections, 5+classes]&#x0a;- YOLOv8: [batch, 4+classes, detections]&#x0a;&#x0a;注意: セグメンテーションモデルはサポートされていません。</system:String>
     <system:String x:Key="Msg_UnsupportedModelTitle">サポートされていないモデル</system:String>
     <system:String x:Key="Msg_ModelLoadedSuccess">モデル '{0}' が正常に読み込まれました。&#x0a;形式: {1}&#x0a;クラス: {2}&#x0a;検出: {3}&#x0a;入力サイズ: {4}x{4}&#x0a;合計モデル: {5}</system:String>
     <system:String x:Key="Msg_ModelLoaded">モデルが読み込まれました</system:String>
     <system:String x:Key="Msg_ErrorLoadingModel">モデルの読み込み中にエラーが発生しました: {0}</system:String>
+    <system:String x:Key="Msg_ReloadingModelsForDevice">選択したデバイス用に AI モデルを再読み込みしています...</system:String>
     <system:String x:Key="Msg_YouTube_NoCompatibleStream">{0} の互換性のあるビデオストリームが見つかりません</system:String>
     <system:String x:Key="Msg_YouTube_DownloadError">ダウンロードエラー</system:String>
     <system:String x:Key="Msg_AutoLabelComplete">自動ラベリングが完了しました{0}。&#x0a;検出総数: {1}</system:String>
+    <system:String x:Key="Msg_AutoLabelScopeComplete">処理: {0} 枚、ラベル済みのためスキップ: {1} 枚。</system:String>
+    <system:String x:Key="Msg_AutoLabelFailedImages">失敗または見つからなかった画像: {0} 枚。</system:String>
 
     <!-- Status Bar -->
     <system:String x:Key="Status_NoProject">プロジェクトなし</system:String>
@@ -423,10 +468,10 @@
 
     <!-- Mapping Dialog -->
     <system:String x:Key="Mapping_Title">モデルクラスマッピングの設定</system:String>
-    <system:String x:Key="Mapping_Description">モデルの各クラスに対応するプロジェクトクラスを選択してください</system:String>
+    <system:String x:Key="Mapping_Description">モデルの各クラスが対応できるプロジェクトクラスをすべてチェックしてください</system:String>
     <system:String x:Key="Mapping_LoadClassFile">クラスファイルを読み込む</system:String>
     <system:String x:Key="Mapping_ModelID">モデル ID: {0}</system:String>
-    <system:String x:Key="Mapping_InfoFormat">モデル: {0}&#x0a;クラス数: {1}&#x0a;プロジェクトクラス数: {2}&#x0a;ヒント: 'nan (検出しない)' を選択すると、このクラスの検出をスキップできます</system:String>
+    <system:String x:Key="Mapping_InfoFormat">モデル: {0}&#x0a;クラス数: {1}&#x0a;プロジェクトクラス数: {2}&#x0a;ヒント: 'nan (未検出)' をチェックするとそのクラスをスキップします。複数チェックすると、その検出が分類されうるクラスの集合を宣言します。</system:String>
     <system:String x:Key="Mapping_WarningGeneric">⚠ 警告: クラスファイルが見つかりません。汎用クラス名を表示しています。&#x0a;右上の「クラスファイルを読み込む」ボタンをクリックして、正しいクラス名を手動で読み込んでください。</system:String>
     <system:String x:Key="Mapping_SelectClassFile">クラスファイルを選択</system:String>
     <system:String x:Key="Mapping_ClassFileEmpty">クラスファイルが空であるか、形式が正しくありません。</system:String>
@@ -453,5 +498,134 @@
     <system:String x:Key="ModelManager_ClearModels">モデルをクリア</system:String>
     <system:String x:Key="ModelManager_NeedProjectClasses">まずプロジェクトでクラスを作成してから、モデルクラスマッピングを設定してください。&#x0a;&#x0a;右側パネルの「Classes」領域でクラスを追加できます。</system:String>
     <system:String x:Key="ModelManager_NeedProjectClassesTitle">プロジェクトクラスが必要</system:String>
+
+    <!-- Duplicate image review -->
+    <system:String x:Key="Main_TabAnnotate">アノテーション</system:String>
+    <system:String x:Key="Main_TabDuplicates">重複画像</system:String>
+    <system:String x:Key="Duplicate_Title">重複画像</system:String>
+    <system:String x:Key="Duplicate_Scan">再スキャン</system:String>
+    <system:String x:Key="Duplicate_NoScan">現在のプロジェクトから重複画像を検索します。</system:String>
+    <system:String x:Key="Duplicate_Scanning">画像をスキャンしています...</system:String>
+    <system:String x:Key="Duplicate_NoImages">スキャンするには画像を2枚以上追加してください。</system:String>
+    <system:String x:Key="Duplicate_NoMatches">重複画像は見つかりませんでした。</system:String>
+    <system:String x:Key="Duplicate_ScanFailed">重複画像をスキャンできませんでした。</system:String>
+    <system:String x:Key="Duplicate_Resolved">すべての重複画像を処理しました。</system:String>
+    <system:String x:Key="Duplicate_Summary">残り {0} グループ、余分な画像 {1} 枚</system:String>
+    <system:String x:Key="Duplicate_GroupProgress">グループ {0} / {1}</system:String>
+    <system:String x:Key="Duplicate_LabelCount">ラベル {0} 件</system:String>
+    <system:String x:Key="Duplicate_KeepLeft">左の画像とラベルを保持</system:String>
+    <system:String x:Key="Duplicate_KeepRight">右の画像とラベルを保持</system:String>
+    <system:String x:Key="Duplicate_RemoveFailed">プロジェクトから重複画像を削除できませんでした。</system:String>
+    <system:String x:Key="Duplicate_AllGroups">すべての重複グループ</system:String>
+    <system:String x:Key="Duplicate_PreviousGroup">前のグループ</system:String>
+    <system:String x:Key="Duplicate_NextGroup">次のグループ</system:String>
+    <system:String x:Key="Duplicate_GroupTitle">グループ {0}</system:String>
+    <system:String x:Key="Duplicate_ExtraCount">余分な画像 {0} 枚</system:String>
+
+    <!-- Center ROI crop -->
+    <system:String x:Key="Main_TabRoiCrop">中央 ROI</system:String>
+    <system:String x:Key="Roi_Title">中央 ROI クロップ</system:String>
+    <system:String x:Key="Roi_OutputSize">出力ピクセルサイズ</system:String>
+    <system:String x:Key="Roi_Scope">適用範囲</system:String>
+    <system:String x:Key="Roi_AllImages">プロジェクト内の全画像</system:String>
+    <system:String x:Key="Roi_CurrentImage">現在の画像</system:String>
+    <system:String x:Key="Roi_OutputFolder">出力フォルダー</system:String>
+    <system:String x:Key="Roi_Apply">640 x 640 クロップを作成</system:String>
+    <system:String x:Key="Roi_RemoveSmall">640 px 未満の画像を除外</system:String>
+    <system:String x:Key="Roi_RemoveSmallConfirm">幅または高さが 640 ピクセル未満の画像が {0} 枚見つかりました。画像とラベルをこのプロジェクトから除外しますか？元のファイルはディスクに残ります。</system:String>
+    <system:String x:Key="Roi_RemoveSmallComplete">サイズ不足の画像 {0} 枚とそのラベルをプロジェクトから除外しました。</system:String>
+    <system:String x:Key="Roi_NoSmallImages">幅または高さが 640 ピクセル未満の画像はありません。</system:String>
+    <system:String x:Key="Roi_Preview">中央 ROI プレビュー</system:String>
+    <system:String x:Key="Roi_NoPreview">プレビューできる画像がありません</system:String>
+    <system:String x:Key="Roi_InvalidSize">ROI サイズが無効です。</system:String>
+    <system:String x:Key="Roi_Confirm">中央の {0} x {1} ピクセルをクロップしてラベルを更新しますか？</system:String>
+    <system:String x:Key="Roi_Processing">画像をクロップしています...</system:String>
+    <system:String x:Key="Roi_Progress">{0} / {1} - {2}</system:String>
+    <system:String x:Key="Roi_Complete">画像 {0} 枚をクロップ、ラベル {1} 件を削除、{2} 件をクリップ、画像 {3} 枚をスキップしました。</system:String>
+    <system:String x:Key="Roi_Cancelled">ROI クロップをキャンセルしました。</system:String>
+    <system:String x:Key="Roi_ProjectRequired">画像をクロップする前にプロジェクトを開くか作成してください。</system:String>
+    <system:String x:Key="Roi_Failed">ROI クロップに失敗しました。</system:String>
+    <system:String x:Key="Roi_NoImages">クロップできる画像がありません。</system:String>
+
+    <system:String x:Key="Menu_AILabelCurrentImage">現在の画像を AI ラベル付け</system:String>
+    <system:String x:Key="AIClassConfidence_Title">クラス別信頼度</system:String>
+    <system:String x:Key="AIClassConfidence_Subtitle">AI ラベル付けで使用するクラス別の最低信頼度を設定します。</system:String>
+    <system:String x:Key="AIClassConfidence_Class">クラス</system:String>
+    <system:String x:Key="AIClassConfidence_Threshold">最低信頼度</system:String>
+    <system:String x:Key="AIClassConfidence_Reset">グローバル値に戻す</system:String>
+    <system:String x:Key="AIClassConfidence_Running">現在の画像で AI 検出を実行しています...</system:String>
+    <system:String x:Key="AIClassConfidence_Complete">現在の画像のラベル付けが完了しました。{0} 件を検出しました。</system:String>
+    <system:String x:Key="AIClassConfidence_Failed">現在の画像のラベル付けに失敗しました: {0}</system:String>
+    <system:String x:Key="Duplicate_AutoResolvedSummary">自動解決: {0}</system:String>
+    <system:String x:Key="Duplicate_AutoResolvedOnly">画像とラベルが同一の重複画像 {0} 枚をプロジェクトから自動的に削除しました。</system:String>
+    <system:String x:Key="Duplicate_OpenEdit">確認 / 編集</system:String>
+    <system:String x:Key="Duplicate_OpenEditFailed">編集する画像を開けませんでした。</system:String>
+
+
+    <!-- Training Dataset Export -->
+    <system:String x:Key="Menu_ExportTrainingDataset">学習データセットをエクスポート...</system:String>
+    <system:String x:Key="TrainingExport_Title">学習データセットのエクスポート</system:String>
+    <system:String x:Key="TrainingExport_Subtitle">画像とラベルを YOLO の train/val/test フォルダー構成にコピーし、学習に使える data.yaml を生成します。</system:String>
+    <system:String x:Key="TrainingExport_OutputFolder">出力フォルダー</system:String>
+    <system:String x:Key="TrainingExport_Browse">参照...</system:String>
+    <system:String x:Key="TrainingExport_SplitRatios">分割比率 (%)</system:String>
+    <system:String x:Key="TrainingExport_Train">学習</system:String>
+    <system:String x:Key="TrainingExport_Val">検証</system:String>
+    <system:String x:Key="TrainingExport_Test">テスト</system:String>
+    <system:String x:Key="TrainingExport_SumFormat">合計: {0}%(100% にしてください)</system:String>
+    <system:String x:Key="TrainingExport_Seed">乱数シード</system:String>
+    <system:String x:Key="TrainingExport_IncludeBackground">ラベルなし画像を背景サンプルとして含める</system:String>
+    <system:String x:Key="TrainingExport_VerifiedOnly">確認済みの画像のみエクスポート</system:String>
+    <system:String x:Key="Msg_ExportingTrainingDataset">学習データセットをエクスポート中...</system:String>
+    <system:String x:Key="Msg_TrainingDatasetExported">学習データセットをエクスポートしました。&#10;学習: {0}   検証: {1}   テスト: {2}&#10;スキップ: {3}</system:String>
+    <system:String x:Key="Msg_NoImagesToExport">エクスポートする画像がありません。</system:String>
+    <system:String x:Key="Msg_NoClassesToExport">学習データセットをエクスポートする前にクラスを 1 つ以上定義してください。</system:String>
+
+    <!-- Dataset Statistics -->
+    <system:String x:Key="Main_TabStats">データセット統計</system:String>
+    <system:String x:Key="Stats_Title">データセット統計</system:String>
+    <system:String x:Key="Stats_Subtitle">現在のプロジェクトのクラスバランス、ボックスサイズ、確認状況。</system:String>
+    <system:String x:Key="Stats_Refresh">更新</system:String>
+    <system:String x:Key="Stats_Empty">画像が読み込まれていません。</system:String>
+    <system:String x:Key="Stats_TotalImages">総画像数</system:String>
+    <system:String x:Key="Stats_LabeledImages">ラベル付き</system:String>
+    <system:String x:Key="Stats_UnlabeledImages">ラベルなし</system:String>
+    <system:String x:Key="Stats_TotalBoxes">総ボックス数</system:String>
+    <system:String x:Key="Stats_AvgBoxes">画像あたり平均ボックス数</system:String>
+    <system:String x:Key="Stats_ClassBalance">クラスバランス</system:String>
+    <system:String x:Key="Stats_SizeDistribution">ボックスサイズ分布</system:String>
+    <system:String x:Key="Stats_SizeSmall">小 (&lt;1% 面積)</system:String>
+    <system:String x:Key="Stats_SizeMedium">中 (1-5%)</system:String>
+    <system:String x:Key="Stats_SizeLarge">大 (&gt;5%)</system:String>
+    <system:String x:Key="Stats_ReviewStatus">確認状況</system:String>
+    <system:String x:Key="Stats_Verified">確認済み</system:String>
+    <system:String x:Key="Stats_NeedsReview">要確認</system:String>
+    <system:String x:Key="Stats_Suggested">提案</system:String>
+    <system:String x:Key="Stats_NoLabelStatus">ラベルなし</system:String>
+
+    <!-- Data Augmentation -->
+    <system:String x:Key="Menu_DataAugmentation">データ拡張...</system:String>
+    <system:String x:Key="Aug_Title">データ拡張</system:String>
+    <system:String x:Key="Aug_Subtitle">学習用に拡張した画像とラベルのコピーを生成します。反転ではボックス座標を再マッピングし、他の効果はピクセルのみ変更します。</system:String>
+    <system:String x:Key="Aug_OutputFolder">出力フォルダー</system:String>
+    <system:String x:Key="Aug_Browse">参照...</system:String>
+    <system:String x:Key="Aug_Scope">範囲</system:String>
+    <system:String x:Key="Aug_ScopeAll">すべての画像</system:String>
+    <system:String x:Key="Aug_ScopeCurrent">現在の画像</system:String>
+    <system:String x:Key="Aug_Variants">画像あたりのバリエーション数</system:String>
+    <system:String x:Key="Aug_Seed">乱数シード</system:String>
+    <system:String x:Key="Aug_Augmentations">拡張</system:String>
+    <system:String x:Key="Aug_Flip">左右反転</system:String>
+    <system:String x:Key="Aug_Brightness">明るさ / コントラスト</system:String>
+    <system:String x:Key="Aug_Hsv">色相 / 彩度</system:String>
+    <system:String x:Key="Aug_Noise">ガウスノイズ</system:String>
+    <system:String x:Key="Aug_Blur">ぼかし</system:String>
+    <system:String x:Key="Aug_OutputOptions">出力オプション</system:String>
+    <system:String x:Key="Aug_IncludeOriginals">元の画像を含める</system:String>
+    <system:String x:Key="Aug_LabeledOnly">ラベル付き画像のみ拡張</system:String>
+    <system:String x:Key="Aug_NeedAugmentation">少なくとも 1 つの拡張を有効にしてください。</system:String>
+    <system:String x:Key="Msg_Augmenting">画像を拡張中...</system:String>
+    <system:String x:Key="Msg_AugmentationComplete">拡張が完了しました。&#10;元画像: {0}&#10;生成画像: {1}&#10;スキップ: {2}</system:String>
+    <system:String x:Key="Msg_AugmentationFailed">拡張に失敗しました: {0}</system:String>
 
 </ResourceDictionary>

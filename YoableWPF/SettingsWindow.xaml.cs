@@ -5,13 +5,41 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using YoableWPF.Managers;
+using YoableWPF.Models;
 using System.Collections.Generic;
 
 namespace YoableWPF
 {
+    /// <summary>
+    /// Binds a loaded model's ClassTransfer role to a combo box. Writes straight through to the
+    /// model so the choice survives without extra plumbing; the project saves it from there.
+    /// </summary>
+    public class ModelRoleItem
+    {
+        private readonly YoloModel model;
+
+        public ModelRoleItem(YoloModel model)
+        {
+            this.model = model;
+        }
+
+        public string ModelName => model.Name;
+
+        public ModelRole Role => model.Role;
+
+        public int RoleIndex
+        {
+            get => (int)model.Role;
+            set => model.Role = value == (int)ModelRole.Classifier
+                ? ModelRole.Classifier
+                : ModelRole.Detector;
+        }
+    }
+
     public partial class SettingsWindow : Window
     {
         private YoloAI yoloAI;
+        private List<ModelRoleItem> modelRoleItems = new List<ModelRoleItem>();
 
         public SettingsWindow()
         {
@@ -115,7 +143,144 @@ namespace YoableWPF
         public SettingsWindow(YoloAI ai) : this()
         {
             yoloAI = ai;
+            LoadModelRoles();
             UpdateEnsembleControls();
+            UpdateModeDependentSettings();
+        }
+
+        private void LoadModelRoles()
+        {
+            modelRoleItems = (yoloAI?.GetLoadedModels() ?? new List<YoloModel>())
+                .Select(model => new ModelRoleItem(model))
+                .ToList();
+
+            if (ModelRoleList != null)
+                ModelRoleList.ItemsSource = modelRoleItems;
+        }
+
+        /// <summary>
+        /// Per-class thresholds are project-scoped (they key off project class IDs), so the
+        /// caller supplies the current project's classes and saved thresholds. When no project
+        /// with classes is open the editor is unavailable.
+        /// </summary>
+        public SettingsWindow(
+            YoloAI ai,
+            IEnumerable<LabelClass> classes,
+            IReadOnlyDictionary<int, float> savedThresholds,
+            IEnumerable<ClassTeamPair> savedTeamPairs = null) : this(ai)
+        {
+            projectClasses = classes?.ToList() ?? new List<LabelClass>();
+            ClassConfidenceThresholds = savedThresholds == null
+                ? new Dictionary<int, float>()
+                : new Dictionary<int, float>(savedThresholds);
+            ClassTeamPairs = savedTeamPairs == null
+                ? new List<ClassTeamPair>()
+                : savedTeamPairs
+                    .Select(pair => new ClassTeamPair
+                    {
+                        BodyClassId = pair.BodyClassId,
+                        HeadClassId = pair.HeadClassId
+                    })
+                    .ToList();
+
+            UpdatePerClassConfidenceControls();
+            UpdateTeamPairingControls();
+        }
+
+        /// <summary>
+        /// Team pairings as edited in this window. Only meaningful once the dialog returns true.
+        /// </summary>
+        public List<ClassTeamPair> ClassTeamPairs { get; private set; } = new List<ClassTeamPair>();
+
+        /// <summary>
+        /// True once the user opened the pairing editor and confirmed a change, so the caller
+        /// can avoid marking the project dirty on an untouched settings visit.
+        /// </summary>
+        public bool ClassTeamPairsChanged { get; private set; }
+
+        private void UpdateTeamPairingControls()
+        {
+            if (TeamPairingButton == null)
+                return;
+
+            bool hasClasses = projectClasses.Count > 0;
+            TeamPairingButton.IsEnabled = hasClasses;
+
+            if (!hasClasses && TeamPairingHelpText != null)
+            {
+                TeamPairingHelpText.Text =
+                    LanguageManager.Instance.GetString("Settings_PerClassConfidence_NoClasses") ??
+                    "Open a project with defined classes to configure this.";
+            }
+        }
+
+        private void TeamPairing_Click(object sender, RoutedEventArgs e)
+        {
+            if (projectClasses.Count == 0)
+                return;
+
+            var dialog = new TeamPairingDialog(projectClasses, ClassTeamPairs)
+            {
+                Owner = this
+            };
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+            ClassTeamPairs = dialog.Pairs;
+            ClassTeamPairsChanged = true;
+        }
+
+        private List<LabelClass> projectClasses = new List<LabelClass>();
+
+        /// <summary>
+        /// Thresholds as edited in this window. Only meaningful once the dialog returns true.
+        /// </summary>
+        public Dictionary<int, float> ClassConfidenceThresholds { get; private set; } =
+            new Dictionary<int, float>();
+
+        /// <summary>
+        /// True when the user actually opened the editor and confirmed a change, so the caller
+        /// can avoid marking the project dirty on an untouched settings visit.
+        /// </summary>
+        public bool ClassConfidenceThresholdsChanged { get; private set; }
+
+        private void UpdatePerClassConfidenceControls()
+        {
+            if (PerClassConfidenceButton == null)
+                return;
+
+            bool hasClasses = projectClasses.Count > 0;
+            PerClassConfidenceButton.IsEnabled = hasClasses;
+
+            if (!hasClasses && PerClassConfidenceHelpText != null)
+            {
+                PerClassConfidenceHelpText.Text =
+                    LanguageManager.Instance.GetString("Settings_PerClassConfidence_NoClasses") ??
+                    "Open a project with defined classes to set per-class thresholds.";
+            }
+        }
+
+        private void PerClassConfidence_Click(object sender, RoutedEventArgs e)
+        {
+            if (projectClasses.Count == 0)
+                return;
+
+            // Use the slider's live value so the "reset to global" action reflects an
+            // unsaved change to the global threshold made in this same visit.
+            var dialog = new ClassConfidenceDialog(
+                projectClasses,
+                ClassConfidenceThresholds,
+                (float)(ConfidenceSlider.Value / 100))
+            {
+                Owner = this
+            };
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+            ClassConfidenceThresholds = dialog.ConfidenceThresholds;
+            ClassConfidenceThresholdsChanged = true;
         }
 
         private void Tab_Changed(object sender, RoutedEventArgs e)
@@ -199,6 +364,8 @@ namespace YoableWPF
             // Load AI Settings
             ProcessingDeviceComboBox.SelectedIndex = Properties.Settings.Default.UseGPU ? 1 : 0;
             ConfidenceSlider.Value = Properties.Settings.Default.AIConfidence * 100;
+            AutoLabelOnlyUnlabeledCheckBox.IsChecked = Properties.Settings.Default.AIAutoLabelOnlyUnlabeled;
+            ReplaceExistingLabelsCheckBox.IsChecked = Properties.Settings.Default.AIReplaceExistingLabels;
             FormHexAccent.Text = Properties.Settings.Default.FormAccent;
 
             // Load Ensemble Settings
@@ -207,6 +374,9 @@ namespace YoableWPF
             ConsensusIoUSlider.Value = Properties.Settings.Default.ConsensusIoUThreshold;
             EnsembleIoUSlider.Value = Properties.Settings.Default.EnsembleIoUThreshold;
             UseWeightedAverageCheckBox.IsChecked = Properties.Settings.Default.UseWeightedAverage;
+            ClassTransferIoUSlider.Value = Properties.Settings.Default.ClassTransferIoUThreshold;
+            ClassTransferKeepUnvotedCheckBox.IsChecked = Properties.Settings.Default.ClassTransferKeepUnvoted;
+            ClassTransferTeamConsistencyCheckBox.IsChecked = Properties.Settings.Default.ClassTransferTeamConsistency;
 
             // Load Propagation Settings
             EnablePropagationCheckBox.IsChecked = Properties.Settings.Default.EnablePropagation;
@@ -356,6 +526,10 @@ namespace YoableWPF
             // Save AI Settings
             Properties.Settings.Default.UseGPU = ProcessingDeviceComboBox.SelectedIndex == 1;
             Properties.Settings.Default.AIConfidence = (float)(ConfidenceSlider.Value / 100);
+            Properties.Settings.Default.AIAutoLabelOnlyUnlabeled =
+                AutoLabelOnlyUnlabeledCheckBox.IsChecked ?? false;
+            Properties.Settings.Default.AIReplaceExistingLabels =
+                ReplaceExistingLabelsCheckBox.IsChecked ?? true;
 
             // Save Ensemble Settings
             Properties.Settings.Default.EnsembleDetectionMode = DetectionModeComboBox.SelectedIndex;
@@ -363,6 +537,11 @@ namespace YoableWPF
             Properties.Settings.Default.ConsensusIoUThreshold = (float)ConsensusIoUSlider.Value;
             Properties.Settings.Default.EnsembleIoUThreshold = (float)EnsembleIoUSlider.Value;
             Properties.Settings.Default.UseWeightedAverage = UseWeightedAverageCheckBox.IsChecked ?? true;
+            Properties.Settings.Default.ClassTransferIoUThreshold = (float)ClassTransferIoUSlider.Value;
+            Properties.Settings.Default.ClassTransferKeepUnvoted =
+                ClassTransferKeepUnvotedCheckBox.IsChecked ?? true;
+            Properties.Settings.Default.ClassTransferTeamConsistency =
+                ClassTransferTeamConsistencyCheckBox.IsChecked ?? true;
 
             // Save Propagation Settings
             Properties.Settings.Default.EnablePropagation = EnablePropagationCheckBox.IsChecked ?? true;
@@ -460,8 +639,33 @@ namespace YoableWPF
         {
             // Show/hide relevant settings based on mode
             bool isVotingMode = DetectionModeComboBox.SelectedIndex == 0;
+            bool isClassTransferMode =
+                DetectionModeComboBox.SelectedIndex == (int)EnsembleDetectionMode.ClassTransfer;
+
             MinConsensusSlider.IsEnabled = isVotingMode;
             ConsensusIoUSlider.IsEnabled = isVotingMode;
+
+            if (ClassTransferPanel == null)
+                return;
+
+            ClassTransferPanel.Visibility = isClassTransferMode
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+            if (isClassTransferMode)
+                UpdateModelRoleWarning();
+        }
+
+        private void UpdateModelRoleWarning()
+        {
+            if (ModelRoleWarningText == null)
+                return;
+
+            // Without a detector there is nothing to take boxes from, so the mode cannot work.
+            bool hasDetector = modelRoleItems.Any(item => item.Role == ModelRole.Detector);
+            ModelRoleWarningText.Visibility = modelRoleItems.Count > 0 && !hasDetector
+                ? Visibility.Visible
+                : Visibility.Collapsed;
         }
 
         protected override void OnClosed(EventArgs e)

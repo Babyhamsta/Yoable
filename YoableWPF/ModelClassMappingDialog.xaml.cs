@@ -9,14 +9,53 @@ using YoableWPF.Managers;
 
 namespace YoableWPF
 {
+    /// <summary>
+    /// One project class a model class may be mapped to, with its checkbox state.
+    /// </summary>
+    public class ProjectClassOption : INotifyPropertyChanged
+    {
+        private bool _isSelected;
+
+        public LabelClass ProjectClass { get; set; }
+        public int ClassId => ProjectClass.ClassId;
+        public string DisplayText => ProjectClass.DisplayText;
+        public object ColorBrush => ProjectClass.ColorBrush;
+
+        public bool IsSelected
+        {
+            get => _isSelected;
+            set
+            {
+                if (_isSelected == value)
+                    return;
+
+                _isSelected = value;
+                OnPropertyChanged();
+                SelectionChanged?.Invoke(this, EventArgs.Empty);
+            }
+        }
+
+        public void NotifyDisplayTextChanged() => OnPropertyChanged(nameof(DisplayText));
+
+        public event EventHandler SelectionChanged;
+        public event PropertyChangedEventHandler PropertyChanged;
+
+        protected virtual void OnPropertyChanged([CallerMemberName] string propertyName = null)
+        {
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        }
+    }
+
     public class ClassMappingItem : INotifyPropertyChanged
     {
-        private LabelClass _selectedProjectClass;
+        // Guards the mutual exclusion between "not detected" and the real classes so that
+        // clearing sibling checkboxes does not recurse back into this handler.
+        private bool isSyncingSelection;
 
         public int ModelClassId { get; set; }
         public string ModelClassName { get; set; }
-        public List<LabelClass> ProjectClasses { get; set; }
-        
+        public List<ProjectClassOption> ProjectClasses { get; set; }
+
         public string ModelIdDisplayText
         {
             get
@@ -24,17 +63,86 @@ namespace YoableWPF
                 return string.Format(LanguageManager.Instance.GetString("Mapping_ModelID"), ModelClassId);
             }
         }
-        
-        public LabelClass SelectedProjectClass
+
+        /// <summary>
+        /// The project classes this model class may be reported as. Empty when the row is set to
+        /// "not detected", which is also how an untouched row reads.
+        /// </summary>
+        public List<int> SelectedClassIds => ProjectClasses
+            .Where(option => option.IsSelected && option.ClassId != NotDetectedClassId)
+            .Select(option => option.ClassId)
+            .ToList();
+
+        public const int NotDetectedClassId = -1;
+
+        public string SelectionSummary
         {
-            get => _selectedProjectClass;
-            set
+            get
             {
-                if (_selectedProjectClass != value)
+                var selected = ProjectClasses
+                    .Where(option => option.IsSelected && option.ClassId != NotDetectedClassId)
+                    .ToList();
+
+                if (selected.Count == 0)
+                    return LanguageManager.Instance.GetString("Mapping_NotDetected") ?? "nan (not detected)";
+
+                return string.Join(", ", selected.Select(option => option.ProjectClass.Name));
+            }
+        }
+
+        public void AttachSelectionHandlers()
+        {
+            foreach (ProjectClassOption option in ProjectClasses)
+                option.SelectionChanged += Option_SelectionChanged;
+        }
+
+        private void Option_SelectionChanged(object sender, EventArgs e)
+        {
+            if (!isSyncingSelection && sender is ProjectClassOption changed && changed.IsSelected)
+            {
+                isSyncingSelection = true;
+                try
                 {
-                    _selectedProjectClass = value;
-                    OnPropertyChanged();
+                    // "Not detected" and a concrete class list are mutually exclusive.
+                    bool notDetectedPicked = changed.ClassId == NotDetectedClassId;
+                    foreach (ProjectClassOption option in ProjectClasses)
+                    {
+                        if (ReferenceEquals(option, changed))
+                            continue;
+
+                        bool isNotDetected = option.ClassId == NotDetectedClassId;
+                        if (notDetectedPicked || isNotDetected)
+                            option.IsSelected = false;
+                    }
                 }
+                finally
+                {
+                    isSyncingSelection = false;
+                }
+            }
+
+            OnPropertyChanged(nameof(SelectionSummary));
+        }
+
+        /// <summary>
+        /// Ticks "not detected" when no real class is selected, so a row always shows an
+        /// explicit state rather than looking merely untouched.
+        /// </summary>
+        public void SyncNotDetectedOption()
+        {
+            ProjectClassOption notDetected =
+                ProjectClasses.FirstOrDefault(option => option.ClassId == NotDetectedClassId);
+            if (notDetected == null)
+                return;
+
+            isSyncingSelection = true;
+            try
+            {
+                notDetected.IsSelected = SelectedClassIds.Count == 0;
+            }
+            finally
+            {
+                isSyncingSelection = false;
             }
         }
 
@@ -59,7 +167,7 @@ namespace YoableWPF
         private List<ClassMappingItem> mappingItems;
         private List<string> storedModelClassNames;
 
-        public Dictionary<int, int> ClassMapping { get; private set; }
+        public Dictionary<int, List<int>> ClassMapping { get; private set; }
 
         public ModelClassMappingDialog(YoloModel model, List<LabelClass> projectClasses)
         {
@@ -67,7 +175,7 @@ namespace YoableWPF
             this.model = model;
             this.projectClasses = projectClasses ?? new List<LabelClass>();
             mappingItems = new List<ClassMappingItem>();
-            ClassMapping = new Dictionary<int, int>();
+            ClassMapping = new Dictionary<int, List<int>>();
 
             // Subscribe to language changes
             LanguageManager.Instance.LanguageChanged += LanguageManager_LanguageChanged;
@@ -84,13 +192,12 @@ namespace YoableWPF
                 // Update nan option name in all mapping items
                 foreach (var item in mappingItems)
                 {
-                    if (item.ProjectClasses != null && item.ProjectClasses.Any())
+                    var nanOption = item.ProjectClasses?
+                        .FirstOrDefault(option => option.ClassId == ClassMappingItem.NotDetectedClassId);
+                    if (nanOption != null)
                     {
-                        var nanOption = item.ProjectClasses.FirstOrDefault(c => c.ClassId == -1);
-                        if (nanOption != null)
-                        {
-                            nanOption.Name = LanguageManager.Instance.GetString("Mapping_NotDetected");
-                        }
+                        nanOption.ProjectClass.Name = LanguageManager.Instance.GetString("Mapping_NotDetected");
+                        nanOption.NotifyDisplayTextChanged();
                     }
                     // Trigger property change for ModelIdDisplayText
                     item.NotifyModelIdDisplayTextChanged();
@@ -159,62 +266,50 @@ namespace YoableWPF
             }
 
             // Create "nan" option (ClassId = -1 means skip detection)
-            var nanOption = new LabelClass(LanguageManager.Instance.GetString("Mapping_NotDetected"), "#808080", -1);
+            var nanOption = new LabelClass(LanguageManager.Instance.GetString("Mapping_NotDetected"), "#808080", ClassMappingItem.NotDetectedClassId);
 
             // Create mapping items
             for (int i = 0; i < actualNumClasses; i++)
             {
                 string className = i < modelClassNames.Count ? modelClassNames[i] : $"class_{i}";
-                
-                // Build project classes list with "nan" option at the beginning
-                var availableClasses = new List<LabelClass> { nanOption };
-                if (projectClasses != null && projectClasses.Any())
-                {
-                    availableClasses.AddRange(projectClasses);
-                }
 
-                // Check if there's an existing mapping
-                LabelClass selectedClass = null;
-                if (model.ClassMapping != null && model.ClassMapping.ContainsKey(i))
+                // "Not detected" leads each row, followed by every project class.
+                var options = new List<ProjectClassOption>
                 {
-                    // Mapping exists - use the mapped class
-                    int mappedProjectClassId = model.ClassMapping[i];
-                    selectedClass = availableClasses.FirstOrDefault(c => c.ClassId == mappedProjectClassId);
-                }
-                else if (model.ClassMapping != null && model.ClassMapping.Count > 0)
+                    new ProjectClassOption { ProjectClass = nanOption }
+                };
+                options.AddRange((projectClasses ?? new List<LabelClass>())
+                    .Select(projectClass => new ProjectClassOption { ProjectClass = projectClass }));
+
+                if (model.ClassMapping != null)
                 {
-                    // Mapping has been configured but this class is not in mapping
-                    // This means it was set to "nan" (not detected)
-                    selectedClass = nanOption;
-                }
-                else if (projectClasses != null && projectClasses.Any())
-                {
-                    // No mapping configured yet - try to find a matching class by name
-                    var matchingClass = projectClasses.FirstOrDefault(c => 
-                        c.Name.Equals(className, System.StringComparison.OrdinalIgnoreCase));
-                    if (matchingClass != null)
+                    // Mapping already configured: tick exactly what it contains. A model class that
+                    // is absent stays unticked, which preserves its "not detected" state.
+                    if (model.ClassMapping.TryGetValue(i, out List<int> mappedClassIds) &&
+                        mappedClassIds != null)
                     {
-                        selectedClass = matchingClass;
-                    }
-                    else
-                    {
-                        // Default to "nan" (not detected) for new mappings
-                        selectedClass = nanOption;
+                        foreach (ProjectClassOption option in options)
+                            option.IsSelected = mappedClassIds.Contains(option.ClassId);
                     }
                 }
                 else
                 {
-                    // No project classes, default to "nan"
-                    selectedClass = nanOption;
+                    // First time through: pre-tick a project class whose name matches the model's.
+                    ProjectClassOption matchingOption = options.FirstOrDefault(option =>
+                        option.ProjectClass.Name.Equals(className, System.StringComparison.OrdinalIgnoreCase));
+                    if (matchingOption != null)
+                        matchingOption.IsSelected = true;
                 }
 
-                mappingItems.Add(new ClassMappingItem
+                var item = new ClassMappingItem
                 {
                     ModelClassId = i,
                     ModelClassName = className,
-                    ProjectClasses = availableClasses,
-                    SelectedProjectClass = selectedClass ?? nanOption
-                });
+                    ProjectClasses = options
+                };
+                item.SyncNotDetectedOption();
+                item.AttachSelectionHandlers();
+                mappingItems.Add(item);
             }
 
             MappingList.ItemsSource = mappingItems;
@@ -228,14 +323,15 @@ namespace YoableWPF
 
         private void OKButton_Click(object sender, RoutedEventArgs e)
         {
-            // Build mapping dictionary
-            // Only add mappings for classes that are not "nan" (ClassId != -1)
+            // Build mapping dictionary. Model classes with nothing ticked are left out entirely,
+            // which is what marks them as "not detected".
             ClassMapping.Clear();
             foreach (var item in mappingItems)
             {
-                if (item.SelectedProjectClass != null && item.SelectedProjectClass.ClassId != -1)
+                List<int> selectedClassIds = item.SelectedClassIds;
+                if (selectedClassIds.Count > 0)
                 {
-                    ClassMapping[item.ModelClassId] = item.SelectedProjectClass.ClassId;
+                    ClassMapping[item.ModelClassId] = selectedClassIds;
                 }
             }
 

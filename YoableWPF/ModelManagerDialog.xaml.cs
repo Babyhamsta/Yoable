@@ -58,14 +58,14 @@ namespace YoableWPF
         private YoloAI yoloAI;
         private ObservableCollection<ModelListItem> modelItems;
         private List<LabelClass> projectClasses;
-        private Dictionary<string, Dictionary<int, int>> savedMappings;
+        private Dictionary<string, Dictionary<int, List<int>>> savedMappings;
 
-        public ModelManagerDialog(YoloAI ai, List<LabelClass> projectClasses = null, Dictionary<string, Dictionary<int, int>> savedMappings = null)
+        public ModelManagerDialog(YoloAI ai, List<LabelClass> projectClasses = null, Dictionary<string, Dictionary<int, List<int>>> savedMappings = null)
         {
             InitializeComponent();
             yoloAI = ai;
             this.projectClasses = projectClasses ?? new List<LabelClass>();
-            this.savedMappings = savedMappings ?? new Dictionary<string, Dictionary<int, int>>();
+            this.savedMappings = savedMappings ?? new Dictionary<string, Dictionary<int, List<int>>>();
             modelItems = new ObservableCollection<ModelListItem>();
             ModelListBox.ItemsSource = modelItems;
 
@@ -148,7 +148,7 @@ namespace YoableWPF
                         // Restore saved mapping if available
                         if (savedMappings != null && savedMappings.TryGetValue(file, out var savedMapping))
                         {
-                            loadedModel.ClassMapping = new Dictionary<int, int>(savedMapping);
+                            loadedModel.ClassMapping = YoloAI.CloneClassMapping(savedMapping);
                         }
 
                         // Open class mapping dialog if project classes exist

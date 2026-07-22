@@ -15,6 +15,21 @@ namespace YoableWPF
         Suggested = 3
     }
 
+    /// <summary>
+    /// How the image-list class filter matches an image against the selected classes.
+    /// Include: image has at least one of the selected classes (OR).
+    /// All: image contains every selected class at least once (AND).
+    /// Only: every label in the image belongs to the selected set (no other class present).
+    /// Exclude: image contains none of the selected classes.
+    /// </summary>
+    public enum ClassFilterMode
+    {
+        Include = 0,
+        All = 2,
+        Only = 1,
+        Exclude = 3
+    }
+
     public class ImageListItem : INotifyPropertyChanged
     {
         private ImageStatus _status;

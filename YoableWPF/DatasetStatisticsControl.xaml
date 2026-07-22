@@ -1,0 +1,175 @@
+<UserControl x:Class="YoableWPF.DatasetStatisticsControl"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:ui="http://schemas.modernwpf.com/2019">
+    <UserControl.Resources>
+        <Style x:Key="StatCard" TargetType="Border">
+            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Padding" Value="16,12"/>
+            <Setter Property="MinWidth" Value="150"/>
+            <Setter Property="Margin" Value="0,0,12,12"/>
+        </Style>
+        <Style x:Key="StatNumber" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="26"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+        </Style>
+        <Style x:Key="StatCaption" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="Margin" Value="0,2,0,0"/>
+            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+        </Style>
+        <Style x:Key="SectionHeader" TargetType="TextBlock">
+            <Setter Property="FontSize" Value="15"/>
+            <Setter Property="FontWeight" Value="SemiBold"/>
+            <Setter Property="Margin" Value="0,10,0,10"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <Border Grid.Row="0"
+                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
+                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+                BorderThickness="0,0,0,1"
+                Padding="20,14">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0">
+                    <TextBlock Text="{DynamicResource Stats_Title}" FontSize="18" FontWeight="SemiBold"/>
+                    <TextBlock Text="{DynamicResource Stats_Subtitle}"
+                               Margin="0,4,0,0" FontSize="12"
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
+                               TextWrapping="Wrap"/>
+                </StackPanel>
+                <Button Grid.Column="1"
+                        x:Name="RefreshButton"
+                        Content="{DynamicResource Stats_Refresh}"
+                        Height="32" MinWidth="110"
+                        VerticalAlignment="Center"
+                        Click="Refresh_Click"/>
+            </Grid>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" Padding="20,16">
+            <StackPanel>
+                <TextBlock x:Name="EmptyText"
+                           Text="{DynamicResource Stats_Empty}"
+                           Visibility="Collapsed"
+                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+
+                <StackPanel x:Name="ContentPanel">
+                    <!-- Summary cards -->
+                    <WrapPanel>
+                        <Border Style="{StaticResource StatCard}">
+                            <StackPanel>
+                                <TextBlock x:Name="StatTotalImages" Style="{StaticResource StatNumber}" Text="0"/>
+                                <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_TotalImages}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource StatCard}">
+                            <StackPanel>
+                                <TextBlock x:Name="StatLabeled" Style="{StaticResource StatNumber}" Text="0"/>
+                                <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_LabeledImages}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource StatCard}">
+                            <StackPanel>
+                                <TextBlock x:Name="StatUnlabeled" Style="{StaticResource StatNumber}" Text="0"/>
+                                <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_UnlabeledImages}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource StatCard}">
+                            <StackPanel>
+                                <TextBlock x:Name="StatTotalBoxes" Style="{StaticResource StatNumber}" Text="0"/>
+                                <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_TotalBoxes}"/>
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource StatCard}">
+                            <StackPanel>
+                                <TextBlock x:Name="StatAvgBoxes" Style="{StaticResource StatNumber}" Text="0"/>
+                                <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_AvgBoxes}"/>
+                            </StackPanel>
+                        </Border>
+                    </WrapPanel>
+
+                    <!-- Class balance -->
+                    <TextBlock Text="{DynamicResource Stats_ClassBalance}" Style="{StaticResource SectionHeader}"/>
+                    <ItemsControl x:Name="ClassStatsItems">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid Margin="0,0,0,10">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="16"/>
+                                        <ColumnDefinition Width="2*" MinWidth="120"/>
+                                        <ColumnDefinition Width="3*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Rectangle Grid.Column="0" Width="12" Height="12" RadiusX="2" RadiusY="2"
+                                               VerticalAlignment="Center" HorizontalAlignment="Left"
+                                               Fill="{Binding ColorBrush}"/>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="4,0,10,0">
+                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                        <TextBlock Text="{Binding CountText}" FontSize="11"
+                                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                    </StackPanel>
+                                    <ProgressBar Grid.Column="2" Height="16" VerticalAlignment="Center"
+                                                 Minimum="0"
+                                                 Maximum="{Binding BarMax}"
+                                                 Value="{Binding BoxCount}"
+                                                 Foreground="{Binding ColorBrush}"/>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <!-- Box size distribution -->
+                    <TextBlock Text="{DynamicResource Stats_SizeDistribution}" Style="{StaticResource SectionHeader}"/>
+                    <Grid Margin="0,0,0,4">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" MinWidth="140"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="{DynamicResource Stats_SizeSmall}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{DynamicResource Stats_SizeMedium}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{DynamicResource Stats_SizeLarge}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock x:Name="StatSmall" Text="0" Margin="0,0,0,6" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="StatMedium" Text="0" Margin="0,0,0,6" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="StatLarge" Text="0" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <!-- Review status -->
+                    <TextBlock Text="{DynamicResource Stats_ReviewStatus}" Style="{StaticResource SectionHeader}"/>
+                    <Grid Margin="0,0,0,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" MinWidth="140"/>
+                            <ColumnDefinition Width="Auto"/>
+                        </Grid.ColumnDefinitions>
+                        <StackPanel Grid.Column="0">
+                            <TextBlock Text="{DynamicResource Stats_Verified}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{DynamicResource Stats_NeedsReview}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{DynamicResource Stats_Suggested}" Margin="0,0,0,6"/>
+                            <TextBlock Text="{DynamicResource Stats_NoLabelStatus}"/>
+                        </StackPanel>
+                        <StackPanel Grid.Column="1">
+                            <TextBlock x:Name="StatVerified" Text="0" Margin="0,0,0,6" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="StatNeedsReview" Text="0" Margin="0,0,0,6" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="StatSuggested" Text="0" Margin="0,0,0,6" FontWeight="SemiBold"/>
+                            <TextBlock x:Name="StatNoLabel" Text="0" FontWeight="SemiBold"/>
+                        </StackPanel>
+                    </Grid>
+                </StackPanel>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

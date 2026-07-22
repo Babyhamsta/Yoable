@@ -6,6 +6,16 @@ using System.Windows;
 namespace YoableWPF.Models
 {
     /// <summary>
+    /// A body class and the head class that belong to the same team (e.g. police body + police
+    /// head). Lets ClassTransfer reconcile a body box's team with the head box inside it.
+    /// </summary>
+    public class ClassTeamPair
+    {
+        public int BodyClassId { get; set; } = -1;
+        public int HeadClassId { get; set; } = -1;
+    }
+
+    /// <summary>
     /// Represents all data for a Yoable project
     /// </summary>
     public class ProjectData
@@ -64,12 +74,47 @@ namespace YoableWPF.Models
         // Model configurations
         // List of loaded model paths
         public List<string> LoadedModelPaths { get; set; } = new List<string>();
-        // Key: model path, Value: class mapping (Model Class ID -> Project Class ID)
+        // Legacy single-target mapping, only read from projects saved before a model class could map
+        // to several project classes. MigrateLegacyModelClassMappings folds it into
+        // ModelClassMappingSets on load and it is never written back.
         public Dictionary<string, Dictionary<int, int>> ModelClassMappings { get; set; } = new Dictionary<string, Dictionary<int, int>>();
+        // Key: model path, Value: model class ID -> allowed project class IDs.
+        public Dictionary<string, Dictionary<int, List<int>>> ModelClassMappingSets { get; set; } = new Dictionary<string, Dictionary<int, List<int>>>();
+        // Key: model path, Value: ModelRole. Only used by the ClassTransfer ensemble mode.
+        public Dictionary<string, int> ModelRoles { get; set; } = new Dictionary<string, int>();
+        // Body/head class pairs that belong to the same team, used to keep a body box's team
+        // consistent with the head box inside it. Only used by the ClassTransfer ensemble mode.
+        public List<ClassTeamPair> ClassTeamPairs { get; set; } = new List<ClassTeamPair>();
+        // Project class ID -> confidence threshold used when labeling the current image.
+        public Dictionary<int, float> AIClassConfidenceThresholds { get; set; } = new Dictionary<int, float>();
 
         // Statistics (optional, for display purposes)
         public int TotalImages => Images?.Count ?? 0;
         public int TotalLabels => (AppCreatedLabels?.Count ?? 0) + (ImportedLabelPaths?.Count ?? 0);
+
+        /// <summary>
+        /// Converts any legacy one-to-one model class mappings into the multi-target format.
+        /// Safe to call repeatedly; entries already present in the new format win.
+        /// </summary>
+        public void MigrateLegacyModelClassMappings()
+        {
+            ModelClassMappingSets ??= new Dictionary<string, Dictionary<int, List<int>>>();
+
+            if (ModelClassMappings == null || ModelClassMappings.Count == 0)
+                return;
+
+            foreach (var modelMapping in ModelClassMappings)
+            {
+                if (modelMapping.Value == null || ModelClassMappingSets.ContainsKey(modelMapping.Key))
+                    continue;
+
+                ModelClassMappingSets[modelMapping.Key] = modelMapping.Value.ToDictionary(
+                    classMapping => classMapping.Key,
+                    classMapping => new List<int> { classMapping.Value });
+            }
+
+            ModelClassMappings.Clear();
+        }
     }
 
     /// <summary>

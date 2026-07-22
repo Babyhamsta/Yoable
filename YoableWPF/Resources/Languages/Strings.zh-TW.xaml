@@ -58,9 +58,16 @@
     <system:String x:Key="Settings_Detection_Section">檢測</system:String>
     <system:String x:Key="Settings_ProcessingDevice">處理裝置</system:String>
     <system:String x:Key="Settings_Device_CPU">CPU</system:String>
-    <system:String x:Key="Settings_Device_GPU">GPU (CUDA)</system:String>
+    <system:String x:Key="Settings_Device_GPU">GPU (DirectML)</system:String>
     <system:String x:Key="Settings_ConfidenceThreshold">信心閾值</system:String>
     <system:String x:Key="Settings_ConfidenceThreshold_Help">顯示 AI 檢測所需的最低信心值</system:String>
+    <system:String x:Key="Settings_AI_OnlyUnlabeled">只自動標註無標籤圖片</system:String>
+    <system:String x:Key="Settings_AI_OnlyUnlabeled_Help">略過已有一個或多個確認標籤的圖片。</system:String>
+    <system:String x:Key="Settings_PerClassConfidence">各類別門檻設定…</system:String>
+    <system:String x:Key="Settings_PerClassConfidence_Help">為個別類別覆寫置信度門檻。未調整的類別會沿用上方的全域滑桿數值。</system:String>
+    <system:String x:Key="Settings_PerClassConfidence_NoClasses">請先開啟已定義類別的專案，才能設定各類別門檻。</system:String>
+    <system:String x:Key="Settings_AI_ReplaceExisting">標註時取代既有的 AI 標籤</system:String>
+    <system:String x:Key="Settings_AI_ReplaceExisting_Help">關閉時，新的偵測結果會與圖片上既有的 AI 標籤並存。</system:String>
     <system:String x:Key="Settings_EnsembleMode_Section">集成模式</system:String>
     <system:String x:Key="Settings_NoModelsLoaded">未載入模型</system:String>
     <system:String x:Key="Settings_ModelLoaded_Single">已載入 1 個模型（單一模型模式）</system:String>
@@ -68,6 +75,24 @@
     <system:String x:Key="Settings_DetectionMode">檢測模式</system:String>
     <system:String x:Key="Settings_DetectionMode_Voting">投票模式（需要多個模型共識）</system:String>
     <system:String x:Key="Settings_DetectionMode_Union">聯合模式（任何模型檢測到即標記）</system:String>
+    <system:String x:Key="Settings_DetectionMode_ClassTransfer">分類轉移（定位模型出框，分類模型投票決定類別）</system:String>
+    <system:String x:Key="Settings_ClassTransfer_Help">用一個定位準的模型負責畫框，其他模型只負責判斷每個框的類別。適合你最好的模型缺少所需類別、而懂類別的模型定位又不準的情況。</system:String>
+    <system:String x:Key="Settings_ClassTransfer_Roles">模型角色</system:String>
+    <system:String x:Key="Settings_ModelRole_Detector">定位者（負責畫框）</system:String>
+    <system:String x:Key="Settings_ModelRole_Classifier">分類者（投票決定類別）</system:String>
+    <system:String x:Key="Settings_ClassTransfer_NeedDetector">請至少選一個定位者模型，否則沒有框可以保留。</system:String>
+    <system:String x:Key="Settings_ClassTransfer_VoteIoU">投票重疊門檻 (IoU)</system:String>
+    <system:String x:Key="Settings_ClassTransfer_KeepUnvoted">保留沒有任何分類者辨識到的框</system:String>
+    <system:String x:Key="Settings_ClassTransfer_KeepUnvoted_Help">開啟時，沒有分類者投票的定位框會保留，並標成它允許清單中的第一個類別，你只需修改類別而不用重畫框。關閉時則直接捨棄這類框。</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamConsistency">讓身體的陣營與其頭部一致</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamConsistency_Help">當頭框與包住它的身體框陣營不一致時，以置信度較高的一方為準修正另一方。需要下方的類別配對。</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamPairing">陣營配對設定…</system:String>
+    <system:String x:Key="Settings_ClassTransfer_TeamPairing_Help">把每個身體類別與同一隊的頭類別配對（例如：警身體 配 警頭）。</system:String>
+    <system:String x:Key="TeamPairing_Title">陣營配對</system:String>
+    <system:String x:Key="TeamPairing_Subtitle">把身體類別與同一隊的頭類別配對，用來維持身體與頭部分類的一致性。</system:String>
+    <system:String x:Key="TeamPairing_Body">身體類別</system:String>
+    <system:String x:Key="TeamPairing_Head">頭類別</system:String>
+    <system:String x:Key="TeamPairing_AddPair">新增配對</system:String>
     <system:String x:Key="Settings_MinConsensus">所需最低共識</system:String>
     <system:String x:Key="Settings_ConsensusIoU">共識 IoU 閾值</system:String>
     <system:String x:Key="Settings_EnsembleIoU">最終集成 IoU 閾值</system:String>
@@ -166,7 +191,15 @@
     <system:String x:Key="Main_FilterReview">審查</system:String>
     <system:String x:Key="Main_FilterNone">無</system:String>
     <system:String x:Key="Main_FilterDone">已完成</system:String>
+    <system:String x:Key="Main_FilterAiLabels">AI 標籤</system:String>
     <system:String x:Key="Main_FilterByClass">依類別篩選</system:String>
+    <system:String x:Key="Main_FilterModeInclude">包含</system:String>
+    <system:String x:Key="Main_FilterModeAll">同時</system:String>
+    <system:String x:Key="Main_FilterModeOnly">只有</system:String>
+    <system:String x:Key="Main_FilterModeExclude">排除</system:String>
+    <system:String x:Key="Main_FilterSelectAll">全選</system:String>
+    <system:String x:Key="Main_FilterClear">全不選</system:String>
+    <system:String x:Key="Main_FilterInvert">反選</system:String>
     <system:String x:Key="Main_StatusReview">審查</system:String>
     <system:String x:Key="Main_StatusNoLabel">無標籤</system:String>
     <system:String x:Key="Main_StatusVerified">已驗證</system:String>
@@ -192,6 +225,12 @@
     <system:String x:Key="Main_ConfirmClear">確認清除</system:String>
     <system:String x:Key="Main_Error">錯誤</system:String>
     <system:String x:Key="Main_Information">資訊</system:String>
+    <system:String x:Key="Main_OpenImageLocation">開啟圖片檔案位置</system:String>
+    <system:String x:Key="Main_OpenLabelLocation">開啟標籤檔案位置</system:String>
+    <system:String x:Key="Main_DeleteImage">刪除圖片</system:String>
+    <system:String x:Key="Main_ConfirmDeleteImage">確定要將「{0}」及其標籤檔移到資源回收筒，並從專案中移除嗎？</system:String>
+    <system:String x:Key="Main_NoLabelFileOnDisk">此圖片在磁碟上尚無標籤檔。請先儲存或匯出專案。</system:String>
+    <system:String x:Key="Main_DeleteImageFailed">圖片已從專案移除，但下列檔案無法刪除：&#x0a;&#x0a;{0}</system:String>
 
     <!-- Propagation Dialog -->
     <system:String x:Key="Propagation_Title">標籤傳播</system:String>
@@ -340,6 +379,8 @@
     <system:String x:Key="Msg_SingleModel">單一模型</system:String>
     <system:String x:Key="Msg_EnsembleModels">集成（{0} 個模型）</system:String>
     <system:String x:Key="Msg_ProcessImagesPrompt">使用 {1} 偵測處理 {0} 張圖片？</system:String>
+    <system:String x:Key="Msg_OnlyUnlabeledSummary">只處理無標籤圖片；將略過 {0} 張已有標籤的圖片。</system:String>
+    <system:String x:Key="Msg_NoUnlabeledImages">沒有可處理的無標籤圖片。</system:String>
     <system:String x:Key="Msg_ManyModelsWarning">注意：使用多個模型進行處理可能需要較長時間。</system:String>
     <system:String x:Key="Msg_StartDetection">開始偵測</system:String>
     <system:String x:Key="Msg_UsingModels"> 使用 {0} 個模型</system:String>
@@ -396,15 +437,19 @@
     <system:String x:Key="Msg_ModelAlreadyLoadedTitle">模型已載入</system:String>
     <system:String x:Key="Msg_GPUInitFailed">GPU 初始化失敗：{0}&#x0a;回退到 CPU。</system:String>
     <system:String x:Key="Msg_GPUWarning">GPU 警告</system:String>
+    <system:String x:Key="Msg_DirectMLUnsupported">此 GPU 或目前的驅動程式不支援 DirectML。</system:String>
     <system:String x:Key="Msg_ModelInitFailed">模型初始化失敗：{0}</system:String>
     <system:String x:Key="Msg_UnsupportedModel">無法偵測 YOLO 模型格式或不支援的模型類型。&#x0a;&#x0a;支援的格式：&#x0a;- YOLOv5: [batch, detections, 5+classes]&#x0a;- YOLOv8: [batch, 4+classes, detections]&#x0a;&#x0a;注意：不支援分割模型。</system:String>
     <system:String x:Key="Msg_UnsupportedModelTitle">不支援的模型</system:String>
     <system:String x:Key="Msg_ModelLoadedSuccess">模型 '{0}' 載入成功。&#x0a;格式：{1}&#x0a;類別：{2}&#x0a;偵測：{3}&#x0a;輸入尺寸：{4}x{4}&#x0a;模型總數：{5}</system:String>
     <system:String x:Key="Msg_ModelLoaded">模型已載入</system:String>
     <system:String x:Key="Msg_ErrorLoadingModel">載入模型時出錯：{0}</system:String>
+    <system:String x:Key="Msg_ReloadingModelsForDevice">正在為選取的裝置重新載入 AI 模型...</system:String>
     <system:String x:Key="Msg_YouTube_NoCompatibleStream">未找到 {0} 的相容視訊串流</system:String>
     <system:String x:Key="Msg_YouTube_DownloadError">下載錯誤</system:String>
     <system:String x:Key="Msg_AutoLabelComplete">自動標註完成{0}。&#x0a;總偵測數：{1}</system:String>
+    <system:String x:Key="Msg_AutoLabelScopeComplete">已處理：{0}；已略過有標籤圖片：{1}。</system:String>
+    <system:String x:Key="Msg_AutoLabelFailedImages">有 {0} 張圖片處理失敗或檔案不存在。</system:String>
 
     <!-- Status Bar -->
     <system:String x:Key="Status_NoProject">無專案</system:String>
@@ -423,10 +468,10 @@
 
     <!-- Mapping Dialog -->
     <system:String x:Key="Mapping_Title">配置模型類別映射</system:String>
-    <system:String x:Key="Mapping_Description">請為模型的每個類別選擇對應的項目類別</system:String>
+    <system:String x:Key="Mapping_Description">請勾選模型每個類別允許對應到的專案類別</system:String>
     <system:String x:Key="Mapping_LoadClassFile">載入類別文件</system:String>
     <system:String x:Key="Mapping_ModelID">模型 ID: {0}</system:String>
-    <system:String x:Key="Mapping_InfoFormat">模型: {0}&#x0a;類別數量: {1}&#x0a;項目類別數量: {2}&#x0a;提示: 選擇 'nan (不檢測)' 可跳過該類別的檢測</system:String>
+    <system:String x:Key="Mapping_InfoFormat">模型: {0}&#x0a;類別數量: {1}&#x0a;專案類別數量: {2}&#x0a;提示: 勾選 'nan (不檢測)' 可跳過該類別。勾選多個類別代表宣告該偵測允許被分類成哪幾類。</system:String>
     <system:String x:Key="Mapping_WarningGeneric">⚠ 警告: 未找到類別文件，顯示通用類別名稱。&#x0a;請點擊右上角「載入類別文件」按鈕手動載入正確的類別名稱。</system:String>
     <system:String x:Key="Mapping_SelectClassFile">選擇類別文件</system:String>
     <system:String x:Key="Mapping_ClassFileEmpty">類別文件為空或格式不正確。</system:String>
@@ -453,5 +498,134 @@
     <system:String x:Key="ModelManager_ClearModels">清除模型</system:String>
     <system:String x:Key="ModelManager_NeedProjectClasses">請先在專案中創建類別，然後再配置模型類別映射。&#x0a;&#x0a;您可以在右側面板的「Classes」區域添加類別。</system:String>
     <system:String x:Key="ModelManager_NeedProjectClassesTitle">需要專案類別</system:String>
+
+    <!-- Duplicate image review -->
+    <system:String x:Key="Main_TabAnnotate">圖片標註</system:String>
+    <system:String x:Key="Main_TabDuplicates">重複圖片</system:String>
+    <system:String x:Key="Duplicate_Title">重複圖片</system:String>
+    <system:String x:Key="Duplicate_Scan">重新掃描</system:String>
+    <system:String x:Key="Duplicate_NoScan">掃描目前專案中的重複圖片。</system:String>
+    <system:String x:Key="Duplicate_Scanning">正在掃描圖片...</system:String>
+    <system:String x:Key="Duplicate_NoImages">至少加入兩張圖片後才能掃描。</system:String>
+    <system:String x:Key="Duplicate_NoMatches">沒有找到重複圖片。</system:String>
+    <system:String x:Key="Duplicate_ScanFailed">無法掃描重複圖片。</system:String>
+    <system:String x:Key="Duplicate_Resolved">所有重複圖片都已處理完成。</system:String>
+    <system:String x:Key="Duplicate_Summary">剩餘 {0} 組重複圖片，共 {1} 張多餘圖片</system:String>
+    <system:String x:Key="Duplicate_GroupProgress">第 {0} 組，共 {1} 組</system:String>
+    <system:String x:Key="Duplicate_LabelCount">{0} 個標註</system:String>
+    <system:String x:Key="Duplicate_KeepLeft">保留左側圖片與標註</system:String>
+    <system:String x:Key="Duplicate_KeepRight">保留右側圖片與標註</system:String>
+    <system:String x:Key="Duplicate_RemoveFailed">無法從專案移除重複圖片。</system:String>
+    <system:String x:Key="Duplicate_AllGroups">全部重複群組</system:String>
+    <system:String x:Key="Duplicate_PreviousGroup">上一組</system:String>
+    <system:String x:Key="Duplicate_NextGroup">下一組</system:String>
+    <system:String x:Key="Duplicate_GroupTitle">第 {0} 組</system:String>
+    <system:String x:Key="Duplicate_ExtraCount">{0} 張多餘圖片</system:String>
+
+    <!-- Center ROI crop -->
+    <system:String x:Key="Main_TabRoiCrop">中心 ROI</system:String>
+    <system:String x:Key="Roi_Title">中心 ROI 裁切</system:String>
+    <system:String x:Key="Roi_OutputSize">輸出像素尺寸</system:String>
+    <system:String x:Key="Roi_Scope">套用範圍</system:String>
+    <system:String x:Key="Roi_AllImages">專案內全部圖片</system:String>
+    <system:String x:Key="Roi_CurrentImage">目前圖片</system:String>
+    <system:String x:Key="Roi_OutputFolder">輸出資料夾</system:String>
+    <system:String x:Key="Roi_Apply">建立 640 x 640 裁切圖片</system:String>
+    <system:String x:Key="Roi_RemoveSmall">移除小於 640 px 的圖片</system:String>
+    <system:String x:Key="Roi_RemoveSmallConfirm">找到 {0} 張寬度或高度小於 640 像素的圖片。要從專案中移除這些圖片及其標註嗎？硬碟上的原始檔會保留。</system:String>
+    <system:String x:Key="Roi_RemoveSmallComplete">已從專案中移除 {0} 張尺寸不足的圖片及其標註。</system:String>
+    <system:String x:Key="Roi_NoSmallImages">專案中沒有寬度或高度小於 640 像素的圖片。</system:String>
+    <system:String x:Key="Roi_Preview">中心 ROI 預覽</system:String>
+    <system:String x:Key="Roi_NoPreview">沒有可預覽的圖片</system:String>
+    <system:String x:Key="Roi_InvalidSize">ROI 尺寸無效。</system:String>
+    <system:String x:Key="Roi_Confirm">要建立正中央 {0} x {1} 像素裁切圖片並更新標註嗎？</system:String>
+    <system:String x:Key="Roi_Processing">正在裁切圖片...</system:String>
+    <system:String x:Key="Roi_Progress">{0} / {1} - {2}</system:String>
+    <system:String x:Key="Roi_Complete">已裁切 {0} 張圖片、移除 {1} 個標註、裁短 {2} 個標註、跳過 {3} 張圖片。</system:String>
+    <system:String x:Key="Roi_Cancelled">已取消 ROI 裁切。</system:String>
+    <system:String x:Key="Roi_ProjectRequired">請先開啟或建立專案再裁切圖片。</system:String>
+    <system:String x:Key="Roi_Failed">ROI 裁切失敗。</system:String>
+    <system:String x:Key="Roi_NoImages">沒有可裁切的圖片。</system:String>
+
+    <system:String x:Key="Menu_AILabelCurrentImage">AI 標記目前圖片</system:String>
+    <system:String x:Key="AIClassConfidence_Title">各類別置信度</system:String>
+    <system:String x:Key="AIClassConfidence_Subtitle">設定 AI 標記時，每個類別需要達到的最低置信度。</system:String>
+    <system:String x:Key="AIClassConfidence_Class">類別</system:String>
+    <system:String x:Key="AIClassConfidence_Threshold">最低置信度</system:String>
+    <system:String x:Key="AIClassConfidence_Reset">重設為全域值</system:String>
+    <system:String x:Key="AIClassConfidence_Running">正在對目前圖片執行 AI 偵測...</system:String>
+    <system:String x:Key="AIClassConfidence_Complete">目前圖片標記完成，共偵測到 {0} 個物件。</system:String>
+    <system:String x:Key="AIClassConfidence_Failed">目前圖片標記失敗：{0}</system:String>
+    <system:String x:Key="Duplicate_AutoResolvedSummary">已自動處理：{0}</system:String>
+    <system:String x:Key="Duplicate_AutoResolvedOnly">已從專案自動移除 {0} 張圖片與標籤皆相同的重複圖片。</system:String>
+    <system:String x:Key="Duplicate_OpenEdit">檢查 / 修改</system:String>
+    <system:String x:Key="Duplicate_OpenEditFailed">無法開啟圖片進行修改。</system:String>
+
+
+    <!-- Training Dataset Export -->
+    <system:String x:Key="Menu_ExportTrainingDataset">匯出訓練資料集...</system:String>
+    <system:String x:Key="TrainingExport_Title">匯出訓練資料集</system:String>
+    <system:String x:Key="TrainingExport_Subtitle">將圖片與標籤複製為 YOLO 的 train/val/test 資料夾結構,並產生可直接用於訓練的 data.yaml。</system:String>
+    <system:String x:Key="TrainingExport_OutputFolder">輸出資料夾</system:String>
+    <system:String x:Key="TrainingExport_Browse">瀏覽...</system:String>
+    <system:String x:Key="TrainingExport_SplitRatios">切分比例 (%)</system:String>
+    <system:String x:Key="TrainingExport_Train">訓練</system:String>
+    <system:String x:Key="TrainingExport_Val">驗證</system:String>
+    <system:String x:Key="TrainingExport_Test">測試</system:String>
+    <system:String x:Key="TrainingExport_SumFormat">合計:{0}%(必須等於 100%)</system:String>
+    <system:String x:Key="TrainingExport_Seed">隨機種子</system:String>
+    <system:String x:Key="TrainingExport_IncludeBackground">將無標籤圖片作為背景樣本納入</system:String>
+    <system:String x:Key="TrainingExport_VerifiedOnly">僅匯出已驗證的圖片</system:String>
+    <system:String x:Key="Msg_ExportingTrainingDataset">正在匯出訓練資料集...</system:String>
+    <system:String x:Key="Msg_TrainingDatasetExported">訓練資料集已匯出。&#10;訓練:{0}   驗證:{1}   測試:{2}&#10;已跳過:{3}</system:String>
+    <system:String x:Key="Msg_NoImagesToExport">沒有可匯出的圖片。</system:String>
+    <system:String x:Key="Msg_NoClassesToExport">匯出訓練資料集前請至少定義一個類別。</system:String>
+
+    <!-- Dataset Statistics -->
+    <system:String x:Key="Main_TabStats">資料集統計</system:String>
+    <system:String x:Key="Stats_Title">資料集統計</system:String>
+    <system:String x:Key="Stats_Subtitle">目前專案的類別平衡、框大小分布與審查狀態。</system:String>
+    <system:String x:Key="Stats_Refresh">重新整理</system:String>
+    <system:String x:Key="Stats_Empty">尚未載入圖片。</system:String>
+    <system:String x:Key="Stats_TotalImages">圖片總數</system:String>
+    <system:String x:Key="Stats_LabeledImages">已標註</system:String>
+    <system:String x:Key="Stats_UnlabeledImages">未標註</system:String>
+    <system:String x:Key="Stats_TotalBoxes">框總數</system:String>
+    <system:String x:Key="Stats_AvgBoxes">平均每圖框數</system:String>
+    <system:String x:Key="Stats_ClassBalance">類別平衡</system:String>
+    <system:String x:Key="Stats_SizeDistribution">框大小分布</system:String>
+    <system:String x:Key="Stats_SizeSmall">小 (&lt;1% 面積)</system:String>
+    <system:String x:Key="Stats_SizeMedium">中 (1-5%)</system:String>
+    <system:String x:Key="Stats_SizeLarge">大 (&gt;5%)</system:String>
+    <system:String x:Key="Stats_ReviewStatus">審查狀態</system:String>
+    <system:String x:Key="Stats_Verified">已驗證</system:String>
+    <system:String x:Key="Stats_NeedsReview">待審查</system:String>
+    <system:String x:Key="Stats_Suggested">建議</system:String>
+    <system:String x:Key="Stats_NoLabelStatus">無標籤</system:String>
+
+    <!-- Data Augmentation -->
+    <system:String x:Key="Menu_DataAugmentation">資料增強...</system:String>
+    <system:String x:Key="Aug_Title">資料增強</system:String>
+    <system:String x:Key="Aug_Subtitle">為訓練產生增強後的圖片與標籤副本。翻轉會重映框座標,其他效果只改變像素。</system:String>
+    <system:String x:Key="Aug_OutputFolder">輸出資料夾</system:String>
+    <system:String x:Key="Aug_Browse">瀏覽...</system:String>
+    <system:String x:Key="Aug_Scope">範圍</system:String>
+    <system:String x:Key="Aug_ScopeAll">所有圖片</system:String>
+    <system:String x:Key="Aug_ScopeCurrent">目前圖片</system:String>
+    <system:String x:Key="Aug_Variants">每張圖變體數</system:String>
+    <system:String x:Key="Aug_Seed">隨機種子</system:String>
+    <system:String x:Key="Aug_Augmentations">增強項目</system:String>
+    <system:String x:Key="Aug_Flip">水平翻轉</system:String>
+    <system:String x:Key="Aug_Brightness">亮度 / 對比</system:String>
+    <system:String x:Key="Aug_Hsv">色相 / 飽和度</system:String>
+    <system:String x:Key="Aug_Noise">高斯雜訊</system:String>
+    <system:String x:Key="Aug_Blur">模糊</system:String>
+    <system:String x:Key="Aug_OutputOptions">輸出選項</system:String>
+    <system:String x:Key="Aug_IncludeOriginals">包含原始圖片</system:String>
+    <system:String x:Key="Aug_LabeledOnly">只增強已標註的圖片</system:String>
+    <system:String x:Key="Aug_NeedAugmentation">請至少啟用一項增強。</system:String>
+    <system:String x:Key="Msg_Augmenting">正在增強圖片...</system:String>
+    <system:String x:Key="Msg_AugmentationComplete">增強完成。&#10;來源圖片:{0}&#10;產生圖片:{1}&#10;已跳過:{2}</system:String>
+    <system:String x:Key="Msg_AugmentationFailed">增強失敗:{0}</system:String>
 
 </ResourceDictionary>

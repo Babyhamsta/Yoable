@@ -24,6 +24,9 @@ namespace YoableWPF.Managers
         public int ClassId { get; set; }
         public float Score => Confidence * ClassConfidence;
         public int ModelIndex { get; set; } = -1;
+        // Project classes this detection is allowed to be reported as, from the model's mapping.
+        // Null when the model has no mapping configured.
+        public List<int> AllowedClassIds { get; set; }
 
         public Rectangle ToRectangle()
         {
@@ -76,8 +79,26 @@ namespace YoableWPF.Managers
 
     public enum EnsembleDetectionMode
     {
-        Voting,      // Voting mode (requires consensus from multiple models)
-        Union        // Union mode (mark if any model detects it)
+        Voting,       // Voting mode (requires consensus from multiple models)
+        Union,        // Union mode (mark if any model detects it)
+        ClassTransfer // Detector models own the boxes; classifier models only vote on the class
+    }
+
+    /// <summary>
+    /// What a model contributes in <see cref="EnsembleDetectionMode.ClassTransfer"/>.
+    /// Ignored by the other ensemble modes.
+    /// </summary>
+    public enum ModelRole
+    {
+        Detector,   // Supplies the boxes; its coordinates are used verbatim
+        Classifier  // Boxes are discarded; detections only vote on the class of a detector box
+    }
+
+    public enum ExecutionProviderReloadResult
+    {
+        Success,
+        FallbackToCpu,
+        Failed
     }
 
     public class YoloModelInfo
@@ -97,9 +118,15 @@ namespace YoableWPF.Managers
         public YoloModelInfo ModelInfo { get; set; }
         public List<string> OutputNames { get; set; }
         public string Name { get; set; }
-        // Class mapping: Model Class ID -> Project Class ID
-        // null = not configured, empty = all classes set to "nan", non-empty = configured with mappings
-        public Dictionary<int, int> ClassMapping { get; set; } = null;
+        public bool UsesDirectMl { get; set; }
+        public int DirectMlDeviceId { get; set; } = -1;
+        // Class mapping: Model Class ID -> allowed Project Class IDs.
+        // null = not configured (model class IDs are used as-is). Once configured, a model class
+        // that is absent from the dictionary is never detected. A class may map to several project
+        // classes, which declares the set a detection is allowed to be classified as.
+        public Dictionary<int, List<int>> ClassMapping { get; set; } = null;
+        // Only consulted in ClassTransfer mode.
+        public ModelRole Role { get; set; } = ModelRole.Detector;
     }
 
     public class YoloAI
@@ -108,9 +135,38 @@ namespace YoableWPF.Managers
         private const int DEFAULT_MODEL_INPUT_SIZE = 640;
         private const int DEFAULT_DETECTION_COUNT = 8400;
         private const int SEGMENTATION_THRESHOLD = 84; // 4 box coords + typical class count threshold
+        private const int MaxDirectMlAdaptersToProbe = 16;
 
         private List<YoloModel> loadedModels = new List<YoloModel>();
-        public int TotalDetections { get; private set; } = 0;
+        // DirectML permits only one thread to call Run at a time, including across loaded models.
+        private readonly object directMlInferenceLock = new object();
+        private int totalDetections;
+        public int TotalDetections => Volatile.Read(ref totalDetections);
+        public bool UsesDirectMl => loadedModels.Any(model => model.UsesDirectMl);
+        public bool AllModelsUseDirectMl =>
+            loadedModels.Count > 0 && loadedModels.All(model => model.UsesDirectMl);
+
+        public string GetExecutionProviderSummary()
+        {
+            if (loadedModels.Count == 0)
+                return "CPU";
+
+            int directMlModels = loadedModels.Count(model => model.UsesDirectMl);
+            if (directMlModels == 0)
+                return "CPU";
+            if (directMlModels == loadedModels.Count)
+            {
+                string deviceIds = string.Join(
+                    ", ",
+                    loadedModels
+                        .Select(model => model.DirectMlDeviceId)
+                        .Distinct()
+                        .OrderBy(deviceId => deviceId));
+                return $"DirectML GPU (device {deviceIds})";
+            }
+
+            return "DirectML GPU + CPU";
+        }
 
         // Legacy single model support
         public InferenceSession yoloSession => loadedModels.FirstOrDefault()?.Session;
@@ -320,6 +376,166 @@ namespace YoableWPF.Managers
             return union == 0 ? 0 : intersection / union;
         }
 
+        /// <summary>
+        /// Fraction of the smaller box that lies inside the larger one. Unlike IoU this stays high
+        /// for a small box fully nested in a large box, which is how a box-wraps-box duplicate is
+        /// detected (IoU is low there because the union is dominated by the large box).
+        /// </summary>
+        private float ComputeContainmentYolo(YoloDetection a, YoloDetection b)
+        {
+            float x1_a = a.CenterX - a.Width / 2;
+            float y1_a = a.CenterY - a.Height / 2;
+            float x2_a = a.CenterX + a.Width / 2;
+            float y2_a = a.CenterY + a.Height / 2;
+
+            float x1_b = b.CenterX - b.Width / 2;
+            float y1_b = b.CenterY - b.Height / 2;
+            float x2_b = b.CenterX + b.Width / 2;
+            float y2_b = b.CenterY + b.Height / 2;
+
+            float intersection =
+                Math.Max(0, Math.Min(x2_a, x2_b) - Math.Max(x1_a, x1_b)) *
+                Math.Max(0, Math.Min(y2_a, y2_b) - Math.Max(y1_a, y1_b));
+
+            float areaA = a.Width * a.Height;
+            float areaB = b.Width * b.Height;
+            float smallerArea = Math.Min(areaA, areaB);
+
+            return smallerArea <= 0 ? 0 : intersection / smallerArea;
+        }
+
+        /// <summary>
+        /// Removes box-wraps-box duplicates that IoU-based NMS leaves behind: when one detection
+        /// sits almost entirely inside another and the two are of comparable size, the lower-scoring
+        /// one is dropped. A size-ratio guard preserves the legitimate case of a small part box (a
+        /// head) nested in a much larger box (a body), which differ in area by far more than the
+        /// guard allows.
+        /// </summary>
+        private List<YoloDetection> ApplyContainmentSuppression(List<YoloDetection> detections)
+        {
+            const float ContainmentThreshold = 0.80f; // 80% of the smaller box inside the larger
+            const float SizeRatioGuard = 0.55f;        // only treat comparably sized boxes as dupes
+
+            if (detections.Count < 2) return detections;
+
+            var ordered = detections.OrderByDescending(d => d.Score).ToList();
+            var kept = new List<YoloDetection>();
+
+            foreach (YoloDetection candidate in ordered)
+            {
+                bool isDuplicate = false;
+                float candidateArea = candidate.Width * candidate.Height;
+
+                foreach (YoloDetection keptDetection in kept)
+                {
+                    float keptArea = keptDetection.Width * keptDetection.Height;
+                    float sizeRatio = Math.Min(candidateArea, keptArea) /
+                                      Math.Max(candidateArea, keptArea);
+
+                    // Very different sizes (head-in-body) are a valid nesting, not a duplicate.
+                    if (sizeRatio < SizeRatioGuard)
+                        continue;
+
+                    if (ComputeContainmentYolo(candidate, keptDetection) >= ContainmentThreshold)
+                    {
+                        isDuplicate = true;
+                        break;
+                    }
+                }
+
+                if (!isDuplicate)
+                    kept.Add(candidate);
+            }
+
+            return kept;
+        }
+
+        /// <summary>
+        /// Forces each body box's team to agree with the head box sitting inside it. When they
+        /// disagree the higher-scoring detection wins: a confident head reclassifies the body, and
+        /// a confident body reclassifies the head. This fixes the common case where the head team
+        /// is read reliably but the body team flips between frames.
+        /// </summary>
+        /// <param name="teamPairs">Body/head class pairs that share a team.</param>
+        private List<YoloDetection> ApplyTeamConsistency(
+            List<YoloDetection> detections,
+            IReadOnlyList<(int BodyClassId, int HeadClassId)> teamPairs)
+        {
+            const float HeadInBodyContainment = 0.6f; // how much of the head must sit in the body
+
+            if (detections.Count == 0 || teamPairs == null || teamPairs.Count == 0)
+                return detections;
+
+            // Look up a class's team, and the body/head class for a given team. Team index is the
+            // pair's position; a class appearing in several pairs keeps its first team.
+            var teamOfClass = new Dictionary<int, int>();
+            var bodyClassOfTeam = new Dictionary<int, int>();
+            var headClassOfTeam = new Dictionary<int, int>();
+            var headClasses = new HashSet<int>();
+            var bodyClasses = new HashSet<int>();
+
+            for (int team = 0; team < teamPairs.Count; team++)
+            {
+                (int bodyClassId, int headClassId) = teamPairs[team];
+                if (bodyClassId < 0 || headClassId < 0)
+                    continue;
+
+                bodyClassOfTeam[team] = bodyClassId;
+                headClassOfTeam[team] = headClassId;
+                bodyClasses.Add(bodyClassId);
+                headClasses.Add(headClassId);
+                teamOfClass.TryAdd(bodyClassId, team);
+                teamOfClass.TryAdd(headClassId, team);
+            }
+
+            var bodyBoxes = detections.Where(d => bodyClasses.Contains(d.ClassId)).ToList();
+            var headBoxes = detections.Where(d => headClasses.Contains(d.ClassId)).ToList();
+
+            foreach (YoloDetection head in headBoxes)
+            {
+                // Pair the head with the body that best encloses it.
+                YoloDetection bestBody = null;
+                float bestContainment = HeadInBodyContainment;
+
+                foreach (YoloDetection body in bodyBoxes)
+                {
+                    if (body.Width * body.Height <= head.Width * head.Height)
+                        continue; // A body must be larger than the head it contains.
+
+                    float containment = ComputeContainmentYolo(head, body);
+                    if (containment >= bestContainment)
+                    {
+                        bestContainment = containment;
+                        bestBody = body;
+                    }
+                }
+
+                if (bestBody == null)
+                    continue;
+
+                if (!teamOfClass.TryGetValue(head.ClassId, out int headTeam) ||
+                    !teamOfClass.TryGetValue(bestBody.ClassId, out int bodyTeam) ||
+                    headTeam == bodyTeam)
+                {
+                    continue; // Already consistent or not part of a configured team.
+                }
+
+                // Higher score decides the shared team.
+                if (head.Score >= bestBody.Score)
+                {
+                    if (bodyClassOfTeam.TryGetValue(headTeam, out int correctedBodyClass))
+                        bestBody.ClassId = correctedBodyClass;
+                }
+                else
+                {
+                    if (headClassOfTeam.TryGetValue(bodyTeam, out int correctedHeadClass))
+                        head.ClassId = correctedHeadClass;
+                }
+            }
+
+            return detections;
+        }
+
         private List<Detection> ApplyImprovedNMS(List<Detection> detections, float iouThreshold = 0.5f)
         {
             if (detections.Count == 0) return new List<Detection>();
@@ -415,14 +631,28 @@ namespace YoableWPF.Managers
             return (float)Math.Sqrt(Math.Pow(p2.X - p1.X, 2) + Math.Pow(p2.Y - p1.Y, 2));
         }
 
-        private List<YoloDetection> ApplyEnsembleConsensus(List<YoloDetection> allDetections)
+        private static float GetConfidenceThresholdForClass(
+            int classId,
+            IReadOnlyDictionary<int, float>? classConfidenceThresholds)
+        {
+            if (classConfidenceThresholds != null &&
+                classConfidenceThresholds.TryGetValue(classId, out float threshold))
+            {
+                return Math.Clamp(threshold, 0f, 1f);
+            }
+
+            return Properties.Settings.Default.AIConfidence;
+        }
+
+        private List<YoloDetection> ApplyEnsembleConsensus(
+            List<YoloDetection> allDetections,
+            IReadOnlyDictionary<int, float>? classConfidenceThresholds = null)
         {
             if (allDetections.Count == 0) return new List<YoloDetection>();
 
             float consensusIoUThreshold = Properties.Settings.Default.ConsensusIoUThreshold;
             int minimumConsensus = Properties.Settings.Default.MinimumConsensus;
             bool useWeightedAverage = Properties.Settings.Default.UseWeightedAverage;
-            float confidenceThreshold = Properties.Settings.Default.AIConfidence;
 
             var clusters = new List<List<YoloDetection>>();
             var processed = new bool[allDetections.Count];
@@ -472,6 +702,9 @@ namespace YoableWPF.Managers
             foreach (var cluster in clusters)
             {
                 var modelIndices = cluster.Select(d => d.ModelIndex).Distinct().ToList();
+                float confidenceThreshold = GetConfidenceThresholdForClass(
+                    cluster[0].ClassId,
+                    classConfidenceThresholds);
 
                 if (modelIndices.Count >= effectiveMinConsensus ||
                     (cluster[0].Score > confidenceThreshold + 0.2f) ||
@@ -502,17 +735,20 @@ namespace YoableWPF.Managers
             return ApplyNMSYolo(consensusDetections, ensembleIoUThreshold);
         }
 
-        private List<YoloDetection> ApplyEnsembleUnion(List<YoloDetection> allDetections)
+        private List<YoloDetection> ApplyEnsembleUnion(
+            List<YoloDetection> allDetections,
+            IReadOnlyDictionary<int, float>? classConfidenceThresholds = null)
         {
             if (allDetections.Count == 0) return new List<YoloDetection>();
             
             float mergeIoUThreshold = Properties.Settings.Default.EnsembleIoUThreshold;
             bool useWeightedAverage = Properties.Settings.Default.UseWeightedAverage;
-            float confidenceThreshold = Properties.Settings.Default.AIConfidence;
 
             // Filter low confidence detections
             var validDetections = allDetections
-                .Where(d => d.Score >= confidenceThreshold)
+                .Where(d => d.Score >= GetConfidenceThresholdForClass(
+                    d.ClassId,
+                    classConfidenceThresholds))
                 .OrderByDescending(d => d.Score)
                 .ToList();
 
@@ -556,6 +792,114 @@ namespace YoableWPF.Managers
 
             // Apply NMS to remove duplicate detections
             return ApplyNMSYolo(mergedDetections, mergeIoUThreshold);
+        }
+
+        private ModelRole GetModelRole(int modelIndex)
+        {
+            if (modelIndex < 0 || modelIndex >= loadedModels.Count)
+                return ModelRole.Detector;
+
+            return loadedModels[modelIndex].Role;
+        }
+
+        /// <summary>
+        /// Keeps the boxes produced by detector models verbatim and lets classifier models decide
+        /// only what class each box is, by score-weighted vote among the detections that overlap it.
+        /// This is for ensembles where one model localises well but lacks the classes you need,
+        /// while others know the classes but localise poorly.
+        /// </summary>
+        private List<YoloDetection> ApplyClassTransfer(
+            List<YoloDetection> allDetections,
+            IReadOnlyDictionary<int, float>? classConfidenceThresholds)
+        {
+            if (allDetections.Count == 0) return new List<YoloDetection>();
+
+            var detectorBoxes = allDetections
+                .Where(detection => GetModelRole(detection.ModelIndex) == ModelRole.Detector)
+                .ToList();
+
+            // Without a detector there are no boxes to keep, so rather than returning nothing fall
+            // back to Union, which is the closest behaviour that still produces labels.
+            if (detectorBoxes.Count == 0)
+            {
+                Debug.WriteLine("ClassTransfer: no detector-role model produced boxes; using Union.");
+                return ApplyEnsembleUnion(allDetections, classConfidenceThresholds);
+            }
+
+            float voteIoUThreshold = Properties.Settings.Default.ClassTransferIoUThreshold;
+            bool keepUnvotedBoxes = Properties.Settings.Default.ClassTransferKeepUnvoted;
+
+            var classifierVotes = allDetections
+                .Where(detection => GetModelRole(detection.ModelIndex) == ModelRole.Classifier)
+                .ToList();
+
+            detectorBoxes = detectorBoxes
+                .Where(detection => detection.Score >= GetConfidenceThresholdForClass(
+                    detection.ClassId,
+                    classConfidenceThresholds))
+                .ToList();
+
+            // Detector models may overlap each other, so collapse duplicates before voting.
+            detectorBoxes = ApplyNMSYolo(
+                detectorBoxes,
+                Properties.Settings.Default.EnsembleIoUThreshold);
+
+            var results = new List<YoloDetection>();
+
+            foreach (YoloDetection box in detectorBoxes)
+            {
+                List<int> allowedClassIds = box.AllowedClassIds;
+                var voteWeights = new Dictionary<int, float>();
+
+                foreach (YoloDetection vote in classifierVotes)
+                {
+                    // A box only accepts votes for classes its mapping permits, which is what
+                    // stops a head box from being classified as a body class.
+                    if (allowedClassIds != null &&
+                        allowedClassIds.Count > 0 &&
+                        !allowedClassIds.Contains(vote.ClassId))
+                    {
+                        continue;
+                    }
+
+                    if (vote.Score < GetConfidenceThresholdForClass(
+                        vote.ClassId,
+                        classConfidenceThresholds))
+                    {
+                        continue;
+                    }
+
+                    if (ComputeIoUYolo(box, vote) < voteIoUThreshold)
+                        continue;
+
+                    voteWeights.TryGetValue(vote.ClassId, out float weight);
+                    voteWeights[vote.ClassId] = weight + vote.Score;
+                }
+
+                if (voteWeights.Count > 0)
+                {
+                    box.ClassId = voteWeights
+                        .OrderByDescending(pair => pair.Value)
+                        .First()
+                        .Key;
+                }
+                else
+                {
+                    if (!keepUnvotedBoxes)
+                        continue;
+
+                    // No classifier recognised this box. Keeping it costs one class correction,
+                    // whereas dropping it costs redrawing the box by hand.
+                    box.ClassId = allowedClassIds != null && allowedClassIds.Count > 0
+                        ? allowedClassIds[0]
+                        : box.ClassId;
+                }
+
+                box.ModelIndex = -1;
+                results.Add(box);
+            }
+
+            return results;
         }
 
         private YoloDetection MergeYoloDetections(List<YoloDetection> detections, bool useWeightedAverage)
@@ -606,11 +950,53 @@ namespace YoableWPF.Managers
             }
         }
 
-        private List<YoloDetection> PostProcessYoloOutputDynamic(Tensor<float> outputTensor, YoloModel model, int imgWidth, int imgHeight)
+        /// <summary>
+        /// Resolves a model class ID to the project class a detection should be reported as.
+        /// Returns false when the model's mapping excludes that class entirely.
+        /// </summary>
+        /// <remarks>
+        /// A model class may map to several project classes (for example a "body" class that is
+        /// allowed to be either team). The first allowed class becomes the reported class, which
+        /// matches the previous behaviour for single-target mappings; ClassTransfer mode later
+        /// replaces it using <paramref name="allowedClassIds"/>.
+        /// </remarks>
+        private static bool TryMapModelClass(
+            YoloModel model,
+            int modelClassId,
+            out int projectClassId,
+            out List<int> allowedClassIds)
+        {
+            // An unconfigured mapping means model class IDs double as project class IDs.
+            if (model.ClassMapping == null)
+            {
+                projectClassId = modelClassId;
+                allowedClassIds = null;
+                return true;
+            }
+
+            if (!model.ClassMapping.TryGetValue(modelClassId, out List<int> allowedClasses) ||
+                allowedClasses == null ||
+                allowedClasses.Count == 0)
+            {
+                projectClassId = -1;
+                allowedClassIds = null;
+                return false;
+            }
+
+            projectClassId = allowedClasses[0];
+            allowedClassIds = allowedClasses;
+            return true;
+        }
+
+        private List<YoloDetection> PostProcessYoloOutputDynamic(
+            Tensor<float> outputTensor,
+            YoloModel model,
+            int imgWidth,
+            int imgHeight,
+            IReadOnlyDictionary<int, float>? classConfidenceThresholds = null)
         {
             var modelInfo = model.ModelInfo;
             List<YoloDetection> detections = new();
-            float confidenceThreshold = Properties.Settings.Default.AIConfidence;
 
             float scaleX = (float)imgWidth / modelInfo.ModelInputSize;
             float scaleY = (float)imgHeight / modelInfo.ModelInputSize;
@@ -622,7 +1008,6 @@ namespace YoableWPF.Managers
                 for (int i = 0; i < modelInfo.NumDetections; i++)
                 {
                     float objectness = outputTensor[0, i, 4];
-                    if (objectness < confidenceThreshold) continue;
 
                     float maxClassConf = 0;
                     int modelClassId = 0;
@@ -636,18 +1021,16 @@ namespace YoableWPF.Managers
                         }
                     }
 
-                    // Apply class mapping: Model Class ID -> Project Class ID
-                    // Skip detection if class is not mapped (user selected "nan")
-                    // Only skip if ClassMapping has been configured (not null and not empty)
-                    if (model.ClassMapping != null && model.ClassMapping.Count > 0 && !model.ClassMapping.ContainsKey(modelClassId))
+                    if (!TryMapModelClass(model, modelClassId, out int projectClassId, out List<int> allowedClassIds))
                     {
-                        continue; // Skip this detection - class is set to "nan"
+                        continue; // Class is excluded by the model's mapping.
                     }
 
-                    int projectClassId = modelClassId;
-                    if (model.ClassMapping != null && model.ClassMapping.ContainsKey(modelClassId))
+                    if (objectness < GetConfidenceThresholdForClass(
+                        projectClassId,
+                        classConfidenceThresholds))
                     {
-                        projectClassId = model.ClassMapping[modelClassId];
+                        continue;
                     }
 
                     float centerX = outputTensor[0, i, 0] * scaleX;
@@ -663,7 +1046,8 @@ namespace YoableWPF.Managers
                         Height = height,
                         Confidence = objectness,
                         ClassConfidence = maxClassConf,
-                        ClassId = projectClassId  // Use mapped project class ID
+                        ClassId = projectClassId,  // Use mapped project class ID
+                        AllowedClassIds = allowedClassIds
                     });
                 }
             }
@@ -686,21 +1070,17 @@ namespace YoableWPF.Managers
                         }
                     }
 
-                    // YOLOv8 uses class confidence as the score (no separate objectness)
-                    if (maxClassConf < confidenceThreshold) continue;
-
-                    // Apply class mapping: Model Class ID -> Project Class ID
-                    // Skip detection if class is not mapped (user selected "nan")
-                    // Only skip if ClassMapping has been configured (not null and not empty)
-                    if (model.ClassMapping != null && model.ClassMapping.Count > 0 && !model.ClassMapping.ContainsKey(modelClassId))
+                    if (!TryMapModelClass(model, modelClassId, out int projectClassId, out List<int> allowedClassIds))
                     {
-                        continue; // Skip this detection - class is set to "nan"
+                        continue; // Class is excluded by the model's mapping.
                     }
 
-                    int projectClassId = modelClassId;
-                    if (model.ClassMapping != null && model.ClassMapping.ContainsKey(modelClassId))
+                    // YOLOv8 uses class confidence as the score (no separate objectness).
+                    if (maxClassConf < GetConfidenceThresholdForClass(
+                        projectClassId,
+                        classConfidenceThresholds))
                     {
-                        projectClassId = model.ClassMapping[modelClassId];
+                        continue;
                     }
 
                     float centerX = outputTensor[0, 0, i] * scaleX;
@@ -716,7 +1096,8 @@ namespace YoableWPF.Managers
                         Height = height,
                         Confidence = maxClassConf, // YOLOv8 uses class conf as confidence
                         ClassConfidence = 1.0f,
-                        ClassId = projectClassId  // Use mapped project class ID
+                        ClassId = projectClassId,  // Use mapped project class ID
+                        AllowedClassIds = allowedClassIds
                     });
                 }
             }
@@ -743,17 +1124,55 @@ namespace YoableWPF.Managers
         }
 
         // New method: Returns detection results with ClassId
-        public List<(Rectangle box, int classId)> RunInferenceWithClasses(Bitmap image)
+        public List<(Rectangle box, int classId)> RunInferenceWithClasses(
+            Bitmap image,
+            IReadOnlyDictionary<int, float>? classConfidenceThresholds = null,
+            IReadOnlyList<(int BodyClassId, int HeadClassId)>? teamPairs = null)
         {
             if (loadedModels.Count == 0) return new List<(Rectangle, int)>();
 
             if (loadedModels.Count == 1)
             {
-                var detections = RunSingleModelInferenceWithClasses(image, loadedModels[0]);
+                var detections = RunSingleModelInferenceWithClasses(
+                    image,
+                    loadedModels[0],
+                    classConfidenceThresholds);
                 return detections.Select(d => (d.Box, d.ClassId)).ToList();
             }
 
-            return RunEnsembleInferenceWithClasses(image);
+            return RunEnsembleInferenceWithClasses(image, classConfidenceThresholds, teamPairs);
+        }
+
+        private T RunModelSession<T>(
+            YoloModel model,
+            List<NamedOnnxValue> inputs,
+            Func<Tensor<float>, T> processOutput)
+        {
+            // Hold the DirectML lock only around the GPU Run call. Postprocessing (tensor decode,
+            // NMS) is CPU work; running it unlocked lets another worker start its Run immediately,
+            // so GPU inference from multiple models/images stays back-to-back instead of stalling
+            // while one thread decodes results. Concurrent Run is still prevented by the lock.
+            IDisposableReadOnlyCollection<DisposableNamedOnnxValue> results = null;
+            try
+            {
+                if (model.UsesDirectMl)
+                {
+                    lock (directMlInferenceLock)
+                    {
+                        results = model.Session.Run(inputs, model.OutputNames);
+                    }
+                }
+                else
+                {
+                    results = model.Session.Run(inputs, model.OutputNames);
+                }
+
+                return processOutput(results.First().AsTensor<float>());
+            }
+            finally
+            {
+                results?.Dispose();
+            }
         }
 
         private List<Rectangle> RunSingleModelInference(Bitmap image, YoloModel model)
@@ -775,14 +1194,12 @@ namespace YoableWPF.Managers
 
                 var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("images", inputTensor) };
 
-                // Run inference with error handling
-                using var results = model.Session.Run(inputs, model.OutputNames);
-                var outputTensor = results.First().AsTensor<float>();
-
-                // Post-process using original image dimensions for proper scaling
-                var detections = PostProcessYoloOutput(outputTensor, model, image.Width, image.Height);
-                var finalDetections = ApplyImprovedNMS(detections);
-                TotalDetections += finalDetections.Count;
+                var finalDetections = RunModelSession(
+                    model,
+                    inputs,
+                    outputTensor => ApplyImprovedNMS(
+                        PostProcessYoloOutput(outputTensor, model, image.Width, image.Height)));
+                Interlocked.Add(ref totalDetections, finalDetections.Count);
 
                 // Clean up temporary bitmaps
                 if (processedImage != image) processedImage.Dispose();
@@ -801,15 +1218,18 @@ namespace YoableWPF.Managers
             }
         }
 
-        private List<Detection> RunSingleModelInferenceWithClasses(Bitmap image, YoloModel model)
+        private List<Detection> RunSingleModelInferenceWithClasses(
+            Bitmap image,
+            YoloModel model,
+            IReadOnlyDictionary<int, float>? classConfidenceThresholds)
         {
             try
             {
                 // Convert to 24bpp first
-                Bitmap processedImage = ConvertTo24bpp(image);
+                using Bitmap processedImage = ConvertTo24bpp(image);
 
                 // Resize image to match model's expected input size
-                Bitmap resizedImage = ResizeImageForModel(processedImage, model.ModelInfo.ModelInputSize);
+                using Bitmap resizedImage = ResizeImageForModel(processedImage, model.ModelInfo.ModelInputSize);
 
                 // Convert resized image to float array
                 float[] inputArray = BitmapToFloatArray(resizedImage);
@@ -820,29 +1240,32 @@ namespace YoableWPF.Managers
 
                 var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("images", inputTensor) };
 
-                // Run inference with error handling
-                using var results = model.Session.Run(inputs, model.OutputNames);
-                var outputTensor = results.First().AsTensor<float>();
-
-                // Post-process using original image dimensions for proper scaling
-                var detections = PostProcessYoloOutput(outputTensor, model, image.Width, image.Height);
-                var finalDetections = ApplyImprovedNMS(detections);
-                TotalDetections += finalDetections.Count;
-
-                // Clean up temporary bitmaps
-                if (processedImage != image) processedImage.Dispose();
-                resizedImage.Dispose();
+                var finalDetections = RunModelSession(
+                    model,
+                    inputs,
+                    outputTensor => ApplyImprovedNMS(
+                        PostProcessYoloOutputDynamic(
+                            outputTensor,
+                            model,
+                            image.Width,
+                            image.Height,
+                            classConfidenceThresholds)
+                        .Select(detection => new Detection(
+                            detection.ToRectangle(),
+                            detection.Confidence,
+                            detection.ClassConfidence,
+                            detection.ClassId))
+                        .ToList()));
+                Interlocked.Add(ref totalDetections, finalDetections.Count);
 
                 return finalDetections;
             }
             catch (Exception ex)
             {
-                CustomMessageBox.Show(
-                    string.Format(LanguageManager.Instance.GetString("Msg_AIInferenceError") ?? "Error running AI inference on image:\n\n{0}\n\nImage size: {1}x{2}\nModel expected size: {3}x{3}\n\nPlease ensure your model is compatible with the image.", ex.Message, image.Width, image.Height, model.ModelInfo.ModelInputSize),
-                    LanguageManager.Instance.GetString("Msg_AIInferenceErrorTitle") ?? "AI Inference Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-                return new List<Detection>();
+                throw new InvalidOperationException(
+                    $"Inference failed for {image.Width}x{image.Height} image with " +
+                    $"{model.ModelInfo.ModelInputSize}x{model.ModelInfo.ModelInputSize} model input.",
+                    ex);
             }
         }
 
@@ -873,13 +1296,16 @@ namespace YoableWPF.Managers
 
                         var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("images", inputTensor) };
 
-                        // Run inference
-                        using var results = model.Session.Run(inputs, model.OutputNames);
-                        var outputTensor = results.First().AsTensor<float>();
-
-                        // Post-process using original image dimensions for proper scaling
-                        var detections = PostProcessYoloOutputDynamic(outputTensor, model, image.Width, image.Height);
-                        detections = ApplyNMSYolo(detections, 0.5f);
+                        var detections = RunModelSession(
+                            model,
+                            inputs,
+                            outputTensor => ApplyNMSYolo(
+                                PostProcessYoloOutputDynamic(
+                                    outputTensor,
+                                    model,
+                                    image.Width,
+                                    image.Height),
+                                0.5f));
 
                         foreach (var det in detections)
                         {
@@ -921,7 +1347,11 @@ namespace YoableWPF.Managers
                 EnsembleDetectionMode mode = (EnsembleDetectionMode)Properties.Settings.Default.EnsembleDetectionMode;
                 List<YoloDetection> finalDetections;
                 
-                if (mode == EnsembleDetectionMode.Union)
+                if (mode == EnsembleDetectionMode.ClassTransfer)
+                {
+                    finalDetections = ApplyClassTransfer(allYoloDetections, null);
+                }
+                else if (mode == EnsembleDetectionMode.Union)
                 {
                     finalDetections = ApplyEnsembleUnion(allYoloDetections);
                 }
@@ -929,8 +1359,9 @@ namespace YoableWPF.Managers
                 {
                     finalDetections = ApplyEnsembleConsensus(allYoloDetections);
                 }
-                
-                TotalDetections += finalDetections.Count;
+
+                finalDetections = ApplyContainmentSuppression(finalDetections);
+                Interlocked.Add(ref totalDetections, finalDetections.Count);
 
                 return finalDetections.Select(d => d.ToRectangle()).ToList();
             }
@@ -945,14 +1376,18 @@ namespace YoableWPF.Managers
             }
         }
 
-        private List<(Rectangle box, int classId)> RunEnsembleInferenceWithClasses(Bitmap image)
+        private List<(Rectangle box, int classId)> RunEnsembleInferenceWithClasses(
+            Bitmap image,
+            IReadOnlyDictionary<int, float>? classConfidenceThresholds,
+            IReadOnlyList<(int BodyClassId, int HeadClassId)>? teamPairs = null)
         {
             try
             {
                 var allYoloDetections = new List<YoloDetection>();
+                int successfulModelRuns = 0;
 
                 // Convert to 24bpp first
-                Bitmap processedImage = ConvertTo24bpp(image);
+                using Bitmap processedImage = ConvertTo24bpp(image);
 
                 for (int modelIdx = 0; modelIdx < loadedModels.Count; modelIdx++)
                 {
@@ -961,7 +1396,7 @@ namespace YoableWPF.Managers
                     try
                     {
                         // Resize image to match this model's expected input size
-                        Bitmap resizedImage = ResizeImageForModel(processedImage, model.ModelInfo.ModelInputSize);
+                        using Bitmap resizedImage = ResizeImageForModel(processedImage, model.ModelInfo.ModelInputSize);
 
                         // Convert resized image to float array
                         float[] inputArray = BitmapToFloatArray(resizedImage);
@@ -972,13 +1407,17 @@ namespace YoableWPF.Managers
 
                         var inputs = new List<NamedOnnxValue> { NamedOnnxValue.CreateFromTensor("images", inputTensor) };
 
-                        // Run inference
-                        using var results = model.Session.Run(inputs, model.OutputNames);
-                        var outputTensor = results.First().AsTensor<float>();
-
-                        // Post-process using original image dimensions for proper scaling
-                        var detections = PostProcessYoloOutputDynamic(outputTensor, model, image.Width, image.Height);
-                        detections = ApplyNMSYolo(detections, 0.5f);
+                        var detections = RunModelSession(
+                            model,
+                            inputs,
+                            outputTensor => ApplyNMSYolo(
+                                PostProcessYoloOutputDynamic(
+                                    outputTensor,
+                                    model,
+                                    image.Width,
+                                    image.Height,
+                                    classConfidenceThresholds),
+                                0.5f));
 
                         foreach (var det in detections)
                         {
@@ -986,9 +1425,8 @@ namespace YoableWPF.Managers
                         }
 
                         allYoloDetections.AddRange(detections);
+                        successfulModelRuns++;
 
-                        // Clean up resized image
-                        resizedImage.Dispose();
                     }
                     catch (Exception modelEx)
                     {
@@ -996,20 +1434,13 @@ namespace YoableWPF.Managers
                         System.Diagnostics.Debug.WriteLine(
                             $"Error running model {model.Name}: {modelEx.Message}");
 
-                        // If this is a critical error (like wrong dimensions), show warning
-                        if (modelEx.Message.Contains("dimension") || modelEx.Message.Contains("shape"))
-                        {
-                            CustomMessageBox.Show(
-                                string.Format(LanguageManager.Instance.GetString("Msg_ModelProcessingWarning") ?? "Warning: Model '{0}' failed to process the image.\n\nError: {1}\n\nContinuing with remaining models...", model.Name, modelEx.Message),
-                                LanguageManager.Instance.GetString("Msg_ModelProcessingWarningTitle") ?? "Model Processing Warning",
-                                MessageBoxButton.OK,
-                                MessageBoxImage.Warning);
-                        }
+                        // Continue with remaining models; the batch reports this image
+                        // as failed when no model can complete inference.
                     }
                 }
 
-                // Clean up processed image
-                if (processedImage != image) processedImage.Dispose();
+                if (successfulModelRuns == 0)
+                    throw new InvalidOperationException("All loaded models failed inference.");
 
                 if (allYoloDetections.Count == 0)
                 {
@@ -1020,27 +1451,44 @@ namespace YoableWPF.Managers
                 EnsembleDetectionMode mode = (EnsembleDetectionMode)Properties.Settings.Default.EnsembleDetectionMode;
                 List<YoloDetection> finalDetections;
                 
-                if (mode == EnsembleDetectionMode.Union)
+                if (mode == EnsembleDetectionMode.ClassTransfer)
                 {
-                    finalDetections = ApplyEnsembleUnion(allYoloDetections);
+                    finalDetections = ApplyClassTransfer(
+                        allYoloDetections,
+                        classConfidenceThresholds);
+                }
+                else if (mode == EnsembleDetectionMode.Union)
+                {
+                    finalDetections = ApplyEnsembleUnion(
+                        allYoloDetections,
+                        classConfidenceThresholds);
                 }
                 else // Voting mode (default)
                 {
-                    finalDetections = ApplyEnsembleConsensus(allYoloDetections);
+                    finalDetections = ApplyEnsembleConsensus(
+                        allYoloDetections,
+                        classConfidenceThresholds);
                 }
-                
-                TotalDetections += finalDetections.Count;
+
+                finalDetections = ApplyContainmentSuppression(finalDetections);
+
+                // Reconcile a body box's team with the head inside it (ClassTransfer only).
+                if (mode == EnsembleDetectionMode.ClassTransfer &&
+                    Properties.Settings.Default.ClassTransferTeamConsistency &&
+                    teamPairs != null)
+                {
+                    finalDetections = ApplyTeamConsistency(finalDetections, teamPairs);
+                }
+
+                Interlocked.Add(ref totalDetections, finalDetections.Count);
 
                 return finalDetections.Select(d => (d.ToRectangle(), d.ClassId)).ToList();
             }
             catch (Exception ex)
             {
-                CustomMessageBox.Show(
-                    string.Format(LanguageManager.Instance.GetString("Msg_EnsembleInferenceError") ?? "Error running ensemble AI inference:\n\n{0}\n\nImage size: {1}x{2}\n\nPlease check your models and image compatibility.", ex.Message, image.Width, image.Height),
-                    LanguageManager.Instance.GetString("Msg_EnsembleInferenceErrorTitle") ?? "Ensemble Inference Error",
-                    MessageBoxButton.OK,
-                    MessageBoxImage.Error);
-                return new List<(Rectangle, int)>();
+                throw new InvalidOperationException(
+                    $"Ensemble inference failed for {image.Width}x{image.Height} image.",
+                    ex);
             }
         }
 
@@ -1049,7 +1497,7 @@ namespace YoableWPF.Managers
             OpenModelManager();
         }
 
-        public void OpenModelManager(List<LabelClass> projectClasses = null, Dictionary<string, Dictionary<int, int>> savedMappings = null)
+        public void OpenModelManager(List<LabelClass> projectClasses = null, Dictionary<string, Dictionary<int, List<int>>> savedMappings = null)
         {
             var dialog = new ModelManagerDialog(this, projectClasses, savedMappings);
 
@@ -1070,6 +1518,79 @@ namespace YoableWPF.Managers
         public List<YoloModel> GetLoadedModels()
         {
             return new List<YoloModel>(loadedModels);
+        }
+
+        public ExecutionProviderReloadResult ReloadExecutionProviders(out string errorMessage)
+        {
+            bool requestedGpu = Properties.Settings.Default.UseGPU;
+            var replacements = new List<(YoloModel Original, YoloModel Replacement)>();
+            var gpuErrors = new List<string>();
+
+            foreach (YoloModel original in loadedModels)
+            {
+                var replacement = new YoloModel
+                {
+                    ModelPath = original.ModelPath,
+                    Name = original.Name,
+                    ModelInfo = original.ModelInfo,
+                    ClassMapping = CloneClassMapping(original.ClassMapping)
+                };
+
+                if (!TryInitializeSession(replacement, requestedGpu, out string providerError))
+                {
+                    if (!requestedGpu)
+                    {
+                        replacement.Session?.Dispose();
+                        foreach (var pending in replacements)
+                            pending.Replacement.Session?.Dispose();
+
+                        errorMessage = providerError;
+                        return ExecutionProviderReloadResult.Failed;
+                    }
+
+                    if (!TryInitializeSession(replacement, false, out string cpuError))
+                    {
+                        replacement.Session?.Dispose();
+                        foreach (var pending in replacements)
+                            pending.Replacement.Session?.Dispose();
+
+                        errorMessage = $"{GetFriendlyGpuError(providerError)}; CPU: {cpuError}";
+                        return ExecutionProviderReloadResult.Failed;
+                    }
+
+                    gpuErrors.Add($"{original.Name}: {GetFriendlyGpuError(providerError)}");
+                }
+
+                replacements.Add((original, replacement));
+            }
+
+            foreach (var pair in replacements)
+            {
+                pair.Original.Session?.Dispose();
+                pair.Original.Session = pair.Replacement.Session;
+                pair.Original.OutputNames = pair.Replacement.OutputNames;
+                pair.Original.UsesDirectMl = pair.Replacement.UsesDirectMl;
+                pair.Original.DirectMlDeviceId = pair.Replacement.DirectMlDeviceId;
+            }
+
+            errorMessage = string.Join(Environment.NewLine, gpuErrors);
+            return gpuErrors.Count == 0
+                ? ExecutionProviderReloadResult.Success
+                : ExecutionProviderReloadResult.FallbackToCpu;
+        }
+
+        /// <summary>
+        /// Deep-copies a class mapping so the clone's per-class lists are not shared.
+        /// </summary>
+        public static Dictionary<int, List<int>> CloneClassMapping(
+            IReadOnlyDictionary<int, List<int>> mapping)
+        {
+            if (mapping == null)
+                return null;
+
+            return mapping.ToDictionary(
+                pair => pair.Key,
+                pair => new List<int>(pair.Value ?? new List<int>()));
         }
 
         public void RemoveModel(string modelName)
@@ -1125,22 +1646,50 @@ namespace YoableWPF.Managers
                     Name = Path.GetFileNameWithoutExtension(modelPath)
                 };
 
-                if (!TryInitializeSession(model, Properties.Settings.Default.UseGPU, out string errorMessage))
+                bool requestedGpu = Properties.Settings.Default.UseGPU;
+                if (!TryInitializeSession(model, requestedGpu, out string errorMessage))
                 {
-                    if (!silent)
-                    {
-                        CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_GPUInitFailed") ?? "GPU initialization failed: {0}\nFalling back to CPU.", errorMessage),
-                                      LanguageManager.Instance.GetString("Msg_GPUWarning") ?? "GPU Warning", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    }
-
-                    if (!TryInitializeSession(model, false, out errorMessage))
+                    if (!requestedGpu)
                     {
                         if (!silent)
                         {
-                            CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_ModelInitFailed") ?? "Failed to initialize model: {0}", errorMessage),
+                            CustomMessageBox.Show(
+                                string.Format(
+                                    LanguageManager.Instance.GetString("Msg_ModelInitFailed") ??
+                                    "Failed to initialize model: {0}",
+                                    errorMessage),
+                                LanguageManager.Instance.GetString("Msg_Error") ?? "Error",
+                                MessageBoxButton.OK,
+                                MessageBoxImage.Error);
+                        }
+                        return null;
+                    }
+
+                    string gpuErrorMessage = GetFriendlyGpuError(errorMessage);
+                    if (!TryInitializeSession(model, false, out string cpuErrorMessage))
+                    {
+                        if (!silent)
+                        {
+                            CustomMessageBox.Show(string.Format(LanguageManager.Instance.GetString("Msg_ModelInitFailed") ?? "Failed to initialize model: {0}", cpuErrorMessage),
                                           LanguageManager.Instance.GetString("Msg_Error") ?? "Error", MessageBoxButton.OK, MessageBoxImage.Error);
                         }
                         return null;
+                    }
+
+                    if (!silent)
+                    {
+                        CustomMessageBox.Show(
+                            string.Format(
+                                LanguageManager.Instance.GetString("Msg_GPUInitFailed") ??
+                                "GPU initialization failed: {0}\nFalling back to CPU.",
+                                gpuErrorMessage),
+                            LanguageManager.Instance.GetString("Msg_GPUWarning") ?? "GPU Warning",
+                            MessageBoxButton.OK,
+                            MessageBoxImage.Warning);
+                    }
+                    else
+                    {
+                        Debug.WriteLine($"DirectML initialization failed; switched to CPU: {gpuErrorMessage}");
                     }
                 }
 
@@ -1239,33 +1788,82 @@ namespace YoableWPF.Managers
 
         private bool TryInitializeSession(YoloModel model, bool useGPU, out string errorMessage)
         {
+            if (!useGPU)
+                return TryInitializeSessionCore(model, false, -1, out errorMessage);
+
+            var adapterErrors = new List<string>();
+            for (int deviceId = 0; deviceId < MaxDirectMlAdaptersToProbe; deviceId++)
+            {
+                if (TryInitializeSessionCore(model, true, deviceId, out string adapterError))
+                {
+                    Debug.WriteLine(
+                        $"DirectML initialized for '{model.Name}' on device {deviceId}.");
+                    errorMessage = string.Empty;
+                    return true;
+                }
+
+                adapterErrors.Add($"device {deviceId}: {adapterError}");
+                Debug.WriteLine(
+                    $"DirectML device {deviceId} rejected '{model.Name}': {adapterError}");
+            }
+
+            errorMessage = adapterErrors.FirstOrDefault() ??
+                           "No compatible DirectML adapter was found.";
+            return false;
+        }
+
+        private bool TryInitializeSessionCore(
+            YoloModel model,
+            bool useGPU,
+            int directMlDeviceId,
+            out string errorMessage)
+        {
             try
             {
-                var sessionOptions = new SessionOptions
+                using var sessionOptions = new SessionOptions
                 {
                     EnableCpuMemArena = true,
-                    EnableMemoryPattern = true,
+                    // DirectML requires memory patterns to be disabled and does not
+                    // support ORT_PARALLEL execution mode.
+                    EnableMemoryPattern = !useGPU,
                     GraphOptimizationLevel = GraphOptimizationLevel.ORT_ENABLE_ALL,
-                    ExecutionMode = ExecutionMode.ORT_PARALLEL
+                    ExecutionMode = useGPU
+                        ? ExecutionMode.ORT_SEQUENTIAL
+                        : ExecutionMode.ORT_PARALLEL
                 };
 
                 if (useGPU)
                 {
-                    sessionOptions.AppendExecutionProvider_DML();
+                    sessionOptions.AppendExecutionProvider_DML(directMlDeviceId);
                 }
                 sessionOptions.AppendExecutionProvider_CPU();
 
                 model.Session = new InferenceSession(model.ModelPath, sessionOptions);
                 model.OutputNames = new List<string>(model.Session.OutputMetadata.Keys);
+                model.UsesDirectMl = useGPU;
+                model.DirectMlDeviceId = useGPU ? directMlDeviceId : -1;
 
                 errorMessage = string.Empty;
                 return true;
             }
             catch (Exception ex)
             {
+                model.UsesDirectMl = false;
+                model.DirectMlDeviceId = -1;
                 errorMessage = ex.Message;
                 return false;
             }
+        }
+
+        private static string GetFriendlyGpuError(string errorMessage)
+        {
+            if (errorMessage.Contains("887A0004", StringComparison.OrdinalIgnoreCase))
+            {
+                return LanguageManager.Instance.GetString("Msg_DirectMLUnsupported") ??
+                       "This GPU or its current driver does not support DirectML.";
+            }
+
+            return errorMessage;
         }
 
         public void ClearAllModels()

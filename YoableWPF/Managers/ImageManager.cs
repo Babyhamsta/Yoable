@@ -316,6 +316,38 @@ namespace YoableWPF.Managers
             while (duplicateImageFiles.TryDequeue(out _)) { }
         }
 
+        /// <summary>
+        /// Removes an image from the current project without deleting the source file.
+        /// </summary>
+        public bool RemoveImage(string fileName)
+        {
+            if (!imagePathMap.TryRemove(fileName, out var imageInfo))
+                return false;
+
+            imageStatuses.TryRemove(fileName, out _);
+            Cache.Remove(imageInfo.Path);
+
+            if (string.Equals(currentImagePath, fileName, StringComparison.OrdinalIgnoreCase))
+                currentImagePath = "";
+
+            return true;
+        }
+
+        /// <summary>
+        /// Replaces an image reference after a non-destructive image transformation.
+        /// </summary>
+        public bool ReplaceImage(string fileName, string newPath, Size newDimensions)
+        {
+            if (!imagePathMap.TryGetValue(fileName, out var previous))
+                return false;
+
+            var replacement = new ImageInfo(newPath, newDimensions);
+            imagePathMap[fileName] = replacement;
+            Cache.Remove(previous.Path);
+            Cache.Remove(newPath);
+            return true;
+        }
+
         public List<string> GetAllImagePaths()
         {
             return imagePathMap.Values.Select(img => img.Path).ToList();

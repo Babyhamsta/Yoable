@@ -46,7 +46,67 @@ namespace YoableWPF.Properties {
                 this["AIConfidence"] = value;
             }
         }
-        
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool AIAutoLabelOnlyUnlabeled {
+            get {
+                return ((bool)(this["AIAutoLabelOnlyUnlabeled"]));
+            }
+            set {
+                this["AIAutoLabelOnlyUnlabeled"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool AIReplaceExistingLabels {
+            get {
+                return ((bool)(this["AIReplaceExistingLabels"]));
+            }
+            set {
+                this["AIReplaceExistingLabels"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0.5")]
+        public float ClassTransferIoUThreshold {
+            get {
+                return ((float)(this["ClassTransferIoUThreshold"]));
+            }
+            set {
+                this["ClassTransferIoUThreshold"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ClassTransferKeepUnvoted {
+            get {
+                return ((bool)(this["ClassTransferKeepUnvoted"]));
+            }
+            set {
+                this["ClassTransferKeepUnvoted"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        public bool ClassTransferTeamConsistency {
+            get {
+                return ((bool)(this["ClassTransferTeamConsistency"]));
+            }
+            set {
+                this["ClassTransferTeamConsistency"] = value;
+            }
+        }
+
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
         [global::System.Configuration.DefaultSettingValueAttribute("True")]
@@ -704,6 +764,102 @@ namespace YoableWPF.Properties {
             }
             set {
                 this["SettingsUpgradeRequired"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LastTrainingExportDirectory {
+            get {
+                return ((string)(this["LastTrainingExportDirectory"]));
+            }
+            set {
+                this["LastTrainingExportDirectory"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("80")]
+        public double TrainingSplitTrain {
+            get {
+                return ((double)(this["TrainingSplitTrain"]));
+            }
+            set {
+                this["TrainingSplitTrain"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("20")]
+        public double TrainingSplitVal {
+            get {
+                return ((double)(this["TrainingSplitVal"]));
+            }
+            set {
+                this["TrainingSplitVal"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public double TrainingSplitTest {
+            get {
+                return ((double)(this["TrainingSplitTest"]));
+            }
+            set {
+                this["TrainingSplitTest"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int TrainingSplitSeed {
+            get {
+                return ((int)(this["TrainingSplitSeed"]));
+            }
+            set {
+                this["TrainingSplitSeed"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string LastAugmentationDirectory {
+            get {
+                return ((string)(this["LastAugmentationDirectory"]));
+            }
+            set {
+                this["LastAugmentationDirectory"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("3")]
+        public int AugmentationVariants {
+            get {
+                return ((int)(this["AugmentationVariants"]));
+            }
+            set {
+                this["AugmentationVariants"] = value;
+            }
+        }
+
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int AugmentationSeed {
+            get {
+                return ((int)(this["AugmentationSeed"]));
+            }
+            set {
+                this["AugmentationSeed"] = value;
             }
         }
     }

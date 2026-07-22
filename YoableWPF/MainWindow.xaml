@@ -231,6 +231,16 @@
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEDE1;" FontSize="16" Foreground="#FFFF9800"/>
                     </MenuItem.Icon>
                 </MenuItem>
+                <MenuItem Header="{DynamicResource Menu_ExportTrainingDataset}" Click="ExportTrainingDataset_Click">
+                    <MenuItem.Icon>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8F1;" FontSize="16" Foreground="#FF00BCD4"/>
+                    </MenuItem.Icon>
+                </MenuItem>
+                <MenuItem Header="{DynamicResource Menu_DataAugmentation}" Click="DataAugmentation_Click">
+                    <MenuItem.Icon>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8B9;" FontSize="16" Foreground="#FF8BC34A"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <MenuItem Header="{DynamicResource Menu_ClearAll}" Click="ClearAll_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="16" Foreground="#FFF44336"/>
@@ -249,6 +259,11 @@
                     </MenuItem.Icon>
                 </MenuItem>
                 <Separator/>
+                <MenuItem Header="{DynamicResource Menu_AILabelCurrentImage}" Click="AILabelCurrentImage_Click">
+                    <MenuItem.Icon>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8FE;" FontSize="16" Foreground="#FF26A69A"/>
+                    </MenuItem.Icon>
+                </MenuItem>
                 <MenuItem Header="{DynamicResource Menu_AutoLabelImages}" Click="AutoLabelImages_Click">
                     <MenuItem.Icon>
                         <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8FE;" FontSize="16" Foreground="#FF00BCD4"/>
@@ -267,8 +282,20 @@
             </MenuItem>
         </Menu>
 
+        <TabControl x:Name="MainWorkspaceTabs"
+                    Grid.Row="1"
+                    Grid.ColumnSpan="3"
+                    SelectionChanged="MainWorkspaceTabs_SelectionChanged">
+            <TabItem x:Name="ImageAnnotationTab" Header="{DynamicResource Main_TabAnnotate}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="320"/>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="320"/>
+                    </Grid.ColumnDefinitions>
+
         <!-- Left Panel - Images List -->
-        <Border Grid.Row="1" Grid.Column="0" 
+        <Border Grid.Column="0"
                 Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
                 Padding="12">
             <Grid>
@@ -428,6 +455,18 @@
                                         Background="#4481C784"
                                         Foreground="#81C784"
                                         BorderThickness="0"/>
+                                <Button Grid.Row="1" Grid.Column="2"
+                                        x:Name="FilterAiLabelsButton"
+                                        Content="{DynamicResource Main_FilterAiLabels}"
+                                        Click="FilterAiLabels_Click"
+                                        FontSize="10"
+                                        FontWeight="SemiBold"
+                                        Padding="6,6"
+                                        Margin="6,0,0,0"
+                                        HorizontalAlignment="Stretch"
+                                        Background="#44BA68C8"
+                                        Foreground="#BA68C8"
+                                        BorderThickness="0"/>
                             </Grid>
                         </StackPanel>
 
@@ -460,24 +499,85 @@
                                     </Grid>
                                 </DataTemplate>
                             </Expander.HeaderTemplate>
-                            <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0">
-                                <StackPanel x:Name="ClassFilterCheckBoxPanel" Orientation="Vertical">
-                                    <!-- Checkboxes will be added dynamically -->
+                            <StackPanel Margin="0,8,0,0">
+                                <WrapPanel Margin="0,0,0,6">
+                                    <RadioButton x:Name="ClassFilterModeInclude"
+                                                 GroupName="classFilterMode"
+                                                 IsChecked="True"
+                                                 Content="{DynamicResource Main_FilterModeInclude}"
+                                                 FontSize="11"
+                                                 Margin="0,0,14,4"
+                                                 Checked="ClassFilterMode_Changed"/>
+                                    <RadioButton x:Name="ClassFilterModeAll"
+                                                 GroupName="classFilterMode"
+                                                 Content="{DynamicResource Main_FilterModeAll}"
+                                                 FontSize="11"
+                                                 Margin="0,0,14,4"
+                                                 Checked="ClassFilterMode_Changed"/>
+                                    <RadioButton x:Name="ClassFilterModeOnly"
+                                                 GroupName="classFilterMode"
+                                                 Content="{DynamicResource Main_FilterModeOnly}"
+                                                 FontSize="11"
+                                                 Margin="0,0,14,4"
+                                                 Checked="ClassFilterMode_Changed"/>
+                                    <RadioButton x:Name="ClassFilterModeExclude"
+                                                 GroupName="classFilterMode"
+                                                 Content="{DynamicResource Main_FilterModeExclude}"
+                                                 FontSize="11"
+                                                 Margin="0,0,0,4"
+                                                 Checked="ClassFilterMode_Changed"/>
+                                </WrapPanel>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,4">
+                                    <Button Content="{DynamicResource Main_FilterSelectAll}"
+                                            FontSize="10" Padding="6,2" Margin="0,0,6,0"
+                                            Click="ClassFilterSelectAll_Click"/>
+                                    <Button Content="{DynamicResource Main_FilterClear}"
+                                            FontSize="10" Padding="6,2" Margin="0,0,6,0"
+                                            Click="ClassFilterClear_Click"/>
+                                    <Button Content="{DynamicResource Main_FilterInvert}"
+                                            FontSize="10" Padding="6,2"
+                                            Click="ClassFilterInvert_Click"/>
                                 </StackPanel>
-                            </ScrollViewer>
+                                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
+                                    <StackPanel x:Name="ClassFilterCheckBoxPanel" Orientation="Vertical">
+                                        <!-- Checkboxes will be added dynamically -->
+                                    </StackPanel>
+                                </ScrollViewer>
+                            </StackPanel>
                         </Expander>
                     </Grid>
                 </Border>
 
                 <!-- Image List Card -->
                 <Border Grid.Row="2" Style="{StaticResource ModernCard}" Padding="0" Margin="0">
-                    <ListBox x:Name="ImageListBox" 
+                    <ListBox x:Name="ImageListBox"
                              Style="{StaticResource ModernListBox}"
-                             SelectionMode="Single" 
+                             SelectionMode="Single"
                              SelectionChanged="ImageListBox_SelectionChanged"
+                             PreviewMouseRightButtonDown="ImageListBox_PreviewMouseRightButtonDown"
                              VirtualizingStackPanel.IsVirtualizing="True"
                              VirtualizingStackPanel.VirtualizationMode="Recycling"
                              ScrollViewer.IsDeferredScrollingEnabled="True">
+                        <ListBox.ContextMenu>
+                            <ContextMenu x:Name="ImageListContextMenu" Opened="ImageListContextMenu_Opened">
+                                <MenuItem Header="{DynamicResource Main_OpenImageLocation}" Click="OpenImageLocation_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEB9F;" FontSize="14" Foreground="#FF4CAF50"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{DynamicResource Main_OpenLabelLocation}" Click="OpenLabelLocation_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A5;" FontSize="14" Foreground="#FF2196F3"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="{DynamicResource Main_DeleteImage}" Click="DeleteImage_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="14" Foreground="#FFF44336"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </ListBox.ContextMenu>
                         <ListBox.ItemContainerStyle>
                             <Style TargetType="ListBoxItem" BasedOn="{StaticResource ImageListItemStyle}"/>
                         </ListBox.ItemContainerStyle>
@@ -680,7 +780,7 @@
         </Border>
 
         <!-- Center Content Panel -->
-        <Border Grid.Row="1" Grid.Column="1" 
+        <Border Grid.Column="1"
                 Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"
                 Padding="12">
             <Border Style="{StaticResource ModernCard}" Padding="0" Margin="0">
@@ -693,7 +793,7 @@
         </Border>
 
         <!-- Right Panel - Labels & Classes -->
-        <Border Grid.Row="1" Grid.Column="2" 
+        <Border Grid.Column="2"
                 Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
                 Padding="12">
             <Grid>
@@ -854,11 +954,28 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*"/>
                                 <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="Auto"/>
                             </Grid.ColumnDefinitions>
                             <TextBlock Grid.Column="0" Text="{DynamicResource Main_ImageLabels}"
                                        FontSize="13" FontWeight="SemiBold"
                                        VerticalAlignment="Center"/>
                             <Button Grid.Column="1"
+                                    x:Name="AILabelCurrentImageButton"
+                                    Click="AILabelCurrentImage_Click"
+                                    Width="28"
+                                    Height="28"
+                                    Background="Transparent"
+                                    BorderThickness="0"
+                                    Padding="4"
+                                    Margin="8,0,0,0"
+                                    VerticalAlignment="Center"
+                                    ToolTip="{DynamicResource Menu_AILabelCurrentImage}">
+                                <TextBlock FontFamily="Segoe MDL2 Assets"
+                                           Text="&#xE8FE;"
+                                           FontSize="14"
+                                           Foreground="#26A69A"/>
+                            </Button>
+                            <Button Grid.Column="2"
                                     x:Name="ClearImageClassesButton"
                                     Click="ClearImageClasses_Click"
                                     Background="Transparent"
@@ -1001,6 +1118,22 @@
                 </Border>
             </Grid>
         </Border>
+
+                </Grid>
+            </TabItem>
+            <TabItem x:Name="DuplicateImagesTab"
+                     Header="{DynamicResource Main_TabDuplicates}">
+                <local:DuplicateImageReviewControl x:Name="DuplicateImageReview"/>
+            </TabItem>
+            <TabItem x:Name="RoiCropTab"
+                     Header="{DynamicResource Main_TabRoiCrop}">
+                <local:RoiCropControl x:Name="RoiCropReview"/>
+            </TabItem>
+            <TabItem x:Name="DatasetStatsTab"
+                     Header="{DynamicResource Main_TabStats}">
+                <local:DatasetStatisticsControl x:Name="DatasetStats"/>
+            </TabItem>
+        </TabControl>
 
 
         <!-- Status Bar -->

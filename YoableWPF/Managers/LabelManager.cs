@@ -196,6 +196,20 @@ namespace YoableWPF.Managers
             return labelStorage.TryRemove(fileName, out _);
         }
 
+        public void SaveSuggestions(string fileName, List<SuggestedLabel> suggestions)
+        {
+            if (suggestions.Count == 0)
+            {
+                suggestionStorage.TryRemove(fileName, out _);
+                return;
+            }
+
+            suggestionStorage.AddOrUpdate(
+                fileName,
+                suggestions,
+                (_, _) => suggestions);
+        }
+
         public List<SuggestedLabel> GetSuggestions(string fileName)
         {
             if (!suggestionStorage.TryGetValue(fileName, out var suggestions))
@@ -1003,6 +1017,22 @@ namespace YoableWPF.Managers
                 fileName,
                 new List<LabelData>(existingLabels),
                 (k, existing) => new List<LabelData>(existingLabels));
+        }
+
+        public void ReplaceAILabels(string fileName, List<(Rectangle box, int classId)> detectedBoxes)
+        {
+            var labelsToKeep = labelStorage.TryGetValue(fileName, out var labels)
+                ? labels
+                    .Where(label => !label.Name.StartsWith("AI", StringComparison.OrdinalIgnoreCase))
+                    .Select(label => new LabelData(label))
+                    .ToList()
+                : new List<LabelData>();
+
+            labelStorage.AddOrUpdate(
+                fileName,
+                labelsToKeep,
+                (key, existing) => labelsToKeep);
+            AddAILabels(fileName, detectedBoxes);
         }
     }
 }
