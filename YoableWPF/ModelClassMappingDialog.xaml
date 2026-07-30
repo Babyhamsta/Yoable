@@ -12,38 +12,7 @@
         MinWidth="700">
     
     <Window.Resources>
-        <SolidColorBrush x:Key="AccentButtonBrush" Color="{DynamicResource SystemAccentColor}"/>
         
-        <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource AccentButtonBrush}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Border"
-                                Background="{TemplateBinding Background}"
-                                BorderThickness="0"
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.9"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
     </Window.Resources>
 
     <Grid Margin="20">
@@ -106,7 +75,7 @@
                                     <StackPanel Grid.Column="0" Orientation="Horizontal" Margin="0,0,16,0">
                                         <Border Width="4" 
                                                 Height="20" 
-                                                Background="#FF9C27B0"
+                                                Background="{StaticResource GlyphPurpleBrush}"
                                                 CornerRadius="2"
                                                 Margin="0,0,8,0"
                                                 VerticalAlignment="Center"/>
@@ -126,7 +95,7 @@
                                                FontSize="20"
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Center"
-                                               Foreground="#FF9C27B0"/>
+                                               Foreground="{StaticResource GlyphPurpleBrush}"/>
 
                                     <!-- Allowed project classes (tick none to exclude the class) -->
                                     <StackPanel Grid.Column="2"

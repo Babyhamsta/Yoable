@@ -1,0 +1,71 @@
+<ResourceDictionary
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+    mc:Ignorable="po">
+
+    <!-- ============================================================
+         Yoable shared palette — theme-invariant semantic colors.
+         Single source of truth for every status / semantic color
+         previously hard-coded across windows and UIStateManager.
+         ============================================================ -->
+
+    <!-- Accent (follows ModernWpf system accent; NOT frozen on purpose) -->
+    <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource SystemAccentColor}"/>
+    <SolidColorBrush x:Key="AccentButtonBrush" Color="{DynamicResource SystemAccentColor}"/>
+
+    <!-- Status: Needs review / verification (orange) -->
+    <Color x:Key="StatusReviewColor">#FFFFB74D</Color>
+    <SolidColorBrush x:Key="StatusReviewBrush" Color="#FFFFB74D" po:Freeze="True"/>
+    <SolidColorBrush x:Key="StatusReviewSubtleBrush" Color="#44FFB74D" po:Freeze="True"/>
+    <SolidColorBrush x:Key="StatusReviewDeepBrush" Color="#FFCC7A00" po:Freeze="True"/>
+
+    <!-- Status: AI suggested (blue) -->
+    <Color x:Key="StatusSuggestedColor">#FF64B5F6</Color>
+    <SolidColorBrush x:Key="StatusSuggestedBrush" Color="#FF64B5F6" po:Freeze="True"/>
+    <SolidColorBrush x:Key="StatusSuggestedSubtleBrush" Color="#4464B5F6" po:Freeze="True"/>
+    <SolidColorBrush x:Key="StatusSuggestedDeepBrush" Color="#FF1565C0" po:Freeze="True"/>
+
+    <!-- Status: No label / unverified (red) -->
+    <Color x:Key="StatusNoLabelColor">#FFE57373</Color>
+    <SolidColorBrush x:Key="StatusNoLabelBrush" Color="#FFE57373" po:Freeze="True"/>
+    <SolidColorBrush x:Key="StatusNoLabelSubtleBrush" Color="#44E57373" po:Freeze="True"/>
+    <SolidColorBrush x:Key="StatusNoLabelDeepBrush" Color="#FFCC3300" po:Freeze="True"/>
+
+    <!-- Status: Verified (green) -->
+    <Color x:Key="StatusVerifiedColor">#FF81C784</Color>
+    <SolidColorBrush x:Key="StatusVerifiedBrush" Color="#FF81C784" po:Freeze="True"/>
+    <SolidColorBrush x:Key="StatusVerifiedSubtleBrush" Color="#4481C784" po:Freeze="True"/>
+    <SolidColorBrush x:Key="StatusVerifiedDeepBrush" Color="#FF2E7D32" po:Freeze="True"/>
+
+    <!-- Status: AI labeled (purple) -->
+    <Color x:Key="StatusAiColor">#FFBA68C8</Color>
+    <SolidColorBrush x:Key="StatusAiBrush" Color="#FFBA68C8" po:Freeze="True"/>
+    <SolidColorBrush x:Key="StatusAiSubtleBrush" Color="#44BA68C8" po:Freeze="True"/>
+
+    <!-- Semantic -->
+    <SolidColorBrush x:Key="InfoBrush" Color="#FF00BCD4" po:Freeze="True"/>
+    <SolidColorBrush x:Key="InfoSubtleBrush" Color="#4400BCD4" po:Freeze="True"/>
+    <SolidColorBrush x:Key="InfoDeepBrush" Color="#FF007B8A" po:Freeze="True"/>
+    <SolidColorBrush x:Key="SuccessBrush" Color="#FF4CAF50" po:Freeze="True"/>
+    <SolidColorBrush x:Key="WarningBrush" Color="#FFFF9800" po:Freeze="True"/>
+    <SolidColorBrush x:Key="DangerBrush" Color="#FFF44336" po:Freeze="True"/>
+    <SolidColorBrush x:Key="DangerDeepBrush" Color="#FFD32F2F" po:Freeze="True"/>
+    <SolidColorBrush x:Key="DangerFaintBrush" Color="#22F44336" po:Freeze="True"/>
+    <SolidColorBrush x:Key="DangerSubtleBrush" Color="#44F44336" po:Freeze="True"/>
+    <SolidColorBrush x:Key="InfoFaintBrush" Color="#2200BCD4" po:Freeze="True"/>
+
+    <!-- Image viewer / thumbnail letterbox background -->
+    <SolidColorBrush x:Key="CanvasBackgroundBrush" Color="#FF202020" po:Freeze="True"/>
+
+    <!-- Glyph icon colors (menu / toolbar icons) -->
+    <SolidColorBrush x:Key="GlyphPurpleBrush" Color="#FF9C27B0" po:Freeze="True"/>
+    <SolidColorBrush x:Key="GlyphBlueBrush" Color="#FF2196F3" po:Freeze="True"/>
+    <SolidColorBrush x:Key="GlyphTealBrush" Color="#FF26A69A" po:Freeze="True"/>
+    <SolidColorBrush x:Key="GlyphIndigoBrush" Color="#FF3F51B5" po:Freeze="True"/>
+    <SolidColorBrush x:Key="GlyphGreyBrush" Color="#FF607D8B" po:Freeze="True"/>
+    <SolidColorBrush x:Key="GlyphLimeBrush" Color="#FF8BC34A" po:Freeze="True"/>
+    <SolidColorBrush x:Key="GlyphRedLightBrush" Color="#FFE57373" po:Freeze="True"/>
+
+</ResourceDictionary>

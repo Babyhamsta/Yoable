@@ -16,15 +16,15 @@
         </Grid.RowDefinitions>
         
         <!-- Warning message -->
-        <Border Grid.Row="0" Background="#44FFB74D" 
-                BorderBrush="#FFB74D" BorderThickness="1"
+        <Border Grid.Row="0" Background="{StaticResource StatusReviewSubtleBrush}"
+                BorderBrush="{StaticResource StatusReviewBrush}" BorderThickness="1"
                 CornerRadius="4" Padding="12" Margin="0,0,0,16">
             <StackPanel>
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                     <TextBlock FontFamily="Segoe MDL2 Assets" 
                                Text="&#xE7BA;" 
                                FontSize="20"
-                               Foreground="#FFB74D"
+                               Foreground="{StaticResource StatusReviewBrush}"
                                Margin="0,0,8,0"/>
                     <TextBlock Text="Class In Use" 
                                FontWeight="Bold" 
@@ -64,7 +64,7 @@
         <!-- Option 2: Delete -->
         <RadioButton Grid.Row="3" x:Name="DeleteRadio" 
                      Content="Delete all labels with this class (cannot be undone!)" 
-                     Foreground="#E57373" 
+                     Foreground="{StaticResource StatusNoLabelBrush}"
                      VerticalAlignment="Top"
                      Checked="DeleteRadio_Checked"/>
         

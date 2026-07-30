@@ -27,11 +27,6 @@ namespace YoableWPF.Managers
                 Visibility = Visibility.Collapsed
             };
 
-            // Set the overlay to span all columns and rows
-            Grid.SetColumnSpan(overlayGrid, 3); // Span all three columns
-            Grid.SetRowSpan(overlayGrid, 3);    // Span all three rows
-            Grid.SetZIndex(overlayGrid, 1000);  // Ensure overlay appears above other controls
-
             // Center content within overlay
             overlayGrid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(1, GridUnitType.Star) });
             overlayGrid.RowDefinitions.Add(new RowDefinition { Height = GridLength.Auto });
@@ -77,8 +72,17 @@ namespace YoableWPF.Managers
             overlayGrid.Children.Add(overlayProgressBar);
             overlayGrid.Children.Add(cancelButton);
 
-            if (mainWindow.Content is Grid mainGrid)
+            // Prefer the dedicated OverlayHost element defined in the window's XAML;
+            // fall back to injecting into the root Grid for windows without one.
+            if (mainWindow.FindName("OverlayHost") is Panel host)
             {
+                host.Children.Add(overlayGrid);
+            }
+            else if (mainWindow.Content is Grid mainGrid)
+            {
+                Grid.SetColumnSpan(overlayGrid, Math.Max(1, mainGrid.ColumnDefinitions.Count));
+                Grid.SetRowSpan(overlayGrid, Math.Max(1, mainGrid.RowDefinitions.Count));
+                Grid.SetZIndex(overlayGrid, 1000);
                 mainGrid.Children.Add(overlayGrid);
             }
             else

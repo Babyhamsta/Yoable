@@ -37,10 +37,40 @@
                         <TextBlock Text="{DynamicResource Roi_OutputSize}"
                                    FontSize="11"
                                    Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                        <TextBlock Text="640 x 640 px"
-                                   Margin="0,3,0,0"
-                                   FontSize="16"
-                                   FontWeight="SemiBold"/>
+                        <Grid Margin="0,7,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                                <ColumnDefinition Width="*"/>
+                            </Grid.ColumnDefinitions>
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Roi_Width}"
+                                           Margin="0,0,0,3"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                <TextBox x:Name="CropWidthTextBox"
+                                         Text="640"
+                                         MaxLength="6"
+                                         Padding="6,4"
+                                         TextChanged="CropSizeTextBox_TextChanged"/>
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       Text="×"
+                                       Margin="8,18,8,0"
+                                       VerticalAlignment="Center"
+                                       FontSize="16"/>
+                            <StackPanel Grid.Column="2">
+                                <TextBlock Text="{DynamicResource Roi_Height}"
+                                           Margin="0,0,0,3"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                <TextBox x:Name="CropHeightTextBox"
+                                         Text="640"
+                                         MaxLength="6"
+                                         Padding="6,4"
+                                         TextChanged="CropSizeTextBox_TextChanged"/>
+                            </StackPanel>
+                        </Grid>
                     </StackPanel>
                 </Border>
 
@@ -146,7 +176,7 @@
 
             <Border Grid.Row="1"
                     Margin="0,10,0,0"
-                    Background="#FF202020"
+                    Background="{StaticResource CanvasBackgroundBrush}"
                     BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
                     BorderThickness="1"
                     CornerRadius="6"
@@ -155,9 +185,9 @@
                     <Image x:Name="PreviewImage" Stretch="Uniform"/>
                     <Canvas x:Name="PreviewOverlay" IsHitTestVisible="False">
                         <Border x:Name="RoiPreviewBorder"
-                                BorderBrush="#FFFFC107"
+                                BorderBrush="{StaticResource WarningBrush}"
                                 BorderThickness="2"
-                                Background="#2200BCD4"/>
+                                Background="{StaticResource InfoFaintBrush}"/>
                     </Canvas>
                     <TextBlock x:Name="NoPreviewText"
                                Text="{DynamicResource Roi_NoPreview}"

@@ -18,29 +18,26 @@ namespace YoableWPF.Managers
         private readonly Brush verifiedDefaultForeground;
         private readonly Brush suggestedDefaultForeground;
 
-        private static SolidColorBrush CreateFrozenBrush(byte a, byte r, byte g, byte b)
-        {
-            var brush = new SolidColorBrush(Color.FromArgb(a, r, g, b));
-            brush.Freeze();
-            return brush;
-        }
+        // Semantic status brushes sourced from the shared palette (Themes/Palette.xaml).
+        // Palette brushes are frozen and theme-invariant, so a one-time lookup is safe.
+        private static SolidColorBrush Pal(string key) => (SolidColorBrush)Application.Current.FindResource(key);
 
-        private static readonly SolidColorBrush NeedsReviewBrush = CreateFrozenBrush(0xFF, 0xFF, 0xB7, 0x4D);
-        private static readonly SolidColorBrush UnverifiedBrush = CreateFrozenBrush(0xFF, 0xE5, 0x73, 0x73);
-        private static readonly SolidColorBrush VerifiedBrush = CreateFrozenBrush(0xFF, 0x81, 0xC7, 0x84);
-        private static readonly SolidColorBrush SuggestedBrush = CreateFrozenBrush(0xFF, 0x64, 0xB5, 0xF6);
+        private static readonly SolidColorBrush NeedsReviewBrush = Pal("StatusReviewBrush");
+        private static readonly SolidColorBrush UnverifiedBrush = Pal("StatusNoLabelBrush");
+        private static readonly SolidColorBrush VerifiedBrush = Pal("StatusVerifiedBrush");
+        private static readonly SolidColorBrush SuggestedBrush = Pal("StatusSuggestedBrush");
 
-        private static readonly SolidColorBrush OrangeInactive = CreateFrozenBrush(0x44, 0xFF, 0xB7, 0x4D);
-        private static readonly SolidColorBrush OrangeActive = CreateFrozenBrush(0xFF, 0xFF, 0xB7, 0x4D);
-        private static readonly SolidColorBrush RedInactive = CreateFrozenBrush(0x44, 0xE5, 0x73, 0x73);
-        private static readonly SolidColorBrush RedActive = CreateFrozenBrush(0xFF, 0xE5, 0x73, 0x73);
-        private static readonly SolidColorBrush GreenInactive = CreateFrozenBrush(0x44, 0x81, 0xC7, 0x84);
-        private static readonly SolidColorBrush GreenActive = CreateFrozenBrush(0xFF, 0x81, 0xC7, 0x84);
-        private static readonly SolidColorBrush BlueInactive = CreateFrozenBrush(0x44, 0x64, 0xB5, 0xF6);
-        private static readonly SolidColorBrush BlueActive = CreateFrozenBrush(0xFF, 0x64, 0xB5, 0xF6);
-        private static readonly SolidColorBrush PurpleInactive = CreateFrozenBrush(0x44, 0xBA, 0x68, 0xC8);
-        private static readonly SolidColorBrush PurpleActive = CreateFrozenBrush(0xFF, 0xBA, 0x68, 0xC8);
-        private static readonly SolidColorBrush DefaultLabelBrush = CreateFrozenBrush(0xFF, 0xE5, 0x73, 0x73);
+        private static readonly SolidColorBrush OrangeInactive = Pal("StatusReviewSubtleBrush");
+        private static readonly SolidColorBrush OrangeActive = Pal("StatusReviewBrush");
+        private static readonly SolidColorBrush RedInactive = Pal("StatusNoLabelSubtleBrush");
+        private static readonly SolidColorBrush RedActive = Pal("StatusNoLabelBrush");
+        private static readonly SolidColorBrush GreenInactive = Pal("StatusVerifiedSubtleBrush");
+        private static readonly SolidColorBrush GreenActive = Pal("StatusVerifiedBrush");
+        private static readonly SolidColorBrush BlueInactive = Pal("StatusSuggestedSubtleBrush");
+        private static readonly SolidColorBrush BlueActive = Pal("StatusSuggestedBrush");
+        private static readonly SolidColorBrush PurpleInactive = Pal("StatusAiSubtleBrush");
+        private static readonly SolidColorBrush PurpleActive = Pal("StatusAiBrush");
+        private static readonly SolidColorBrush DefaultLabelBrush = Pal("StatusNoLabelBrush");
 
         public UIStateManager(MainWindow mainWindow)
         {
@@ -128,6 +125,37 @@ namespace YoableWPF.Managers
             mainWindow.VerifiedCount.Foreground = verified > 0
                 ? VerifiedBrush
                 : verifiedDefaultForeground;
+
+            UpdateFilterChipCounts();
+        }
+
+        /// <summary>
+        /// Updates the small counters on the status filter chips. Counts the unfiltered
+        /// master list so an active filter never zeroes the other chips' counts.
+        /// </summary>
+        public void UpdateFilterChipCounts()
+        {
+            var source = (allImages != null && allImages.Count > 0)
+                ? allImages
+                : mainWindow.ImageListBox.Items.Cast<ImageListItem>().ToList();
+
+            int total = source.Count, review = 0, suggested = 0, noLabel = 0, verified = 0;
+            foreach (var item in source)
+            {
+                switch (item.Status)
+                {
+                    case ImageStatus.VerificationNeeded: review++; break;
+                    case ImageStatus.Suggested: suggested++; break;
+                    case ImageStatus.NoLabel: noLabel++; break;
+                    case ImageStatus.Verified: verified++; break;
+                }
+            }
+
+            mainWindow.FilterAllCountText.Text = total.ToString();
+            mainWindow.FilterReviewCountText.Text = review.ToString();
+            mainWindow.FilterSuggestedCountText.Text = suggested.ToString();
+            mainWindow.FilterNoLabelCountText.Text = noLabel.ToString();
+            mainWindow.FilterVerifiedCountText.Text = verified.ToString();
         }
 
         // Updated RefreshLabelList with class color indicators
@@ -188,6 +216,51 @@ namespace YoableWPF.Managers
 
             // Sort by filename
             var sorted = sourceItems.OrderBy(x => x.FileName).ToList();
+
+            // Update allImages to maintain sort order for filters
+            allImages = new List<ImageListItem>(sorted);
+
+            // Update ListBox while preserving selection
+            mainWindow.ImageListBox.SelectionChanged -= mainWindow.ImageListBox_SelectionChanged;
+            mainWindow.ImageListBox.Items.Clear();
+            foreach (var item in sorted)
+            {
+                mainWindow.ImageListBox.Items.Add(item);
+            }
+
+            // Restore selection
+            if (selectedItem != null)
+            {
+                for (int i = 0; i < mainWindow.ImageListBox.Items.Count; i++)
+                {
+                    if (mainWindow.ImageListBox.Items[i] is ImageListItem item &&
+                        item.FileName == selectedItem.FileName)
+                    {
+                        mainWindow.ImageListBox.SelectedIndex = i;
+                        mainWindow.ImageListBox.ScrollIntoView(mainWindow.ImageListBox.SelectedItem);
+                        break;
+                    }
+                }
+            }
+            mainWindow.ImageListBox.SelectionChanged += mainWindow.ImageListBox_SelectionChanged;
+        }
+
+        public void SortImagesByDate(bool newestFirst)
+        {
+            // Get source list - use allImages if populated (filter-aware), otherwise use current items
+            var sourceItems = (allImages != null && allImages.Count > 0)
+                ? allImages
+                : mainWindow.ImageListBox.Items.Cast<ImageListItem>().ToList();
+            var selectedItem = mainWindow.ImageListBox.SelectedItem as ImageListItem;
+
+            long Ticks(ImageListItem x) =>
+                mainWindow.imageManager.ImagePathMap.TryGetValue(x.FileName, out var info)
+                    ? info.LastWriteTimeUtcTicks
+                    : long.MinValue;
+
+            var sorted = (newestFirst
+                ? sourceItems.OrderByDescending(Ticks)
+                : sourceItems.OrderBy(Ticks)).ThenBy(x => x.FileName).ToList();
 
             // Update allImages to maintain sort order for filters
             allImages = new List<ImageListItem>(sorted);

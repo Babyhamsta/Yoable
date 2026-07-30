@@ -30,6 +30,33 @@ namespace YoableWPF
         Exclude = 3
     }
 
+    /// <summary>
+    /// View item for the class-filter checkbox list in the annotate tab's left panel.
+    /// </summary>
+    public class ClassFilterItem : INotifyPropertyChanged
+    {
+        private bool _isChecked = true;
+
+        public int ClassId { get; init; }
+        public string Name { get; init; }
+        public Brush ColorBrush { get; init; }
+
+        public bool IsChecked
+        {
+            get => _isChecked;
+            set
+            {
+                if (_isChecked != value)
+                {
+                    _isChecked = value;
+                    PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsChecked)));
+                }
+            }
+        }
+
+        public event PropertyChangedEventHandler PropertyChanged;
+    }
+
     public class ImageListItem : INotifyPropertyChanged
     {
         private ImageStatus _status;

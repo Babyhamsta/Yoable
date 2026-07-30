@@ -15,125 +15,12 @@
     PreviewMouseWheel="Window_PreviewMouseWheel"
     Closing="Window_Closing">
 
-    <Window.Resources>
-        <!-- Accent Brush -->
-        <SolidColorBrush x:Key="AccentBrush" Color="{DynamicResource SystemAccentColor}"/>
+    <!-- Shared styles now live in Themes/*.xaml (merged app-wide via App.xaml) -->
 
-        <!-- Modern Card Style -->
-        <Style x:Key="ModernCard" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
-            <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.15" Direction="270"/>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Status Card Style -->
-        <Style x:Key="StatusCard" TargetType="Border">
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="Effect">
-                <Setter.Value>
-                    <DropShadowEffect BlurRadius="8" ShadowDepth="1" Opacity="0.2" Direction="270"/>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Modern ListBox Style -->
-        <Style x:Key="ModernListBox" TargetType="ListBox" BasedOn="{StaticResource {x:Type ListBox}}">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="4"/>
-        </Style>
-
-        <!-- Image List Item Style -->
-        <Style x:Key="ImageListItemStyle" TargetType="ListBoxItem">
-            <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-            <Setter Property="Padding" Value="0"/>
-            <Setter Property="Margin" Value="0,2"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
-                        <Border x:Name="Border" 
-                                Background="Transparent"
-                                CornerRadius="6"
-                                Padding="10,8"
-                                Margin="0,1">
-                            <ContentPresenter/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource AccentBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Collapsible Panel Button Style -->
-        <Style x:Key="CollapsePanelButton" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="8"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        
-        <!-- Icon Button Style for Edit -->
-        <Style x:Key="IconButton" TargetType="Button">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="4"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Width" Value="24"/>
-            <Setter Property="Height" Value="24"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" 
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </Window.Resources>
-
-    <Grid>
+    <Grid x:Name="RootGrid">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="320"/>
+            <ColumnDefinition Width="Auto"/>
             <ColumnDefinition Width="*"/>
-            <ColumnDefinition Width="320"/>
         </Grid.ColumnDefinitions>
 
         <Grid.RowDefinitions>
@@ -142,149 +29,260 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Menu Bar -->
-        <Menu Grid.Row="0" Grid.ColumnSpan="3" Padding="4,2">
-            <MenuItem Header="{DynamicResource Menu_Project}">
-                <MenuItem Header="{DynamicResource Menu_NewProject}" Click="NewProject_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" 
-                                   Text="&#xE710;" 
-                                   FontSize="16" 
-                                   Foreground="#FF9C27B0"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="{DynamicResource Menu_OpenProject}" Click="OpenProject_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" 
-                                   Text="&#xE8E5;" 
-                                   FontSize="16" 
-                                   Foreground="#4CAF50"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <Separator/>
-                <MenuItem Header="{DynamicResource Menu_SaveProject}" Click="SaveProject_Click" InputGestureText="Ctrl+S">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" 
-                                   Text="&#xE74E;" 
-                                   FontSize="16" 
-                                   Foreground="#2196F3"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="{DynamicResource Menu_SaveProjectAs}" Click="SaveProjectAs_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" 
-                                   Text="&#xE792;" 
-                                   FontSize="16" 
-                                   Foreground="#2196F3"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <Separator/>
-                <MenuItem Header="{DynamicResource Menu_CloseProject}" Click="CloseProject_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" 
-                                   Text="&#xE711;" 
-                                   FontSize="16" 
-                                   Foreground="#F44336"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-            </MenuItem>
-            <MenuItem Header="{DynamicResource Menu_File}">
-                <MenuItem Header="{DynamicResource Menu_ImportDirectory}" Click="ImportDirectory_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8B7;" FontSize="16" Foreground="#FF9C27B0"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="{DynamicResource Menu_ImportLabelsAndImage}" Click="ImportLabelsAndImage_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A5;" FontSize="16" Foreground="#FF00BCD4"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="{DynamicResource Menu_ImportImage}" Click="ImportImage_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEB9F;" FontSize="16" Foreground="#FF4CAF50"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="{DynamicResource Menu_ImportLabels}" Click="ImportLabels_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8E5;" FontSize="16" Foreground="#FF2196F3"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <Separator/>
-                <MenuItem Header="{DynamicResource Menu_SetManualProgress}" Click="SetManualProgress_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE7C1;" FontSize="16" Foreground="#FF4CAF50"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="{DynamicResource Menu_JumpManualProgress}" Click="JumpToManualProgress_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72A;" FontSize="16" Foreground="#FF2196F3"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <Separator/>
-                <MenuItem Header="{DynamicResource Menu_YoutubeToImages}" Click="YTToImage_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE714;" FontSize="16" Foreground="#FFF44336"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="{DynamicResource Menu_ExportLabels}" Click="ExportLabels_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEDE1;" FontSize="16" Foreground="#FFFF9800"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="{DynamicResource Menu_ExportTrainingDataset}" Click="ExportTrainingDataset_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8F1;" FontSize="16" Foreground="#FF00BCD4"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="{DynamicResource Menu_DataAugmentation}" Click="DataAugmentation_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8B9;" FontSize="16" Foreground="#FF8BC34A"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="{DynamicResource Menu_ClearAll}" Click="ClearAll_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="16" Foreground="#FFF44336"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="{DynamicResource Menu_ClearAllSuggestions}" Click="ClearAllSuggestions_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="16" Foreground="#FFE57373"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-            </MenuItem>
-            <MenuItem Header="{DynamicResource Menu_AI}">
-                <MenuItem Header="{DynamicResource Menu_ManageModels}" Click="ManageModels_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE950;" FontSize="16" Foreground="#FF9C27B0"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <Separator/>
-                <MenuItem Header="{DynamicResource Menu_AILabelCurrentImage}" Click="AILabelCurrentImage_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8FE;" FontSize="16" Foreground="#FF26A69A"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="{DynamicResource Menu_AutoLabelImages}" Click="AutoLabelImages_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8FE;" FontSize="16" Foreground="#FF00BCD4"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-                <MenuItem Header="{DynamicResource Menu_AutoSuggestLabels}" Click="AutoSuggestLabels_Click">
-                    <MenuItem.Icon>
-                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEA80;" FontSize="16" Foreground="#FF3F51B5"/>
-                    </MenuItem.Icon>
-                </MenuItem>
-            </MenuItem>
-            <MenuItem Header="{DynamicResource Menu_Settings}" x:Name="SettingsMenuItem" Click="SettingsMenuItem_Click">
-                <MenuItem.Icon>
-                    <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE115;" FontSize="16" Foreground="#FF607D8B"/>
-                </MenuItem.Icon>
-            </MenuItem>
-        </Menu>
+        <!-- ================= Top Toolbar ================= -->
+        <Border Grid.Row="0" Grid.ColumnSpan="2" Style="{StaticResource TopToolbar}">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Left: primary actions -->
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button Style="{StaticResource ToolbarButton}"
+                            Click="NewProject_Click"
+                            ToolTip="{DynamicResource Menu_NewProject}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE710;" FontSize="16"
+                                       Foreground="{StaticResource GlyphPurpleBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Menu_NewProject}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ToolbarButton}"
+                            Click="OpenProject_Click"
+                            ToolTip="{DynamicResource Menu_OpenProject}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8E5;" FontSize="16"
+                                       Foreground="{StaticResource SuccessBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Menu_OpenProject}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+                    <Button Style="{StaticResource ToolbarButton}"
+                            Click="SaveProject_Click"
+                            ToolTip="{DynamicResource Toolbar_SaveTooltip}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74E;" FontSize="16"
+                                       Foreground="{StaticResource GlyphBlueBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Menu_SaveProject}" Margin="6,0,0,0" VerticalAlignment="Center"/>
+                        </StackPanel>
+                    </Button>
+
+                    <Rectangle Style="{StaticResource ToolbarSeparator}"/>
+
+                    <!-- Import flyout -->
+                    <Button Style="{StaticResource ToolbarButton}"
+                            Click="ToolbarFlyout_Click"
+                            ToolTip="{DynamicResource Toolbar_Import}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8B5;" FontSize="16"
+                                       Foreground="{StaticResource GlyphTealBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Toolbar_Import}" Margin="6,0,4,0" VerticalAlignment="Center"/>
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE70D;" FontSize="10"
+                                       Opacity="0.6" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="{DynamicResource Menu_ImportDirectory}" Click="ImportDirectory_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8B7;" FontSize="16" Foreground="{StaticResource GlyphPurpleBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{DynamicResource Menu_ImportLabelsAndImage}" Click="ImportLabelsAndImage_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A5;" FontSize="16" Foreground="{StaticResource InfoBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{DynamicResource Menu_ImportImage}" Click="ImportImage_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEB9F;" FontSize="16" Foreground="{StaticResource SuccessBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{DynamicResource Menu_ImportLabels}" Click="ImportLabels_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8E5;" FontSize="16" Foreground="{StaticResource GlyphBlueBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+
+                    <!-- AI flyout -->
+                    <Button Style="{StaticResource ToolbarButton}"
+                            Click="ToolbarFlyout_Click"
+                            ToolTip="{DynamicResource Toolbar_AITools}">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8FE;" FontSize="16"
+                                       Foreground="{StaticResource GlyphIndigoBrush}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{DynamicResource Toolbar_AITools}" Margin="6,0,4,0" VerticalAlignment="Center"/>
+                            <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE70D;" FontSize="10"
+                                       Opacity="0.6" VerticalAlignment="Center"/>
+                        </StackPanel>
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="{DynamicResource Menu_AILabelCurrentImage}" Click="AILabelCurrentImage_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8FE;" FontSize="16" Foreground="{StaticResource GlyphTealBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{DynamicResource Menu_AutoLabelImages}" Click="AutoLabelImages_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8FE;" FontSize="16" Foreground="{StaticResource InfoBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{DynamicResource Menu_AutoSuggestLabels}" Click="AutoSuggestLabels_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEA80;" FontSize="16" Foreground="{StaticResource GlyphIndigoBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                </StackPanel>
+
+                <!-- Right: overflow + settings -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+                    <Button Style="{StaticResource ToolbarButton}"
+                            Click="ToolbarFlyout_Click"
+                            ToolTip="{DynamicResource Toolbar_MoreTooltip}">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE712;" FontSize="16"
+                                   VerticalAlignment="Center"/>
+                        <Button.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="{DynamicResource Menu_SaveProjectAs}" Click="SaveProjectAs_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE792;" FontSize="16" Foreground="{StaticResource GlyphBlueBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{DynamicResource Menu_CloseProject}" Click="CloseProject_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE711;" FontSize="16" Foreground="{StaticResource DangerBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{DynamicResource Menu_BackToStart}" Click="BackToStart_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE80F;" FontSize="16" Foreground="{StaticResource GlyphTealBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="{DynamicResource Menu_SetManualProgress}" Click="SetManualProgress_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE7C1;" FontSize="16" Foreground="{StaticResource SuccessBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{DynamicResource Menu_JumpManualProgress}" Click="JumpToManualProgress_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE72A;" FontSize="16" Foreground="{StaticResource GlyphBlueBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="{DynamicResource Menu_YoutubeToImages}" Click="YTToImage_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE714;" FontSize="16" Foreground="{StaticResource DangerBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{DynamicResource Menu_ExportLabels}" Click="ExportLabels_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEDE1;" FontSize="16" Foreground="{StaticResource WarningBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{DynamicResource Menu_ExportTrainingDataset}" Click="ExportTrainingDataset_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8F1;" FontSize="16" Foreground="{StaticResource InfoBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{DynamicResource Menu_DataAugmentation}" Click="DataAugmentation_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8B9;" FontSize="16" Foreground="{StaticResource GlyphLimeBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="{DynamicResource Menu_ManageModels}" Click="ManageModels_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE950;" FontSize="16" Foreground="{StaticResource GlyphPurpleBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <Separator/>
+                                <MenuItem Header="{DynamicResource Menu_ClearAllSuggestions}" Click="ClearAllSuggestions_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="16" Foreground="{StaticResource GlyphRedLightBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                                <MenuItem Header="{DynamicResource Menu_ClearAll}" Click="ClearAll_Click">
+                                    <MenuItem.Icon>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="16" Foreground="{StaticResource DangerBrush}"/>
+                                    </MenuItem.Icon>
+                                </MenuItem>
+                            </ContextMenu>
+                        </Button.ContextMenu>
+                    </Button>
+                    <Button x:Name="SettingsMenuItem"
+                            Style="{StaticResource ToolbarButton}"
+                            Click="SettingsMenuItem_Click"
+                            ToolTip="{DynamicResource Menu_Settings}">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE713;" FontSize="16"
+                                   Foreground="{StaticResource GlyphGreyBrush}" VerticalAlignment="Center"/>
+                    </Button>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- ================= Left Navigation Rail ================= -->
+        <Border Grid.Row="1" Grid.Column="0" Style="{StaticResource NavRail}">
+            <StackPanel>
+                <RadioButton x:Name="NavAnnotateButton"
+                             Style="{StaticResource NavRailButton}"
+                             GroupName="NavRail" Tag="0" IsChecked="True"
+                             Checked="NavRail_Checked"
+                             ToolTip="{DynamicResource Main_TabAnnotate}">
+                    <StackPanel>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE70F;" FontSize="18" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource Main_TabAnnotate}" FontSize="10" Margin="0,4,0,0"
+                                   HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="60"/>
+                    </StackPanel>
+                </RadioButton>
+                <RadioButton x:Name="NavDuplicatesButton"
+                             Style="{StaticResource NavRailButton}"
+                             GroupName="NavRail" Tag="1"
+                             Checked="NavRail_Checked"
+                             ToolTip="{DynamicResource Main_TabDuplicates}">
+                    <StackPanel>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8C8;" FontSize="18" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource Main_TabDuplicates}" FontSize="10" Margin="0,4,0,0"
+                                   HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="60"/>
+                    </StackPanel>
+                </RadioButton>
+                <RadioButton x:Name="NavRoiCropButton"
+                             Style="{StaticResource NavRailButton}"
+                             GroupName="NavRail" Tag="2"
+                             Checked="NavRail_Checked"
+                             ToolTip="{DynamicResource Main_TabRoiCrop}">
+                    <StackPanel>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE7A8;" FontSize="18" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource Main_TabRoiCrop}" FontSize="10" Margin="0,4,0,0"
+                                   HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="60"/>
+                    </StackPanel>
+                </RadioButton>
+                <RadioButton x:Name="NavStatsButton"
+                             Style="{StaticResource NavRailButton}"
+                             GroupName="NavRail" Tag="3"
+                             Checked="NavRail_Checked"
+                             ToolTip="{DynamicResource Main_TabStats}">
+                    <StackPanel>
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE9D9;" FontSize="18" HorizontalAlignment="Center"/>
+                        <TextBlock Text="{DynamicResource Main_TabStats}" FontSize="10" Margin="0,4,0,0"
+                                   HorizontalAlignment="Center" TextTrimming="CharacterEllipsis" MaxWidth="60"/>
+                    </StackPanel>
+                </RadioButton>
+            </StackPanel>
+        </Border>
+
 
         <TabControl x:Name="MainWorkspaceTabs"
                     Grid.Row="1"
-                    Grid.ColumnSpan="3"
+                    Grid.Column="1"
+                    Style="{StaticResource WorkspaceTabControl}"
+                    ItemContainerStyle="{StaticResource HiddenTabItemStyle}"
                     SelectionChanged="MainWorkspaceTabs_SelectionChanged">
             <TabItem x:Name="ImageAnnotationTab" Header="{DynamicResource Main_TabAnnotate}">
                 <Grid>
@@ -317,11 +315,16 @@
                 </Grid>
 
                 <!-- Sort and Filter Controls -->
-                <Border Grid.Row="1" 
+                <Border Grid.Row="1"
                         Background="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"
                         CornerRadius="6"
                         Padding="12,12,20,12"
                         Margin="0,0,0,8">
+                    <!-- Cap the filter card so an expanded class filter can't crush the image list;
+                         on short windows this scrolls instead -->
+                    <ScrollViewer MaxHeight="400"
+                                  VerticalScrollBarVisibility="Auto"
+                                  ScrollViewer.CanContentScroll="False">
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="Auto"/>
@@ -338,7 +341,7 @@
                                 <TextBlock FontFamily="Segoe MDL2 Assets"
                                            Text="&#xE8CB;"
                                            FontSize="12"
-                                           Foreground="#FFFF9800"
+                                           Foreground="{StaticResource WarningBrush}"
                                            VerticalAlignment="Center"
                                            Margin="0,0,6,0"/>
                                 <TextBlock Text="{DynamicResource Main_Sort}"
@@ -355,6 +358,8 @@
                                       HorizontalAlignment="Stretch">
                                 <ComboBoxItem Content="{DynamicResource Main_SortByName}"/>
                                 <ComboBoxItem Content="{DynamicResource Main_SortByStatus}"/>
+                                <ComboBoxItem Content="{DynamicResource Main_SortByDateNewest}"/>
+                                <ComboBoxItem Content="{DynamicResource Main_SortByDateOldest}"/>
                             </ComboBox>
                         </StackPanel>
 
@@ -373,7 +378,7 @@
                                 <TextBlock FontFamily="Segoe MDL2 Assets"
                                            Text="&#xE71C;"
                                            FontSize="12"
-                                           Foreground="#FF3F51B5"
+                                           Foreground="{StaticResource GlyphIndigoBrush}"
                                            VerticalAlignment="Center"
                                            Margin="0,0,6,0"/>
                                 <TextBlock Text="{DynamicResource Main_Filter}"
@@ -396,76 +401,77 @@
 
                                 <Button Grid.Row="0" Grid.Column="0"
                                         x:Name="FilterAllButton"
-                                        Content="{DynamicResource Main_FilterAll}"
+                                        Style="{StaticResource FilterChip}"
                                         Click="FilterAll_Click"
-                                        FontSize="10"
-                                        FontWeight="SemiBold"
-                                        Padding="6,6"
                                         Margin="0,0,6,6"
-                                        HorizontalAlignment="Stretch"
                                         Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
                                         Foreground="{DynamicResource SystemControlForegroundBaseHighBrush}"
-                                        BorderThickness="1"
-                                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"/>
+                                        BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{DynamicResource Main_FilterAll}"/>
+                                        <TextBlock x:Name="FilterAllCountText" Text="0" Margin="4,0,0,0" Opacity="0.75"/>
+                                    </StackPanel>
+                                </Button>
                                 <Button Grid.Row="0" Grid.Column="1"
                                         x:Name="FilterReviewButton"
-                                        Content="{DynamicResource Main_FilterReview}"
+                                        Style="{StaticResource FilterChip}"
                                         Click="FilterReview_Click"
-                                        FontSize="10"
-                                        FontWeight="SemiBold"
-                                        Padding="6,6"
                                         Margin="0,0,6,6"
-                                        HorizontalAlignment="Stretch"
-                                        Background="#44FFB74D"
-                                        Foreground="#FFB74D"
-                                        BorderThickness="0"/>
+                                        Background="{StaticResource StatusReviewSubtleBrush}"
+                                        Foreground="{StaticResource StatusReviewBrush}"
+                                        BorderThickness="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{DynamicResource Main_FilterReview}"/>
+                                        <TextBlock x:Name="FilterReviewCountText" Text="0" Margin="4,0,0,0" Opacity="0.75"/>
+                                    </StackPanel>
+                                </Button>
                                 <Button Grid.Row="0" Grid.Column="2"
                                         x:Name="FilterSuggestedButton"
-                                        Content="{DynamicResource Main_FilterSuggested}"
+                                        Style="{StaticResource FilterChip}"
                                         Click="FilterSuggested_Click"
-                                        FontSize="10"
-                                        FontWeight="SemiBold"
-                                        Padding="6,6"
                                         Margin="0,0,0,6"
-                                        HorizontalAlignment="Stretch"
-                                        Background="#4464B5F6"
-                                        Foreground="#64B5F6"
-                                        BorderThickness="0"/>
+                                        Background="{StaticResource StatusSuggestedSubtleBrush}"
+                                        Foreground="{StaticResource StatusSuggestedBrush}"
+                                        BorderThickness="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{DynamicResource Main_FilterSuggested}"/>
+                                        <TextBlock x:Name="FilterSuggestedCountText" Text="0" Margin="4,0,0,0" Opacity="0.75"/>
+                                    </StackPanel>
+                                </Button>
                                 <Button Grid.Row="1" Grid.Column="0"
                                         x:Name="FilterNoLabelButton"
-                                        Content="{DynamicResource Main_FilterNone}"
+                                        Style="{StaticResource FilterChip}"
                                         Click="FilterNoLabel_Click"
-                                        FontSize="10"
-                                        FontWeight="SemiBold"
-                                        Padding="6,6"
                                         Margin="0,0,6,0"
-                                        HorizontalAlignment="Stretch"
-                                        Background="#44E57373"
-                                        Foreground="#E57373"
-                                        BorderThickness="0"/>
+                                        Background="{StaticResource StatusNoLabelSubtleBrush}"
+                                        Foreground="{StaticResource StatusNoLabelBrush}"
+                                        BorderThickness="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{DynamicResource Main_FilterNone}"/>
+                                        <TextBlock x:Name="FilterNoLabelCountText" Text="0" Margin="4,0,0,0" Opacity="0.75"/>
+                                    </StackPanel>
+                                </Button>
                                 <Button Grid.Row="1" Grid.Column="1"
                                         x:Name="FilterVerifiedButton"
-                                        Content="{DynamicResource Main_FilterDone}"
+                                        Style="{StaticResource FilterChip}"
                                         Click="FilterVerified_Click"
-                                        FontSize="10"
-                                        FontWeight="SemiBold"
-                                        Padding="6,6"
                                         Margin="0"
-                                        HorizontalAlignment="Stretch"
-                                        Background="#4481C784"
-                                        Foreground="#81C784"
-                                        BorderThickness="0"/>
+                                        Background="{StaticResource StatusVerifiedSubtleBrush}"
+                                        Foreground="{StaticResource StatusVerifiedBrush}"
+                                        BorderThickness="0">
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{DynamicResource Main_FilterDone}"/>
+                                        <TextBlock x:Name="FilterVerifiedCountText" Text="0" Margin="4,0,0,0" Opacity="0.75"/>
+                                    </StackPanel>
+                                </Button>
                                 <Button Grid.Row="1" Grid.Column="2"
                                         x:Name="FilterAiLabelsButton"
+                                        Style="{StaticResource FilterChip}"
                                         Content="{DynamicResource Main_FilterAiLabels}"
                                         Click="FilterAiLabels_Click"
-                                        FontSize="10"
-                                        FontWeight="SemiBold"
-                                        Padding="6,6"
                                         Margin="6,0,0,0"
-                                        HorizontalAlignment="Stretch"
-                                        Background="#44BA68C8"
-                                        Foreground="#BA68C8"
+                                        Background="{StaticResource StatusAiSubtleBrush}"
+                                        Foreground="{StaticResource StatusAiBrush}"
                                         BorderThickness="0"/>
                             </Grid>
                         </StackPanel>
@@ -484,10 +490,10 @@
                                             <ColumnDefinition Width="Auto"/>
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Grid.Column="0" Orientation="Horizontal">
-                                            <TextBlock FontFamily="Segoe MDL2 Assets" 
-                                                       Text="&#xE8C8;" 
+                                            <TextBlock FontFamily="Segoe MDL2 Assets"
+                                                       Text="&#xE8C8;"
                                                        FontSize="12"
-                                                       Foreground="#FF9C27B0"
+                                                       Foreground="{StaticResource GlyphPurpleBrush}"
                                                        VerticalAlignment="Center"
                                                        Margin="0,0,6,0"/>
                                             <TextBlock Text="{Binding}" 
@@ -538,18 +544,38 @@
                                             FontSize="10" Padding="6,2"
                                             Click="ClassFilterInvert_Click"/>
                                 </StackPanel>
-                                <ScrollViewer MaxHeight="200" VerticalScrollBarVisibility="Auto">
-                                    <StackPanel x:Name="ClassFilterCheckBoxPanel" Orientation="Vertical">
-                                        <!-- Checkboxes will be added dynamically -->
-                                    </StackPanel>
+                                <ScrollViewer MaxHeight="160" VerticalScrollBarVisibility="Auto"
+                                              ScrollViewer.CanContentScroll="False">
+                                    <ItemsControl x:Name="ClassFilterItemsControl">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate>
+                                                <Grid Margin="0,3">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                        <ColumnDefinition Width="*"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <Border Width="4" Height="16" CornerRadius="2"
+                                                            Background="{Binding ColorBrush}"
+                                                            Margin="0,0,8,0" VerticalAlignment="Center"/>
+                                                    <CheckBox Grid.Column="1"
+                                                              Content="{Binding Name}"
+                                                              FontSize="11"
+                                                              IsChecked="{Binding IsChecked, Mode=TwoWay}"
+                                                              Checked="ClassFilterCheckBox_Changed"
+                                                              Unchecked="ClassFilterCheckBox_Changed"/>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
                                 </ScrollViewer>
                             </StackPanel>
                         </Expander>
                     </Grid>
+                    </ScrollViewer>
                 </Border>
 
                 <!-- Image List Card -->
-                <Border Grid.Row="2" Style="{StaticResource ModernCard}" Padding="0" Margin="0">
+                <Border Grid.Row="2" Style="{StaticResource ModernCard}" Padding="0" Margin="0" MinHeight="140">
                     <ListBox x:Name="ImageListBox"
                              Style="{StaticResource ModernListBox}"
                              SelectionMode="Single"
@@ -562,18 +588,18 @@
                             <ContextMenu x:Name="ImageListContextMenu" Opened="ImageListContextMenu_Opened">
                                 <MenuItem Header="{DynamicResource Main_OpenImageLocation}" Click="OpenImageLocation_Click">
                                     <MenuItem.Icon>
-                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEB9F;" FontSize="14" Foreground="#FF4CAF50"/>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xEB9F;" FontSize="14" Foreground="{StaticResource SuccessBrush}"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
                                 <MenuItem Header="{DynamicResource Main_OpenLabelLocation}" Click="OpenLabelLocation_Click">
                                     <MenuItem.Icon>
-                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A5;" FontSize="14" Foreground="#FF2196F3"/>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE8A5;" FontSize="14" Foreground="{StaticResource GlyphBlueBrush}"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
                                 <Separator/>
                                 <MenuItem Header="{DynamicResource Main_DeleteImage}" Click="DeleteImage_Click">
                                     <MenuItem.Icon>
-                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="14" Foreground="#FFF44336"/>
+                                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE74D;" FontSize="14" Foreground="{StaticResource DangerBrush}"/>
                                     </MenuItem.Icon>
                                 </MenuItem>
                             </ContextMenu>
@@ -605,16 +631,16 @@
                                             <Style TargetType="Border">
                                                 <Style.Triggers>
                                                     <DataTrigger Binding="{Binding Status}" Value="NoLabel">
-                                                        <Setter Property="Background" Value="#FFE57373"/>
+                                                        <Setter Property="Background" Value="{StaticResource StatusNoLabelBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Status}" Value="Suggested">
-                                                        <Setter Property="Background" Value="#FF64B5F6"/>
+                                                        <Setter Property="Background" Value="{StaticResource StatusSuggestedBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Status}" Value="VerificationNeeded">
-                                                        <Setter Property="Background" Value="#FFFFB74D"/>
+                                                        <Setter Property="Background" Value="{StaticResource StatusReviewBrush}"/>
                                                     </DataTrigger>
                                                     <DataTrigger Binding="{Binding Status}" Value="Verified">
-                                                        <Setter Property="Background" Value="#FF81C784"/>
+                                                        <Setter Property="Background" Value="{StaticResource StatusVerifiedBrush}"/>
                                                     </DataTrigger>
                                                 </Style.Triggers>
                                             </Style>
@@ -663,26 +689,26 @@
                         <!-- Review Status -->
                         <Border Grid.Column="0" 
                                 Style="{StaticResource StatusCard}"
-                                Background="#44FFB74D"
+                                Background="{StaticResource StatusReviewSubtleBrush}"
                                 CornerRadius="6,0,0,6"
                                 Margin="0,0,1,0">
                             <StackPanel HorizontalAlignment="Center">
                                 <TextBlock FontFamily="Segoe MDL2 Assets" 
                                            Text="&#xE7BA;" 
                                            FontSize="20"
-                                           Foreground="#FFB74D"
+                                           Foreground="{StaticResource StatusReviewBrush}"
                                            HorizontalAlignment="Center"
                                            Margin="0,0,0,4"/>
                                 <TextBlock x:Name="NeedsReviewCount" 
                                            FontSize="18" 
                                            FontWeight="Bold"
-                                           Foreground="#FFB74D"
+                                           Foreground="{StaticResource StatusReviewBrush}"
                                            HorizontalAlignment="Center"
                                            Text="0"/>
                                 <TextBlock Text="{DynamicResource Main_StatusReview}" 
                                            FontSize="9" 
                                            FontWeight="SemiBold"
-                                           Foreground="#CC7A00"
+                                           Foreground="{StaticResource StatusReviewDeepBrush}"
                                            HorizontalAlignment="Center"
                                            Opacity="0.8"/>
                             </StackPanel>
@@ -691,26 +717,26 @@
                         <!-- Suggested Status -->
                         <Border Grid.Column="1" 
                                 Style="{StaticResource StatusCard}"
-                                Background="#4464B5F6"
+                                Background="{StaticResource StatusSuggestedSubtleBrush}"
                                 CornerRadius="0"
                                 Margin="0,0,1,0">
                             <StackPanel HorizontalAlignment="Center">
                                 <TextBlock FontFamily="Segoe MDL2 Assets" 
                                            Text="&#xEA80;" 
                                            FontSize="20"
-                                           Foreground="#64B5F6"
+                                           Foreground="{StaticResource StatusSuggestedBrush}"
                                            HorizontalAlignment="Center"
                                            Margin="0,0,0,4"/>
                                 <TextBlock x:Name="SuggestedCount" 
                                            FontSize="18" 
                                            FontWeight="Bold"
-                                           Foreground="#64B5F6"
+                                           Foreground="{StaticResource StatusSuggestedBrush}"
                                            HorizontalAlignment="Center"
                                            Text="0"/>
                                 <TextBlock Text="{DynamicResource Main_StatusSuggested}" 
                                            FontSize="9" 
                                            FontWeight="SemiBold"
-                                           Foreground="#1565C0"
+                                           Foreground="{StaticResource StatusSuggestedDeepBrush}"
                                            HorizontalAlignment="Center"
                                            Opacity="0.8"/>
                             </StackPanel>
@@ -719,26 +745,26 @@
                         <!-- No Label Status -->
                         <Border Grid.Column="2" 
                                 Style="{StaticResource StatusCard}"
-                                Background="#44E57373"
+                                Background="{StaticResource StatusNoLabelSubtleBrush}"
                                 CornerRadius="0"
                                 Margin="0">
                             <StackPanel HorizontalAlignment="Center">
                                 <TextBlock FontFamily="Segoe MDL2 Assets" 
                                            Text="&#xE783;" 
                                            FontSize="20"
-                                           Foreground="#E57373"
+                                           Foreground="{StaticResource StatusNoLabelBrush}"
                                            HorizontalAlignment="Center"
                                            Margin="0,0,0,4"/>
                                 <TextBlock x:Name="UnverifiedCount" 
                                            FontSize="18" 
                                            FontWeight="Bold"
-                                           Foreground="#E57373"
+                                           Foreground="{StaticResource StatusNoLabelBrush}"
                                            HorizontalAlignment="Center"
                                            Text="0"/>
                                 <TextBlock Text="{DynamicResource Main_StatusNoLabel}" 
                                            FontSize="9" 
                                            FontWeight="SemiBold"
-                                           Foreground="#CC3300"
+                                           Foreground="{StaticResource StatusNoLabelDeepBrush}"
                                            HorizontalAlignment="Center"
                                            Opacity="0.8"/>
                             </StackPanel>
@@ -747,26 +773,26 @@
                         <!-- Verified Status -->
                         <Border Grid.Column="3" 
                                 Style="{StaticResource StatusCard}"
-                                Background="#4481C784"
+                                Background="{StaticResource StatusVerifiedSubtleBrush}"
                                 CornerRadius="0,6,6,0"
                                 Margin="1,0,0,0">
                             <StackPanel HorizontalAlignment="Center">
                                 <TextBlock FontFamily="Segoe MDL2 Assets" 
                                            Text="&#xE73E;" 
                                            FontSize="20"
-                                           Foreground="#81C784"
+                                           Foreground="{StaticResource StatusVerifiedBrush}"
                                            HorizontalAlignment="Center"
                                            Margin="0,0,0,4"/>
                                 <TextBlock x:Name="VerifiedCount" 
                                            FontSize="18" 
                                            FontWeight="Bold"
-                                           Foreground="#81C784"
+                                           Foreground="{StaticResource StatusVerifiedBrush}"
                                            HorizontalAlignment="Center"
                                            Text="0"/>
                                 <TextBlock Text="{DynamicResource Main_StatusVerified}" 
                                            FontSize="9" 
                                            FontWeight="SemiBold"
-                                           Foreground="#2E7D32"
+                                           Foreground="{StaticResource StatusVerifiedDeepBrush}"
                                            HorizontalAlignment="Center"
                                            Opacity="0.8"/>
                             </StackPanel>
@@ -833,6 +859,7 @@
                                  SelectionChanged="ClassListBox_SelectionChanged"
                                  BorderThickness="0"
                                  Background="Transparent"
+                                 VirtualizingPanel.ScrollUnit="Pixel"
                                  ScrollViewer.VerticalScrollBarVisibility="Auto"
                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                             <ListBox.ItemContainerStyle>
@@ -973,7 +1000,7 @@
                                 <TextBlock FontFamily="Segoe MDL2 Assets"
                                            Text="&#xE8FE;"
                                            FontSize="14"
-                                           Foreground="#26A69A"/>
+                                           Foreground="{StaticResource GlyphTealBrush}"/>
                             </Button>
                             <Button Grid.Column="2"
                                     x:Name="ClearImageClassesButton"
@@ -987,12 +1014,12 @@
                                     <TextBlock FontFamily="Segoe MDL2 Assets"
                                                Text="&#xE74D;"
                                                FontSize="12"
-                                               Foreground="#E57373"
+                                               Foreground="{StaticResource StatusNoLabelBrush}"
                                                Margin="0,0,4,0"/>
                                     <TextBlock Text="{DynamicResource Main_ClearImageClasses}"
                                                FontSize="11"
                                                FontWeight="SemiBold"
-                                               Foreground="#E57373"/>
+                                               Foreground="{StaticResource StatusNoLabelBrush}"/>
                                 </StackPanel>
                                 <Button.ToolTip>
                                     <ToolTip Content="{DynamicResource Main_ClearImageClasses}"/>
@@ -1003,7 +1030,7 @@
                         <!-- Suggestions Summary -->
                         <Border Grid.Row="1"
                                 x:Name="SuggestionSummaryPanel"
-                                Background="#2233A1FD"
+                                Background="{StaticResource StatusSuggestedSubtleBrush}"
                                 CornerRadius="4"
                                 Padding="10"
                                 Margin="12,0,12,8"
@@ -1011,7 +1038,7 @@
                             <StackPanel>
                                 <TextBlock x:Name="SuggestionCountText"
                                            Text="{DynamicResource Main_SuggestionsCount}"
-                                           Foreground="#64B5F6"
+                                           Foreground="{StaticResource StatusSuggestedBrush}"
                                            FontWeight="SemiBold"/>
                                 <WrapPanel Margin="0,6,0,0">
                                     <Button Content="{DynamicResource Main_AcceptAllSuggestions}"
@@ -1032,7 +1059,9 @@
                                  Style="{StaticResource ModernListBox}"
                                  SelectionMode="Single"
                                  SelectionChanged="LabelListBox_SelectionChanged"
-                                 MouseDoubleClick="LabelListBox_MouseDoubleClick">
+                                 MouseDoubleClick="LabelListBox_MouseDoubleClick"
+                                 VirtualizingPanel.IsVirtualizing="True"
+                                 VirtualizingPanel.ScrollUnit="Pixel">
                             <ListBox.ItemContainerStyle>
                                 <Style TargetType="ListBoxItem" 
                                        BasedOn="{StaticResource ImageListItemStyle}"/>
@@ -1137,10 +1166,8 @@
 
 
         <!-- Status Bar -->
-        <Border Grid.Row="2" Grid.ColumnSpan="3" 
-                Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}"
-                BorderThickness="0,1,0,0"
-                BorderBrush="{DynamicResource SystemControlForegroundBaseLowBrush}"
+        <Border Grid.Row="2" Grid.ColumnSpan="2"
+                Style="{StaticResource AppStatusBar}"
                 Padding="12,6"
                 Height="32">
             <Grid>
@@ -1152,10 +1179,10 @@
 
                 <!-- Left side: Project info -->
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
-                    <TextBlock FontFamily="Segoe MDL2 Assets" 
-                               Text="&#xE8B7;" 
+                    <TextBlock FontFamily="Segoe MDL2 Assets"
+                               Text="&#xE8B7;"
                                FontSize="14"
-                               Foreground="#FF9C27B0"
+                               Foreground="{StaticResource GlyphPurpleBrush}"
                                VerticalAlignment="Center"
                                Margin="0,0,8,0"/>
                     <TextBlock x:Name="ProjectNameText" 
@@ -1166,14 +1193,13 @@
                                Margin="0,0,20,0"/>
 
                     <Border x:Name="SaveStatusBorder"
-                            Background="#4481C784"
-                            CornerRadius="10"
-                            Padding="8,3"
+                            Style="{StaticResource BadgePill}"
+                            Background="{StaticResource StatusVerifiedSubtleBrush}"
                             Margin="0,0,16,0">
                         <StackPanel Orientation="Horizontal">
-                            <TextBlock x:Name="LastSaveText" 
-                                       Text="{DynamicResource Status_AllChangesSaved}" 
-                                       Foreground="#81C784"
+                            <TextBlock x:Name="LastSaveText"
+                                       Text="{DynamicResource Status_AllChangesSaved}"
+                                       Foreground="{StaticResource StatusVerifiedBrush}"
                                        FontSize="10"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"/>
@@ -1182,25 +1208,24 @@
 
                     <TextBlock x:Name="LastSaveTimeText"
                                Text="{DynamicResource Status_NotSavedYet}"
-                               Foreground="Gray"
+                               Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
                                FontSize="11"
                                VerticalAlignment="Center"/>
                 </StackPanel>
 
                 <!-- Middle: Current Class Display -->
-                <Border Grid.Column="1" 
-                        x:Name="CurrentClassBorder" 
-                        Background="#44E57373" 
-                        BorderBrush="#E57373" 
+                <Border Grid.Column="1"
+                        x:Name="CurrentClassBorder"
+                        Style="{StaticResource BadgePill}"
+                        Background="{StaticResource StatusNoLabelSubtleBrush}"
+                        BorderBrush="{StaticResource StatusNoLabelBrush}"
                         BorderThickness="1"
-                        CornerRadius="10" 
-                        Padding="8,3"
                         Margin="0,0,16,0">
                     <StackPanel Orientation="Horizontal">
-                        <Border Width="3" 
-                                Height="12" 
-                                x:Name="CurrentClassColorIndicator" 
-                                Background="#E57373" 
+                        <Border Width="3"
+                                Height="12"
+                                x:Name="CurrentClassColorIndicator"
+                                Background="{StaticResource StatusNoLabelBrush}"
                                 CornerRadius="2"
                                 Margin="0,0,6,0" 
                                 VerticalAlignment="Center"/>
@@ -1219,19 +1244,18 @@
 
                 <!-- Right side: Auto-save indicator -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
-                    <Border Background="#4400BCD4"
-                            CornerRadius="10"
-                            Padding="8,3">
+                    <Border Style="{StaticResource BadgePill}"
+                            Background="{StaticResource InfoSubtleBrush}">
                         <StackPanel Orientation="Horizontal">
                             <Ellipse x:Name="AutoSaveIndicator"
-                                     Width="6" 
+                                     Width="6"
                                      Height="6"
-                                     Fill="#4CAF50"
+                                     Fill="{StaticResource SuccessBrush}"
                                      VerticalAlignment="Center"
                                      Margin="0,0,6,0"/>
                             <TextBlock x:Name="AutoSaveText"
-                                       Text="{DynamicResource Status_AutoSaveEnabled}" 
-                                       Foreground="#00BCD4"
+                                       Text="{DynamicResource Status_AutoSaveEnabled}"
+                                       Foreground="{StaticResource InfoBrush}"
                                        FontSize="10"
                                        FontWeight="SemiBold"
                                        VerticalAlignment="Center"/>
@@ -1240,5 +1264,10 @@
                 </StackPanel>
             </Grid>
         </Border>
+
+        <!-- Overlay host: progress overlays are injected here by OverlayManager -->
+        <Grid x:Name="OverlayHost"
+              Grid.RowSpan="3" Grid.ColumnSpan="2"
+              Panel.ZIndex="1000"/>
     </Grid>
 </Window>

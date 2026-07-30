@@ -54,6 +54,7 @@
     <system:String x:Key="Settings_CrosshairSettings_Section">Crosshair Settings</system:String>
     <system:String x:Key="Settings_DarkMode">Dark Mode</system:String>
     <system:String x:Key="Settings_AccentColor">Accent Color (Hex)</system:String>
+    <system:String x:Key="Settings_AccentCustomHex">Custom color (Hex)</system:String>
     <system:String x:Key="Settings_AccentColor_Tooltip">Enter a hexadecimal color value (e.g., #FF0000 for red)</system:String>
     <system:String x:Key="Settings_AccentColor_Help">Changes the accent color used throughout the application.</system:String>
     <system:String x:Key="Settings_General_Section">General</system:String>
@@ -170,11 +171,18 @@
     <!-- Main Window - Menu -->
     <system:String x:Key="Menu_Project">Project</system:String>
     <system:String x:Key="Menu_Settings">Settings</system:String>
+    <system:String x:Key="Toolbar_Import">Import</system:String>
+    <system:String x:Key="Toolbar_AITools">AI Tools</system:String>
+    <system:String x:Key="Toolbar_More">More</system:String>
+    <system:String x:Key="Toolbar_MoreTooltip">More commands</system:String>
+    <system:String x:Key="Toolbar_SaveTooltip">Save Project (Ctrl+S)</system:String>
+    <system:String x:Key="Nav_WorkspacesTooltip">Switch workspace</system:String>
     <system:String x:Key="Menu_NewProject">New Project...</system:String>
     <system:String x:Key="Menu_OpenProject">Open Project...</system:String>
     <system:String x:Key="Menu_SaveProject">Save Project</system:String>
     <system:String x:Key="Menu_SaveProjectAs">Save Project As...</system:String>
     <system:String x:Key="Menu_CloseProject">Close Project</system:String>
+    <system:String x:Key="Menu_BackToStart">Back to Start</system:String>
     <system:String x:Key="Menu_File">File</system:String>
     <system:String x:Key="Menu_ImportDirectory">Import Directory</system:String>
     <system:String x:Key="Menu_ImportLabelsAndImage">Import Labels&amp;Image</system:String>
@@ -202,6 +210,8 @@
     <system:String x:Key="Main_Sort">Sort</system:String>
     <system:String x:Key="Main_SortByName">By Name</system:String>
     <system:String x:Key="Main_SortByStatus">By Status</system:String>
+    <system:String x:Key="Main_SortByDateNewest">By Date (Newest)</system:String>
+    <system:String x:Key="Main_SortByDateOldest">By Date (Oldest)</system:String>
     <system:String x:Key="Main_Filter">Filter</system:String>
     <system:String x:Key="Main_FilterAll">All</system:String>
     <system:String x:Key="Main_FilterReview">Review</system:String>
@@ -562,15 +572,17 @@
     <system:String x:Key="Main_TabRoiCrop">Center ROI</system:String>
     <system:String x:Key="Roi_Title">Center ROI Crop</system:String>
     <system:String x:Key="Roi_OutputSize">Output pixel size</system:String>
+    <system:String x:Key="Roi_Width">Width (px)</system:String>
+    <system:String x:Key="Roi_Height">Height (px)</system:String>
     <system:String x:Key="Roi_Scope">Apply to</system:String>
     <system:String x:Key="Roi_AllImages">All project images</system:String>
     <system:String x:Key="Roi_CurrentImage">Current image</system:String>
     <system:String x:Key="Roi_OutputFolder">Output folder</system:String>
-    <system:String x:Key="Roi_Apply">Create 640 x 640 Crops</system:String>
-    <system:String x:Key="Roi_RemoveSmall">Remove Images Under 640 px</system:String>
-    <system:String x:Key="Roi_RemoveSmallConfirm">Found {0} image(s) with a width or height under 640 pixels. Remove them and their labels from this project? Original files will remain on disk.</system:String>
+    <system:String x:Key="Roi_Apply">Create Custom-sized Crops</system:String>
+    <system:String x:Key="Roi_RemoveSmall">Remove Images Smaller Than ROI</system:String>
+    <system:String x:Key="Roi_RemoveSmallConfirm">Found {0} image(s) smaller than the {1} x {2} ROI. Remove them and their labels from this project? Original files will remain on disk.</system:String>
     <system:String x:Key="Roi_RemoveSmallComplete">Removed {0} undersized image(s) and their labels from the project.</system:String>
-    <system:String x:Key="Roi_NoSmallImages">No project images have a width or height under 640 pixels.</system:String>
+    <system:String x:Key="Roi_NoSmallImages">No project images are smaller than the {0} x {1} ROI.</system:String>
     <system:String x:Key="Roi_Preview">Center ROI Preview</system:String>
     <system:String x:Key="Roi_NoPreview">No image available</system:String>
     <system:String x:Key="Roi_InvalidSize">The ROI size is invalid.</system:String>
@@ -664,6 +676,18 @@
     <system:String x:Key="Msg_AugmentationComplete">Augmentation complete.&#10;Source images: {0}&#10;Generated images: {1}&#10;Skipped: {2}</system:String>
     <system:String x:Key="Msg_AugmentationFailed">Augmentation failed: {0}</system:String>
 
+
+    <!-- Startup Window -->
+    <system:String x:Key="Startup_Title">Yoable - Get Started</system:String>
+    <system:String x:Key="Startup_Subtitle">Object Detection Labeling Tool</system:String>
+    <system:String x:Key="Startup_RecentProjects">Recent Projects</system:String>
+    <system:String x:Key="Startup_NoRecent">No recent projects</system:String>
+    <system:String x:Key="Startup_NoRecentHint">Create a new project or open an existing one to get started</system:String>
+    <system:String x:Key="Startup_NewProject">New Project</system:String>
+    <system:String x:Key="Startup_OpenProject">Open Project</system:String>
+    <system:String x:Key="Startup_ContinueWithout">Continue Without Project</system:String>
+    <system:String x:Key="Startup_OpenFolderTooltip">Open project folder</system:String>
+    <system:String x:Key="Startup_DeleteTooltip">Delete project</system:String>
 </ResourceDictionary>
 
 

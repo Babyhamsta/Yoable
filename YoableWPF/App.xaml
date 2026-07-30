@@ -8,6 +8,11 @@
             <ResourceDictionary.MergedDictionaries>
                 <ui:ThemeResources />
                 <ui:XamlControlsResources />
+                <ResourceDictionary Source="Themes/Palette.xaml"/>
+                <ResourceDictionary Source="Themes/Cards.xaml"/>
+                <ResourceDictionary Source="Themes/Controls.xaml"/>
+                <ResourceDictionary Source="Themes/Lists.xaml"/>
+                <ResourceDictionary Source="Themes/Shell.xaml"/>
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Application.Resources>

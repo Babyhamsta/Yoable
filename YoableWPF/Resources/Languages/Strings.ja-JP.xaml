@@ -30,6 +30,7 @@
     <system:String x:Key="Settings_CrosshairSettings_Section">十字線設定</system:String>
     <system:String x:Key="Settings_DarkMode">ダークモード</system:String>
     <system:String x:Key="Settings_AccentColor">アクセントカラー（16進数）</system:String>
+    <system:String x:Key="Settings_AccentCustomHex">カスタムカラー（16進数）</system:String>
     <system:String x:Key="Settings_AccentColor_Tooltip">16進数の色の値を入力してください（例：#FF0000 は赤色）</system:String>
     <system:String x:Key="Settings_AccentColor_Help">アプリケーション全体で使用されるアクセントカラーを変更します。</system:String>
     <system:String x:Key="Settings_General_Section">一般</system:String>
@@ -154,11 +155,18 @@
     <!-- Menu -->
     <system:String x:Key="Menu_Project">プロジェクト</system:String>
     <system:String x:Key="Menu_Settings">設定</system:String>
+    <system:String x:Key="Toolbar_Import">インポート</system:String>
+    <system:String x:Key="Toolbar_AITools">AI ツール</system:String>
+    <system:String x:Key="Toolbar_More">その他</system:String>
+    <system:String x:Key="Toolbar_MoreTooltip">その他のコマンド</system:String>
+    <system:String x:Key="Toolbar_SaveTooltip">プロジェクトを保存 (Ctrl+S)</system:String>
+    <system:String x:Key="Nav_WorkspacesTooltip">ワークスペースを切り替え</system:String>
     <system:String x:Key="Menu_NewProject">新しいプロジェクト...</system:String>
     <system:String x:Key="Menu_OpenProject">プロジェクトを開く...</system:String>
     <system:String x:Key="Menu_SaveProject">プロジェクトを保存</system:String>
     <system:String x:Key="Menu_SaveProjectAs">名前を付けて保存...</system:String>
     <system:String x:Key="Menu_CloseProject">プロジェクトを閉じる</system:String>
+    <system:String x:Key="Menu_BackToStart">スタート画面に戻る</system:String>
     <system:String x:Key="Menu_File">ファイル</system:String>
     <system:String x:Key="Menu_ImportDirectory">ディレクトリをインポート</system:String>
     <system:String x:Key="Menu_ImportLabelsAndImage">ラベルと画像をインポート</system:String>
@@ -186,6 +194,8 @@
     <system:String x:Key="Main_Sort">並び替え</system:String>
     <system:String x:Key="Main_SortByName">名前順</system:String>
     <system:String x:Key="Main_SortByStatus">状態順</system:String>
+    <system:String x:Key="Main_SortByDateNewest">日付順（新しい順）</system:String>
+    <system:String x:Key="Main_SortByDateOldest">日付順（古い順）</system:String>
     <system:String x:Key="Main_Filter">フィルター</system:String>
     <system:String x:Key="Main_FilterAll">すべて</system:String>
     <system:String x:Key="Main_FilterReview">レビュー</system:String>
@@ -526,15 +536,17 @@
     <system:String x:Key="Main_TabRoiCrop">中央 ROI</system:String>
     <system:String x:Key="Roi_Title">中央 ROI クロップ</system:String>
     <system:String x:Key="Roi_OutputSize">出力ピクセルサイズ</system:String>
+    <system:String x:Key="Roi_Width">幅（px）</system:String>
+    <system:String x:Key="Roi_Height">高さ（px）</system:String>
     <system:String x:Key="Roi_Scope">適用範囲</system:String>
     <system:String x:Key="Roi_AllImages">プロジェクト内の全画像</system:String>
     <system:String x:Key="Roi_CurrentImage">現在の画像</system:String>
     <system:String x:Key="Roi_OutputFolder">出力フォルダー</system:String>
-    <system:String x:Key="Roi_Apply">640 x 640 クロップを作成</system:String>
-    <system:String x:Key="Roi_RemoveSmall">640 px 未満の画像を除外</system:String>
-    <system:String x:Key="Roi_RemoveSmallConfirm">幅または高さが 640 ピクセル未満の画像が {0} 枚見つかりました。画像とラベルをこのプロジェクトから除外しますか？元のファイルはディスクに残ります。</system:String>
+    <system:String x:Key="Roi_Apply">カスタムサイズのクロップを作成</system:String>
+    <system:String x:Key="Roi_RemoveSmall">ROI より小さい画像を除外</system:String>
+    <system:String x:Key="Roi_RemoveSmallConfirm">{1} x {2} ROI より小さい画像が {0} 枚見つかりました。画像とラベルをこのプロジェクトから除外しますか？元のファイルはディスクに残ります。</system:String>
     <system:String x:Key="Roi_RemoveSmallComplete">サイズ不足の画像 {0} 枚とそのラベルをプロジェクトから除外しました。</system:String>
-    <system:String x:Key="Roi_NoSmallImages">幅または高さが 640 ピクセル未満の画像はありません。</system:String>
+    <system:String x:Key="Roi_NoSmallImages">{0} x {1} ROI より小さい画像はありません。</system:String>
     <system:String x:Key="Roi_Preview">中央 ROI プレビュー</system:String>
     <system:String x:Key="Roi_NoPreview">プレビューできる画像がありません</system:String>
     <system:String x:Key="Roi_InvalidSize">ROI サイズが無効です。</system:String>
@@ -628,4 +640,16 @@
     <system:String x:Key="Msg_AugmentationComplete">拡張が完了しました。&#10;元画像: {0}&#10;生成画像: {1}&#10;スキップ: {2}</system:String>
     <system:String x:Key="Msg_AugmentationFailed">拡張に失敗しました: {0}</system:String>
 
+
+    <!-- Startup Window -->
+    <system:String x:Key="Startup_Title">Yoable - はじめる</system:String>
+    <system:String x:Key="Startup_Subtitle">物体検出ラベリングツール</system:String>
+    <system:String x:Key="Startup_RecentProjects">最近のプロジェクト</system:String>
+    <system:String x:Key="Startup_NoRecent">最近のプロジェクトはありません</system:String>
+    <system:String x:Key="Startup_NoRecentHint">新しいプロジェクトを作成するか、既存のプロジェクトを開いて始めましょう</system:String>
+    <system:String x:Key="Startup_NewProject">新規プロジェクト</system:String>
+    <system:String x:Key="Startup_OpenProject">プロジェクトを開く</system:String>
+    <system:String x:Key="Startup_ContinueWithout">プロジェクトなしで続行</system:String>
+    <system:String x:Key="Startup_OpenFolderTooltip">プロジェクトフォルダーを開く</system:String>
+    <system:String x:Key="Startup_DeleteTooltip">プロジェクトを削除</system:String>
 </ResourceDictionary>

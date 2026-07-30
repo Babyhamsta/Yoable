@@ -239,7 +239,8 @@ namespace YoableWPF.Managers
                 switch (result)
                 {
                     case MessageBoxResult.Yes:
-                        ExportProjectData();
+                        // SaveProjectSync exports internally; a separate un-guarded export
+                        // here would race a concurrently running debounced save.
                         if (!SaveProjectSync())
                             return false;
                         break;
@@ -289,8 +290,10 @@ namespace YoableWPF.Managers
             {
                 progress?.Report((0, 100, "Preparing project data..."));
 
-                // Export current state from main window - async to prevent UI lag
-                await ExportProjectDataAsync();
+                // Export current state from main window - async to prevent UI lag.
+                // ConfigureAwait(false) throughout so SaveProjectSync can block the UI
+                // thread without deadlocking on continuations.
+                await ExportProjectDataAsync().ConfigureAwait(false);
 
                 progress?.Report((30, 100, "Saving project file..."));
 
@@ -301,14 +304,14 @@ namespace YoableWPF.Managers
                 string json = JsonSerializer.Serialize(CurrentProject, jsonOptions);
 
                 // Create backup before saving
-                await CreateBackupAsync();
+                await CreateBackupAsync().ConfigureAwait(false);
 
                 progress?.Report((60, 100, "Writing project file..."));
 
                 // Write to temp file then replace for atomic save
                 string tempPath = Path.Combine(CurrentProject.ProjectFolder,
                     Path.GetFileName(CurrentProject.ProjectPath) + ".tmp");
-                await File.WriteAllTextAsync(tempPath, json);
+                await File.WriteAllTextAsync(tempPath, json).ConfigureAwait(false);
                 File.Move(tempPath, CurrentProject.ProjectPath, true);
 
                 progress?.Report((100, 100, "Project saved successfully"));
@@ -322,14 +325,16 @@ namespace YoableWPF.Managers
             catch (Exception ex)
             {
                 Debug.WriteLine($"Error saving project: {ex.Message}");
-                await mainWindow.Dispatcher.InvokeAsync(() =>
+                // Fire-and-forget: awaiting InvokeAsync would deadlock when the UI thread
+                // is blocked inside SaveProjectSync.
+                mainWindow.Dispatcher.BeginInvoke(new Action(() =>
                 {
                     CustomMessageBox.Show(
                         string.Format(LanguageManager.Instance.GetString("Msg_FailedToSaveProject") ?? "Failed to save project:\n\n{0}", ex.Message),
                         LanguageManager.Instance.GetString("Msg_SaveError") ?? "Save Error",
                         MessageBoxButton.OK,
                         MessageBoxImage.Error);
-                });
+                }));
                 return false;
             }
             finally
@@ -339,11 +344,36 @@ namespace YoableWPF.Managers
         }
 
         /// <summary>
-        /// Synchronous save for backward compatibility
+        /// Synchronous save for backward compatibility. Safe to call from the UI thread:
+        /// waits for any in-flight debounced/auto save (pumping the dispatcher so that
+        /// save can finish its UI-thread capture), then saves synchronously.
         /// </summary>
         public bool SaveProjectSync()
         {
+            bool onUiThread = mainWindow?.Dispatcher.CheckAccess() == true;
+            var deadline = DateTime.UtcNow.AddSeconds(10);
+
+            while (Volatile.Read(ref isSaving) == 1 && DateTime.UtcNow < deadline)
+            {
+                if (onUiThread)
+                    PumpDispatcher();
+                Thread.Sleep(25);
+            }
+
             return SaveProjectAsync().GetAwaiter().GetResult();
+        }
+
+        /// <summary>
+        /// Processes pending dispatcher work so a background save waiting on the UI thread
+        /// (for its snapshot capture) can proceed while we wait for it.
+        /// </summary>
+        private static void PumpDispatcher()
+        {
+            var frame = new System.Windows.Threading.DispatcherFrame();
+            System.Windows.Threading.Dispatcher.CurrentDispatcher.BeginInvoke(
+                System.Windows.Threading.DispatcherPriority.Background,
+                new Action(() => frame.Continue = false));
+            System.Windows.Threading.Dispatcher.PushFrame(frame);
         }
 
         /// <summary>
@@ -533,12 +563,12 @@ namespace YoableWPF.Managers
                 // Copy current project file to backup
                 if (File.Exists(CurrentProject.ProjectPath))
                 {
-                    await Task.Run(() => File.Copy(CurrentProject.ProjectPath, backupPath, true));
+                    await Task.Run(() => File.Copy(CurrentProject.ProjectPath, backupPath, true)).ConfigureAwait(false);
                     Debug.WriteLine($"Backup created: {backupPath}");
                 }
 
                 // Clean up old backups
-                await CleanupOldBackupsAsync(backupFolder);
+                await CleanupOldBackupsAsync(backupFolder).ConfigureAwait(false);
             }
             catch (Exception ex)
             {
@@ -589,82 +619,73 @@ namespace YoableWPF.Managers
         /// <summary>
         /// Exports project data asynchronously - only blocks UI thread for minimal UI access
         /// </summary>
-        private void ExportProjectDataCore(int? selectedIndex, string sortMode)
+        /// <summary>
+        /// Immutable copy of everything the export needs, captured on the UI thread so the
+        /// background export/serialization never enumerates live collections the UI can mutate
+        /// (which throws "Collection was modified; enumeration operation may not execute").
+        /// </summary>
+        private sealed class ExportSnapshot
         {
-            // Clear existing data
-            CurrentProject.Images.Clear();
-            CurrentProject.ImageStatuses.Clear();
-            CurrentProject.AppCreatedLabels.Clear();
-            CurrentProject.ImportedLabelPaths.Clear();
-            CurrentProject.SuggestedLabels ??= new Dictionary<string, List<SuggestedLabel>>();
-            CurrentProject.SuggestedLabels.Clear();
-            CurrentProject.LoadedModelPaths ??= new List<string>();
-            CurrentProject.ModelClassMappings ??= new Dictionary<string, Dictionary<int, int>>();
-            CurrentProject.ModelClassMappingSets ??= new Dictionary<string, Dictionary<int, List<int>>>();
-            CurrentProject.ModelRoles ??= new Dictionary<string, int>();
-            CurrentProject.LoadedModelPaths.Clear();
-            // The legacy map is never written back; clearing it drops it from the saved project.
-            CurrentProject.ModelClassMappings.Clear();
-            CurrentProject.ModelClassMappingSets.Clear();
-            CurrentProject.ModelRoles.Clear();
+            public List<ImageReference> Images = new();
+            public Dictionary<string, ImageStatus> Statuses = new();
+            public List<(string FileName, Size Dimensions, List<LabelData> Labels)> LabelExports = new();
+            public Dictionary<string, List<SuggestedLabel>> Suggestions = new();
+            public List<LabelClass> Classes = new();
+            public List<(string ModelPath, Dictionary<int, List<int>> Mapping, int Role)> Models = new();
+            public int? SelectedIndex;
+            public string SortMode;
+        }
 
-            // Export images
+        /// <summary>
+        /// Builds the export snapshot. Must be called on the UI thread — it is the only thread
+        /// that mutates these collections, so copying here is race-free.
+        /// </summary>
+        private ExportSnapshot CaptureExportSnapshot()
+        {
+            var snap = new ExportSnapshot
+            {
+                SelectedIndex = mainWindow.ImageListBox.SelectedIndex >= 0
+                    ? mainWindow.ImageListBox.SelectedIndex
+                    : (int?)null,
+                SortMode = mainWindow.GetCurrentSortModeString()
+            };
+
             foreach (var kvp in mainWindow.imageManager.ImagePathMap)
             {
-                string fileName = kvp.Key;
-                string fullPath = kvp.Value.Path;
-
                 // Store dimensions so project load can skip decoding every image header
-                CurrentProject.Images.Add(new ImageReference
+                snap.Images.Add(new ImageReference
                 {
-                    FileName = fileName,
-                    FullPath = fullPath,
+                    FileName = kvp.Key,
+                    FullPath = kvp.Value.Path,
                     Width = kvp.Value.OriginalDimensions.Width,
                     Height = kvp.Value.OriginalDimensions.Height
                 });
             }
 
-            // Export image statuses
             foreach (var kvp in mainWindow.imageManager.ImageStatuses)
             {
-                CurrentProject.ImageStatuses[kvp.Key] = kvp.Value;
+                snap.Statuses[kvp.Key] = kvp.Value;
             }
-
-            // Export labels to project's labels folder
-            string labelsFolder = Path.Combine(CurrentProject.ProjectFolder, LABELS_FOLDER);
-            if (!Directory.Exists(labelsFolder))
-                Directory.CreateDirectory(labelsFolder);
 
             foreach (var kvp in mainWindow.labelManager.LabelStorage)
             {
-                string fileName = kvp.Key;
-                var labels = kvp.Value;
-
-                if (labels.Count == 0)
+                if (kvp.Value.Count == 0)
                     continue;
 
-                // Get the corresponding image to export labels
-                if (mainWindow.imageManager.ImagePathMap.TryGetValue(fileName, out var imageInfo))
+                if (mainWindow.imageManager.ImagePathMap.TryGetValue(kvp.Key, out var imageInfo))
                 {
-                    string labelFileName = Path.GetFileNameWithoutExtension(fileName) + ".txt";
-                    string labelPath = Path.Combine(labelsFolder, labelFileName);
-
-                    // Export labels using LabelManager
-                    mainWindow.labelManager.ExportLabelsToYolo(labelPath, imageInfo.OriginalDimensions, labels);
-
-                    // Store relative path in project
-                    string relativePath = Path.Combine(LABELS_FOLDER, labelFileName);
-                    CurrentProject.AppCreatedLabels[fileName] = relativePath;
+                    // Deep-copy: label rects can be mutated mid-drag on the UI thread
+                    snap.LabelExports.Add((kvp.Key, imageInfo.OriginalDimensions,
+                        kvp.Value.Select(l => new LabelData(l)).ToList()));
                 }
             }
 
-            // Export suggested labels (in-project only)
             foreach (var kvp in mainWindow.labelManager.SuggestionStorage)
             {
                 if (kvp.Value.Count == 0)
                     continue;
 
-                CurrentProject.SuggestedLabels[kvp.Key] = kvp.Value
+                snap.Suggestions[kvp.Key] = kvp.Value
                     .Select(s => new SuggestedLabel
                     {
                         Id = s.Id,
@@ -681,36 +702,82 @@ namespace YoableWPF.Managers
                     .ToList();
             }
 
-            // Export model paths and class mappings
+            if (mainWindow.ProjectClasses != null)
+                snap.Classes = new List<LabelClass>(mainWindow.ProjectClasses);
+
             if (mainWindow.yoloAI != null)
             {
-                CurrentProject.LoadedModelPaths = new List<string>();
                 foreach (var model in mainWindow.yoloAI.GetLoadedModels())
                 {
-                    CurrentProject.LoadedModelPaths.Add(model.ModelPath);
-
-                    if (model.ClassMapping != null)
-                    {
-                        CurrentProject.ModelClassMappingSets[model.ModelPath] =
-                            YoloAI.CloneClassMapping(model.ClassMapping);
-                    }
-
-                    CurrentProject.ModelRoles[model.ModelPath] = (int)model.Role;
+                    snap.Models.Add((
+                        model.ModelPath,
+                        model.ClassMapping != null ? YoloAI.CloneClassMapping(model.ClassMapping) : null,
+                        (int)model.Role));
                 }
             }
 
+            return snap;
+        }
+
+        private void ExportProjectDataCore(ExportSnapshot snap)
+        {
+            // Replace project collections with the snapshot copies. Assigning fresh
+            // collections (instead of mutating shared ones) also means a concurrent
+            // reader can never observe a half-cleared list.
+            CurrentProject.Images = snap.Images;
+            CurrentProject.ImageStatuses = snap.Statuses;
+            CurrentProject.AppCreatedLabels.Clear();
+            CurrentProject.ImportedLabelPaths.Clear();
+            CurrentProject.SuggestedLabels = snap.Suggestions;
+            // Replacing the live shared reference from MainWindow.projectClasses with a copy
+            // prevents "Collection was modified" during JSON serialization when the user
+            // edits classes while a debounced save is running.
+            CurrentProject.Classes = snap.Classes;
+            CurrentProject.LoadedModelPaths = new List<string>();
+            // The legacy map is never written back; clearing it drops it from the saved project.
+            CurrentProject.ModelClassMappings = new Dictionary<string, Dictionary<int, int>>();
+            CurrentProject.ModelClassMappingSets = new Dictionary<string, Dictionary<int, List<int>>>();
+            CurrentProject.ModelRoles = new Dictionary<string, int>();
+
+            // Export labels to project's labels folder (file I/O stays on the background thread)
+            string labelsFolder = Path.Combine(CurrentProject.ProjectFolder, LABELS_FOLDER);
+            if (!Directory.Exists(labelsFolder))
+                Directory.CreateDirectory(labelsFolder);
+
+            foreach (var (fileName, dimensions, labels) in snap.LabelExports)
+            {
+                string labelFileName = Path.GetFileNameWithoutExtension(fileName) + ".txt";
+                string labelPath = Path.Combine(labelsFolder, labelFileName);
+
+                mainWindow.labelManager.ExportLabelsToYolo(labelPath, dimensions, labels);
+
+                string relativePath = Path.Combine(LABELS_FOLDER, labelFileName);
+                CurrentProject.AppCreatedLabels[fileName] = relativePath;
+            }
+
+            // Export model paths and class mappings
+            foreach (var (modelPath, mapping, role) in snap.Models)
+            {
+                CurrentProject.LoadedModelPaths.Add(modelPath);
+
+                if (mapping != null)
+                    CurrentProject.ModelClassMappingSets[modelPath] = mapping;
+
+                CurrentProject.ModelRoles[modelPath] = role;
+            }
+
             // Save UI state (captured earlier)
-            if (selectedIndex.HasValue && selectedIndex.Value >= 0)
+            if (snap.SelectedIndex.HasValue)
             {
-                CurrentProject.LastSelectedImageIndex = selectedIndex.Value;
+                CurrentProject.LastSelectedImageIndex = snap.SelectedIndex.Value;
             }
 
-            if (!string.IsNullOrWhiteSpace(sortMode))
+            if (!string.IsNullOrWhiteSpace(snap.SortMode))
             {
-                CurrentProject.CurrentSortMode = sortMode;
+                CurrentProject.CurrentSortMode = snap.SortMode;
             }
 
-            Debug.WriteLine($"Export complete: {CurrentProject.Images.Count} images, {CurrentProject.AppCreatedLabels.Count} label files, {CurrentProject.LoadedModelPaths.Count} models, {CurrentProject.ModelClassMappings.Count} model mappings");
+            Debug.WriteLine($"Export complete: {CurrentProject.Images.Count} images, {CurrentProject.AppCreatedLabels.Count} label files, {CurrentProject.LoadedModelPaths.Count} models");
         }
 
         private async Task ExportProjectDataAsync()
@@ -718,33 +785,31 @@ namespace YoableWPF.Managers
             if (CurrentProject == null || mainWindow == null)
                 return;
 
-            // Quickly capture UI state on UI thread
-            int selectedIndex = -1;
-            string sortMode = "ByName";
-
-            await mainWindow.Dispatcher.InvokeAsync(() =>
+            // Capture on the UI thread; avoid the dispatcher round-trip when already there
+            // (SaveProjectSync blocks the UI thread, so InvokeAsync would deadlock).
+            ExportSnapshot snap = null;
+            if (mainWindow.Dispatcher.CheckAccess())
             {
-                selectedIndex = mainWindow.ImageListBox.SelectedIndex;
-                sortMode = mainWindow.SortComboBox?.SelectedIndex == 1 ? "ByStatus" : "ByName";
-            });
+                snap = CaptureExportSnapshot();
+            }
+            else
+            {
+                await mainWindow.Dispatcher.InvokeAsync(() => snap = CaptureExportSnapshot());
+            }
 
-            // Do all heavy processing on background thread
-            await Task.Run(() => ExportProjectDataCore(selectedIndex, sortMode));
+            // Do the file I/O on a background thread
+            await Task.Run(() => ExportProjectDataCore(snap)).ConfigureAwait(false);
         }
 
         /// <summary>
-        /// Synchronous version for backward compatibility (used in CloseProject)
+        /// Synchronous version for backward compatibility. Must be called on the UI thread.
         /// </summary>
         public void ExportProjectData()
         {
             if (CurrentProject == null || mainWindow == null)
                 return;
-            int selectedIndex = mainWindow.ImageListBox.SelectedIndex;
-            string sortMode = mainWindow.SortComboBox != null && mainWindow.SortComboBox.SelectedIndex == 1
-                ? "ByStatus"
-                : "ByName";
 
-            ExportProjectDataCore(selectedIndex >= 0 ? selectedIndex : null, sortMode);
+            ExportProjectDataCore(CaptureExportSnapshot());
         }
 
         /// <summary>

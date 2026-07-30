@@ -79,7 +79,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <Border Background="#FF202020" CornerRadius="4" ClipToBounds="True">
+                            <Border Background="{StaticResource CanvasBackgroundBrush}" CornerRadius="4" ClipToBounds="True">
                                 <local:DuplicateLabelPreview x:Name="LeftImage"/>
                             </Border>
                             <TextBlock x:Name="LeftFileNameText"
@@ -135,7 +135,7 @@
                                 <RowDefinition Height="Auto"/>
                                 <RowDefinition Height="Auto"/>
                             </Grid.RowDefinitions>
-                            <Border Background="#FF202020" CornerRadius="4" ClipToBounds="True">
+                            <Border Background="{StaticResource CanvasBackgroundBrush}" CornerRadius="4" ClipToBounds="True">
                                 <local:DuplicateLabelPreview x:Name="RightImage"/>
                             </Border>
                             <TextBlock x:Name="RightFileNameText"
@@ -262,11 +262,11 @@
                                                 <ColumnDefinition Width="5"/>
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
-                                            <Border Background="#FF202020" ClipToBounds="True" CornerRadius="2">
+                                            <Border Background="{StaticResource CanvasBackgroundBrush}" ClipToBounds="True" CornerRadius="2">
                                                 <Image Source="{Binding LeftFullPath, Converter={StaticResource DuplicateThumbnailConverter}, IsAsync=True}"
                                                        Stretch="UniformToFill"/>
                                             </Border>
-                                            <Border Grid.Column="2" Background="#FF202020" ClipToBounds="True" CornerRadius="2">
+                                            <Border Grid.Column="2" Background="{StaticResource CanvasBackgroundBrush}" ClipToBounds="True" CornerRadius="2">
                                                 <Image Source="{Binding RightFullPath, Converter={StaticResource DuplicateThumbnailConverter}, IsAsync=True}"
                                                        Stretch="UniformToFill"/>
                                             </Border>

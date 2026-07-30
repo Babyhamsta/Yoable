@@ -3,26 +3,41 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ui="http://schemas.modernwpf.com/2019">
     <UserControl.Resources>
+        <!-- Summary stat tile -->
         <Style x:Key="StatCard" TargetType="Border">
             <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
             <Setter Property="CornerRadius" Value="8"/>
-            <Setter Property="Padding" Value="16,12"/>
-            <Setter Property="MinWidth" Value="150"/>
+            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="MinWidth" Value="170"/>
             <Setter Property="Margin" Value="0,0,12,12"/>
         </Style>
         <Style x:Key="StatNumber" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="26"/>
+            <Setter Property="FontSize" Value="24"/>
             <Setter Property="FontWeight" Value="SemiBold"/>
         </Style>
         <Style x:Key="StatCaption" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="FontSize" Value="11"/>
             <Setter Property="Margin" Value="0,2,0,0"/>
             <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
         </Style>
-        <Style x:Key="SectionHeader" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="15"/>
+        <!-- Icon tile inside a stat card -->
+        <Style x:Key="StatIconTile" TargetType="Border">
+            <Setter Property="Width" Value="38"/>
+            <Setter Property="Height" Value="38"/>
+            <Setter Property="CornerRadius" Value="8"/>
+            <Setter Property="Margin" Value="0,0,12,0"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="StatIconGlyph" TargetType="TextBlock">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets"/>
+            <Setter Property="FontSize" Value="17"/>
+            <Setter Property="HorizontalAlignment" Value="Center"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <!-- Row label + right-aligned badge -->
+        <Style x:Key="BadgeCount" TargetType="TextBlock">
             <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,10,0,10"/>
+            <Setter Property="FontSize" Value="12"/>
         </Style>
     </UserControl.Resources>
 
@@ -43,7 +58,12 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Grid.Column="0">
-                    <TextBlock Text="{DynamicResource Stats_Title}" FontSize="18" FontWeight="SemiBold"/>
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontFamily="Segoe MDL2 Assets" Text="&#xE9D9;" FontSize="18"
+                                   Foreground="{StaticResource GlyphTealBrush}"
+                                   VerticalAlignment="Center" Margin="0,0,8,0"/>
+                        <TextBlock Text="{DynamicResource Stats_Title}" FontSize="18" FontWeight="SemiBold"/>
+                    </StackPanel>
                     <TextBlock Text="{DynamicResource Stats_Subtitle}"
                                Margin="0,4,0,0" FontSize="12"
                                Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"
@@ -51,6 +71,7 @@
                 </StackPanel>
                 <Button Grid.Column="1"
                         x:Name="RefreshButton"
+                        Style="{StaticResource SecondaryButton}"
                         Content="{DynamicResource Stats_Refresh}"
                         Height="32" MinWidth="110"
                         VerticalAlignment="Center"
@@ -66,107 +87,203 @@
                            Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
 
                 <StackPanel x:Name="ContentPanel">
-                    <!-- Summary cards -->
+                    <!-- Summary stat tiles -->
                     <WrapPanel>
                         <Border Style="{StaticResource StatCard}">
-                            <StackPanel>
-                                <TextBlock x:Name="StatTotalImages" Style="{StaticResource StatNumber}" Text="0"/>
-                                <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_TotalImages}"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Style="{StaticResource StatIconTile}" Background="{StaticResource InfoSubtleBrush}">
+                                    <TextBlock Style="{StaticResource StatIconGlyph}" Text="&#xEB9F;"
+                                               Foreground="{StaticResource InfoBrush}"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="StatTotalImages" Style="{StaticResource StatNumber}" Text="0"/>
+                                    <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_TotalImages}"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource StatCard}">
-                            <StackPanel>
-                                <TextBlock x:Name="StatLabeled" Style="{StaticResource StatNumber}" Text="0"/>
-                                <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_LabeledImages}"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Style="{StaticResource StatIconTile}" Background="{StaticResource StatusVerifiedSubtleBrush}">
+                                    <TextBlock Style="{StaticResource StatIconGlyph}" Text="&#xE73E;"
+                                               Foreground="{StaticResource StatusVerifiedBrush}"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="StatLabeled" Style="{StaticResource StatNumber}" Text="0"/>
+                                    <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_LabeledImages}"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource StatCard}">
-                            <StackPanel>
-                                <TextBlock x:Name="StatUnlabeled" Style="{StaticResource StatNumber}" Text="0"/>
-                                <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_UnlabeledImages}"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Style="{StaticResource StatIconTile}" Background="{StaticResource StatusNoLabelSubtleBrush}">
+                                    <TextBlock Style="{StaticResource StatIconGlyph}" Text="&#xE7BA;"
+                                               Foreground="{StaticResource StatusNoLabelBrush}"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="StatUnlabeled" Style="{StaticResource StatNumber}" Text="0"/>
+                                    <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_UnlabeledImages}"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource StatCard}">
-                            <StackPanel>
-                                <TextBlock x:Name="StatTotalBoxes" Style="{StaticResource StatNumber}" Text="0"/>
-                                <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_TotalBoxes}"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Style="{StaticResource StatIconTile}" Background="{StaticResource StatusAiSubtleBrush}">
+                                    <TextBlock Style="{StaticResource StatIconGlyph}" Text="&#xE7C1;"
+                                               Foreground="{StaticResource StatusAiBrush}"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="StatTotalBoxes" Style="{StaticResource StatNumber}" Text="0"/>
+                                    <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_TotalBoxes}"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                         <Border Style="{StaticResource StatCard}">
-                            <StackPanel>
-                                <TextBlock x:Name="StatAvgBoxes" Style="{StaticResource StatNumber}" Text="0"/>
-                                <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_AvgBoxes}"/>
+                            <StackPanel Orientation="Horizontal">
+                                <Border Style="{StaticResource StatIconTile}" Background="{StaticResource StatusReviewSubtleBrush}">
+                                    <TextBlock Style="{StaticResource StatIconGlyph}" Text="&#xE9D2;"
+                                               Foreground="{StaticResource StatusReviewBrush}"/>
+                                </Border>
+                                <StackPanel VerticalAlignment="Center">
+                                    <TextBlock x:Name="StatAvgBoxes" Style="{StaticResource StatNumber}" Text="0"/>
+                                    <TextBlock Style="{StaticResource StatCaption}" Text="{DynamicResource Stats_AvgBoxes}"/>
+                                </StackPanel>
                             </StackPanel>
                         </Border>
                     </WrapPanel>
 
                     <!-- Class balance -->
-                    <TextBlock Text="{DynamicResource Stats_ClassBalance}" Style="{StaticResource SectionHeader}"/>
-                    <ItemsControl x:Name="ClassStatsItems">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate>
-                                <Grid Margin="0,0,0,10">
+                    <Border Style="{StaticResource ModernCard}" Margin="0,8,12,12">
+                        <StackPanel>
+                            <TextBlock Text="{DynamicResource Stats_ClassBalance}" Style="{StaticResource SectionHeader}"/>
+                            <ItemsControl x:Name="ClassStatsItems">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <Grid Margin="0,0,0,12">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="16"/>
+                                                <ColumnDefinition Width="2*" MinWidth="120"/>
+                                                <ColumnDefinition Width="3*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <Rectangle Grid.Column="0" Width="12" Height="12" RadiusX="3" RadiusY="3"
+                                                       VerticalAlignment="Center" HorizontalAlignment="Left"
+                                                       Fill="{Binding ColorBrush}"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="6,0,10,0">
+                                                <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                                                <TextBlock Text="{Binding CountText}" FontSize="11"
+                                                           Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
+                                            </StackPanel>
+                                            <ProgressBar Grid.Column="2" Height="8" VerticalAlignment="Center"
+                                                         Minimum="0"
+                                                         Maximum="{Binding BarMax}"
+                                                         Value="{Binding BoxCount}"
+                                                         BorderThickness="0"
+                                                         Background="{DynamicResource SystemControlBackgroundBaseLowBrush}"
+                                                         Foreground="{Binding ColorBrush}"/>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Size distribution + review status, side by side -->
+                    <Grid Margin="0,0,12,20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Box size distribution -->
+                        <Border Grid.Column="0" Style="{StaticResource ModernCard}" Margin="0" VerticalAlignment="Stretch">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Stats_SizeDistribution}" Style="{StaticResource SectionHeader}"/>
+                                <Grid Margin="0,0,0,8">
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="16"/>
-                                        <ColumnDefinition Width="2*" MinWidth="120"/>
-                                        <ColumnDefinition Width="3*"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
                                     </Grid.ColumnDefinitions>
-                                    <Rectangle Grid.Column="0" Width="12" Height="12" RadiusX="2" RadiusY="2"
-                                               VerticalAlignment="Center" HorizontalAlignment="Left"
-                                               Fill="{Binding ColorBrush}"/>
-                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="4,0,10,0">
-                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                        <TextBlock Text="{Binding CountText}" FontSize="11"
-                                                   Foreground="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
-                                    </StackPanel>
-                                    <ProgressBar Grid.Column="2" Height="16" VerticalAlignment="Center"
-                                                 Minimum="0"
-                                                 Maximum="{Binding BarMax}"
-                                                 Value="{Binding BoxCount}"
-                                                 Foreground="{Binding ColorBrush}"/>
+                                    <TextBlock Text="{DynamicResource Stats_SizeSmall}" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Style="{StaticResource BadgePill}" Background="{StaticResource InfoSubtleBrush}">
+                                        <TextBlock x:Name="StatSmall" Text="0" Style="{StaticResource BadgeCount}"
+                                                   Foreground="{StaticResource InfoBrush}"/>
+                                    </Border>
                                 </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource Stats_SizeMedium}" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Style="{StaticResource BadgePill}" Background="{StaticResource StatusReviewSubtleBrush}">
+                                        <TextBlock x:Name="StatMedium" Text="0" Style="{StaticResource BadgeCount}"
+                                                   Foreground="{StaticResource StatusReviewBrush}"/>
+                                    </Border>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource Stats_SizeLarge}" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Style="{StaticResource BadgePill}" Background="{StaticResource StatusAiSubtleBrush}">
+                                        <TextBlock x:Name="StatLarge" Text="0" Style="{StaticResource BadgeCount}"
+                                                   Foreground="{StaticResource StatusAiBrush}"/>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
 
-                    <!-- Box size distribution -->
-                    <TextBlock Text="{DynamicResource Stats_SizeDistribution}" Style="{StaticResource SectionHeader}"/>
-                    <Grid Margin="0,0,0,4">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" MinWidth="140"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="{DynamicResource Stats_SizeSmall}" Margin="0,0,0,6"/>
-                            <TextBlock Text="{DynamicResource Stats_SizeMedium}" Margin="0,0,0,6"/>
-                            <TextBlock Text="{DynamicResource Stats_SizeLarge}"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1">
-                            <TextBlock x:Name="StatSmall" Text="0" Margin="0,0,0,6" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="StatMedium" Text="0" Margin="0,0,0,6" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="StatLarge" Text="0" FontWeight="SemiBold"/>
-                        </StackPanel>
-                    </Grid>
-
-                    <!-- Review status -->
-                    <TextBlock Text="{DynamicResource Stats_ReviewStatus}" Style="{StaticResource SectionHeader}"/>
-                    <Grid Margin="0,0,0,20">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="Auto" MinWidth="140"/>
-                            <ColumnDefinition Width="Auto"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0">
-                            <TextBlock Text="{DynamicResource Stats_Verified}" Margin="0,0,0,6"/>
-                            <TextBlock Text="{DynamicResource Stats_NeedsReview}" Margin="0,0,0,6"/>
-                            <TextBlock Text="{DynamicResource Stats_Suggested}" Margin="0,0,0,6"/>
-                            <TextBlock Text="{DynamicResource Stats_NoLabelStatus}"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1">
-                            <TextBlock x:Name="StatVerified" Text="0" Margin="0,0,0,6" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="StatNeedsReview" Text="0" Margin="0,0,0,6" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="StatSuggested" Text="0" Margin="0,0,0,6" FontWeight="SemiBold"/>
-                            <TextBlock x:Name="StatNoLabel" Text="0" FontWeight="SemiBold"/>
-                        </StackPanel>
+                        <!-- Review status -->
+                        <Border Grid.Column="2" Style="{StaticResource ModernCard}" Margin="0" VerticalAlignment="Stretch">
+                            <StackPanel>
+                                <TextBlock Text="{DynamicResource Stats_ReviewStatus}" Style="{StaticResource SectionHeader}"/>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource Stats_Verified}" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Style="{StaticResource BadgePill}" Background="{StaticResource StatusVerifiedSubtleBrush}">
+                                        <TextBlock x:Name="StatVerified" Text="0" Style="{StaticResource BadgeCount}"
+                                                   Foreground="{StaticResource StatusVerifiedBrush}"/>
+                                    </Border>
+                                </Grid>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource Stats_NeedsReview}" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Style="{StaticResource BadgePill}" Background="{StaticResource StatusReviewSubtleBrush}">
+                                        <TextBlock x:Name="StatNeedsReview" Text="0" Style="{StaticResource BadgeCount}"
+                                                   Foreground="{StaticResource StatusReviewBrush}"/>
+                                    </Border>
+                                </Grid>
+                                <Grid Margin="0,0,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource Stats_Suggested}" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Style="{StaticResource BadgePill}" Background="{StaticResource StatusSuggestedSubtleBrush}">
+                                        <TextBlock x:Name="StatSuggested" Text="0" Style="{StaticResource BadgeCount}"
+                                                   Foreground="{StaticResource StatusSuggestedBrush}"/>
+                                    </Border>
+                                </Grid>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="{DynamicResource Stats_NoLabelStatus}" VerticalAlignment="Center"/>
+                                    <Border Grid.Column="1" Style="{StaticResource BadgePill}" Background="{StaticResource StatusNoLabelSubtleBrush}">
+                                        <TextBlock x:Name="StatNoLabel" Text="0" Style="{StaticResource BadgeCount}"
+                                                   Foreground="{StaticResource StatusNoLabelBrush}"/>
+                                    </Border>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
                     </Grid>
                 </StackPanel>
             </StackPanel>

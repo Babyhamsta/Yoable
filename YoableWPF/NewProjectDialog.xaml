@@ -13,71 +13,8 @@
 
     <Window.Resources>
         <!-- Modern Button Style -->
-        <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Background" Value="#FF0078D4"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="20,10"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Border"
-                                Background="{TemplateBinding Background}"
-                                BorderThickness="0"
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.9"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.5"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
         <!-- Secondary Button Style -->
-        <Style x:Key="SecondaryButton" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundBaseLowBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="20,10"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Border"
-                                Background="{TemplateBinding Background}"
-                                BorderThickness="0"
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center"
-                                            VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SystemControlBackgroundBaseMediumLowBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
         <!-- Icon Button Style (for browse button) -->
         <Style x:Key="IconButton" TargetType="Button">
@@ -140,7 +77,7 @@
                     <TextBlock FontFamily="Segoe MDL2 Assets" 
                                Text="&#xE710;" 
                                FontSize="24"
-                               Foreground="#FF9C27B0"
+                               Foreground="{StaticResource GlyphPurpleBrush}"
                                VerticalAlignment="Center"
                                Margin="0,0,12,0"/>
                     <TextBlock Text="Create New Project" 
@@ -200,7 +137,7 @@
                 </Grid>
 
                 <!-- Info Card -->
-                <Border Background="#4400BCD4"
+                <Border Background="{StaticResource InfoSubtleBrush}"
                         CornerRadius="6"
                         Padding="16"
                         Margin="0,8,0,0">
@@ -208,16 +145,16 @@
                         <TextBlock FontFamily="Segoe MDL2 Assets"
                                    Text="&#xE946;"
                                    FontSize="16"
-                                   Foreground="#00BCD4"
+                                   Foreground="{StaticResource InfoBrush}"
                                    VerticalAlignment="Top"
                                    Margin="0,0,10,0"/>
                         <StackPanel>
                             <TextBlock Text="Project Folder Structure"
-                                     Foreground="#00BCD4"
+                                     Foreground="{StaticResource InfoBrush}"
                                      FontWeight="SemiBold"
                                      FontSize="13"
                                      Margin="0,0,0,4"/>
-                            <TextBlock Foreground="#00BCD4"
+                            <TextBlock Foreground="{StaticResource InfoBrush}"
                                      FontSize="12"
                                      TextWrapping="Wrap"
                                      Opacity="0.9">
