@@ -13,114 +13,12 @@
 
     <Window.Resources>
         <!-- Accent color for buttons (uses system accent) -->
-        <SolidColorBrush x:Key="AccentButtonBrush" Color="{DynamicResource SystemAccentColor}"/>
 
         <!-- Modern Button Style -->
-        <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource AccentButtonBrush}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Border"
-                                Background="{TemplateBinding Background}"
-                                BorderThickness="0"
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.9"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.5"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
         <!-- Secondary Button Style -->
-        <Style x:Key="SecondaryButton" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Border"
-                                Background="{TemplateBinding Background}"
-                                BorderThickness="0"
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.5"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
         <!-- Danger Button Style -->
-        <Style x:Key="DangerButton" TargetType="Button">
-            <Setter Property="Background" Value="#44E57373"/>
-            <Setter Property="Foreground" Value="#E57373"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Border"
-                                Background="{TemplateBinding Background}"
-                                BorderThickness="0"
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="#FFE57373"/>
-                                <Setter Property="Foreground" Value="White"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="#FFD32F2F"/>
-                                <Setter Property="Foreground" Value="White"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.5"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
         <!-- Model Card Style -->
         <Style x:Key="ModelCard" TargetType="Border">
@@ -149,7 +47,7 @@
                     <TextBlock FontFamily="Segoe MDL2 Assets" 
                                Text="&#xE950;" 
                                FontSize="24"
-                               Foreground="#FF9C27B0"
+                               Foreground="{StaticResource GlyphPurpleBrush}"
                                VerticalAlignment="Center"
                                Margin="0,0,12,0"/>
                     <TextBlock Text="{DynamicResource ModelManager_Title}" 
@@ -218,7 +116,7 @@
                                                FontFamily="Segoe MDL2 Assets"
                                                Text="&#xE82D;"
                                                FontSize="16"
-                                               Foreground="#FF9C27B0"
+                                               Foreground="{StaticResource GlyphPurpleBrush}"
                                                VerticalAlignment="Center"
                                                Margin="0,0,12,0"/>
 
@@ -228,11 +126,11 @@
                                                VerticalAlignment="Center"/>
 
                                     <Border Grid.Column="2"
-                                            Background="#4400BCD4"
+                                            Background="{StaticResource InfoSubtleBrush}"
                                             CornerRadius="10"
                                             Padding="8,4">
                                         <TextBlock Text="{Binding ModelType}"
-                                                   Foreground="#00BCD4"
+                                                   Foreground="{StaticResource InfoBrush}"
                                                    FontSize="11"
                                                    FontWeight="SemiBold"
                                                    VerticalAlignment="Center"/>
@@ -244,18 +142,18 @@
                 </Border>
 
                 <!-- Warning Card -->
-                <Border Background="#44FFB74D"
+                <Border Background="{StaticResource StatusReviewSubtleBrush}"
                         CornerRadius="6"
                         Padding="16">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock FontFamily="Segoe MDL2 Assets"
                                    Text="&#xE7BA;"
                                    FontSize="16"
-                                   Foreground="#FFB74D"
+                                   Foreground="{StaticResource StatusReviewBrush}"
                                    VerticalAlignment="Center"
                                    Margin="0,0,10,0"/>
                         <TextBlock Text="{DynamicResource ModelManager_WarningMessage}"
-                                   Foreground="#CC7A00"
+                                   Foreground="{StaticResource StatusReviewDeepBrush}"
                                    FontSize="12"
                                    TextWrapping="Wrap"
                                    VerticalAlignment="Center"/>

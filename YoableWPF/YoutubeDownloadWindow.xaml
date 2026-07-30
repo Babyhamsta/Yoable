@@ -12,94 +12,16 @@
 
     <Window.Resources>
         <!-- Accent color for buttons (uses system accent) -->
-        <SolidColorBrush x:Key="AccentButtonBrush" Color="{DynamicResource SystemAccentColor}"/>
 
         <!-- Modern Button Style -->
-        <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource AccentButtonBrush}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Border"
-                                Background="{TemplateBinding Background}"
-                                BorderThickness="0"
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.9"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
         <!-- Secondary Button Style -->
-        <Style x:Key="SecondaryButton" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Border"
-                                Background="{TemplateBinding Background}"
-                                BorderThickness="0"
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
 
         <!-- Setting Card Style -->
-        <Style x:Key="SettingCard" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Padding" Value="16"/>
-            <Setter Property="Margin" Value="0,0,0,16"/>
-        </Style>
 
         <!-- Label Style -->
-        <Style x:Key="SettingLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
 
         <!-- Help Text Style -->
-        <Style x:Key="HelpText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="Gray"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Margin" Value="0,6,0,0"/>
-        </Style>
     </Window.Resources>
 
     <Grid>
@@ -120,7 +42,7 @@
                     <TextBlock FontFamily="Segoe MDL2 Assets" 
                                Text="&#xE714;" 
                                FontSize="24"
-                               Foreground="#FFF44336"
+                               Foreground="{StaticResource DangerBrush}"
                                VerticalAlignment="Center"
                                Margin="0,0,12,0"/>
                     <TextBlock Text="YouTube Video Download" 
@@ -199,18 +121,18 @@
                 </Border>
 
                 <!-- Info Card -->
-                <Border Background="#4400BCD4"
+                <Border Background="{StaticResource InfoSubtleBrush}"
                         CornerRadius="6"
                         Padding="16">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock FontFamily="Segoe MDL2 Assets"
                                    Text="&#xE946;"
                                    FontSize="16"
-                                   Foreground="#00BCD4"
+                                   Foreground="{StaticResource InfoBrush}"
                                    VerticalAlignment="Center"
                                    Margin="0,0,10,0"/>
                         <TextBlock Text="Frames will be extracted, resized, and imported automatically into the image list."
-                                   Foreground="#007B8A"
+                                   Foreground="{StaticResource InfoDeepBrush}"
                                    FontSize="12"
                                    TextWrapping="Wrap"
                                    VerticalAlignment="Center"/>

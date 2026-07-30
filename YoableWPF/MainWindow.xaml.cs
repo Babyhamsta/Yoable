@@ -120,8 +120,60 @@ namespace YoableWPF
             LanguageManager.Instance.LanguageChanged += LanguageManager_LanguageChanged;
         }
 
+        // Guards against re-entrancy between the nav rail and the workspace TabControl.
+        private bool syncingWorkspace;
+
+        private void NavRail_Checked(object sender, RoutedEventArgs e)
+        {
+            // Fires during InitializeComponent for the default-checked button,
+            // before MainWorkspaceTabs exists — guard both.
+            if (syncingWorkspace || MainWorkspaceTabs == null)
+                return;
+
+            if (sender is RadioButton rb && rb.Tag is string tag && int.TryParse(tag, out int index))
+            {
+                syncingWorkspace = true;
+                try { MainWorkspaceTabs.SelectedIndex = index; }
+                finally { syncingWorkspace = false; }
+            }
+        }
+
+        private void SyncNavRailToWorkspace()
+        {
+            if (NavAnnotateButton == null)
+                return;
+
+            RadioButton target = MainWorkspaceTabs.SelectedIndex switch
+            {
+                1 => NavDuplicatesButton,
+                2 => NavRoiCropButton,
+                3 => NavStatsButton,
+                _ => NavAnnotateButton
+            };
+
+            if (target.IsChecked != true)
+            {
+                syncingWorkspace = true;
+                try { target.IsChecked = true; }
+                finally { syncingWorkspace = false; }
+            }
+        }
+
+        private void ToolbarFlyout_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is Button btn && btn.ContextMenu != null)
+            {
+                btn.ContextMenu.PlacementTarget = btn;
+                btn.ContextMenu.Placement = System.Windows.Controls.Primitives.PlacementMode.Bottom;
+                btn.ContextMenu.IsOpen = true;
+            }
+        }
+
         private async void MainWorkspaceTabs_SelectionChanged(object sender, SelectionChangedEventArgs e)
         {
+            if (e.Source == MainWorkspaceTabs)
+                SyncNavRailToWorkspace();
+
             if (e.Source == MainWorkspaceTabs && DuplicateImagesTab.IsSelected)
             {
                 if (!string.IsNullOrWhiteSpace(imageManager.CurrentImagePath))
@@ -893,7 +945,7 @@ namespace YoableWPF
             // Save classes before saving project
             if (projectManager?.CurrentProject != null)
             {
-                projectManager.CurrentProject.Classes = projectClasses;
+                projectManager.CurrentProject.Classes = new List<LabelClass>(projectClasses);
             }
 
             // Use async save with progress
@@ -937,7 +989,7 @@ namespace YoableWPF
                     // Save classes before saving project
                     if (projectManager?.CurrentProject != null)
                     {
-                        projectManager.CurrentProject.Classes = projectClasses;
+                        projectManager.CurrentProject.Classes = new List<LabelClass>(projectClasses);
                     }
 
                     // Save to new location
@@ -967,31 +1019,34 @@ namespace YoableWPF
                 return;
             }
 
+            // CloseProject prompts for unsaved changes (Yes=save, Cancel=false)
             if (projectManager.CloseProject())
             {
-                // Clear UI completely
-                ProjectNameText.Text = LanguageManager.Instance.GetString("Status_NoProject");
-                LastSaveText.Text = LanguageManager.Instance.GetString("Status_NotSaved");
-                LastSaveTimeText.Text = "";
-
-                // Clear all data
-                ImageListBox.Items.Clear();
-                LabelListBox.ItemsSource = null;
-                drawingCanvas.Labels.Clear();
-                drawingCanvas.SuggestedLabels.Clear();
-                drawingCanvas.Image = null;
-                drawingCanvas.InvalidateVisual();
-                uiStateManager.ClearCache();
-                uiStateManager.RefreshAllImagesList();
-
-                // Update project UI
-                UpdateProjectUI();
-
-                // Update status counts
-                uiStateManager.UpdateStatusCounts();
-                UpdateSuggestionSummaryUI();
-                propagationManager.SetProjectFolder(null);
+                ReturnToStartup();
             }
+        }
+
+        // Suppresses shutdown/prompt logic in Window_Closing while switching back to the startup window.
+        private bool returningToStartup;
+
+        private void ReturnToStartup()
+        {
+            returningToStartup = true;
+            var startup = new StartupWindow();
+            startup.Show();   // MUST show before Close(): ShutdownMode is OnLastWindowClose
+            Close();
+        }
+
+        private void BackToStart_Click(object sender, RoutedEventArgs e)
+        {
+            if (projectManager != null && projectManager.IsProjectOpen)
+            {
+                // Prompts for unsaved changes; user can cancel
+                if (!projectManager.CloseProject())
+                    return;
+            }
+
+            ReturnToStartup();
         }
 
         /// <summary>
@@ -1082,7 +1137,7 @@ namespace YoableWPF
                 { 
                     new LabelClass("default", "#E57373", 0) 
                 };
-                projectManager.CurrentProject.Classes = projectClasses;
+                projectManager.CurrentProject.Classes = new List<LabelClass>(projectClasses);
             }
             RefreshClassList();
 
@@ -1158,26 +1213,23 @@ namespace YoableWPF
             if (projectManager?.CurrentProject != null)
             {
                 // Set the sort combobox to match saved mode
+                int sortIndex = projectManager.CurrentProject.CurrentSortMode switch
+                {
+                    "ByStatus" => 1,
+                    "ByDateNewest" => 2,
+                    "ByDateOldest" => 3,
+                    _ => 0
+                };
+
                 if (SortComboBox != null)
+                    SortComboBox.SelectedIndex = sortIndex;
+
+                switch (sortIndex)
                 {
-                    if (projectManager.CurrentProject.CurrentSortMode == "ByStatus")
-                    {
-                        SortComboBox.SelectedIndex = 1;
-                        uiStateManager.SortImagesByStatus();
-                    }
-                    else
-                    {
-                        SortComboBox.SelectedIndex = 0;
-                        uiStateManager.SortImagesByName();
-                    }
-                }
-                else
-                {
-                    // Fallback if combobox not available
-                    if (projectManager.CurrentProject.CurrentSortMode == "ByStatus")
-                        uiStateManager.SortImagesByStatus();
-                    else
-                        uiStateManager.SortImagesByName();
+                    case 1: uiStateManager.SortImagesByStatus(); break;
+                    case 2: uiStateManager.SortImagesByDate(newestFirst: true); break;
+                    case 3: uiStateManager.SortImagesByDate(newestFirst: false); break;
+                    default: uiStateManager.SortImagesByName(); break;
                 }
 
                 // Apply saved filter mode (currently always "All", but prepared for future)
@@ -1217,6 +1269,19 @@ namespace YoableWPF
 
         private async void Window_Closing(object sender, CancelEventArgs e)
         {
+            // Returning to the startup window: project already closed (prompt handled),
+            // a StartupWindow is open, so just clean up — and critically, do NOT Shutdown().
+            if (returningToStartup)
+            {
+                projectManager?.Dispose();
+                yoloAI?.Dispose();
+                if (LanguageManager.Instance != null)
+                {
+                    LanguageManager.Instance.LanguageChanged -= LanguageManager_LanguageChanged;
+                }
+                return;
+            }
+
             // Check for unsaved changes
             if (projectManager != null && projectManager.IsProjectOpen && projectManager.HasUnsavedChanges)
             {
@@ -1237,8 +1302,8 @@ namespace YoableWPF
                     // Cancel the close temporarily
                     e.Cancel = true;
 
-                    // Save synchronously (blocking) since we're closing
-                    projectManager.ExportProjectData();
+                    // Save synchronously (blocking) since we're closing.
+                    // SaveProjectSync exports internally — no separate export needed.
                     bool saved = projectManager.SaveProjectSync();
 
                     if (saved)
@@ -3055,7 +3120,7 @@ namespace YoableWPF
                         // Update project data
                         if (projectManager?.CurrentProject != null)
                         {
-                            projectManager.CurrentProject.Classes = projectClasses;
+                            projectManager.CurrentProject.Classes = new List<LabelClass>(projectClasses);
                         }
 
                         // Refresh UI
@@ -3764,8 +3829,23 @@ namespace YoableWPF
                 case 1:
                     uiStateManager.SortImagesByStatus();
                     break;
+                case 2:
+                    uiStateManager.SortImagesByDate(newestFirst: true);
+                    break;
+                case 3:
+                    uiStateManager.SortImagesByDate(newestFirst: false);
+                    break;
             }
         }
+
+        // Maps the current sort combobox selection to the string persisted in the project file.
+        public string GetCurrentSortModeString() => SortComboBox?.SelectedIndex switch
+        {
+            1 => "ByStatus",
+            2 => "ByDateNewest",
+            3 => "ByDateOldest",
+            _ => "ByName"
+        };
 
         private void FilterAll_Click(object sender, RoutedEventArgs e)
         {
@@ -3964,58 +4044,27 @@ namespace YoableWPF
             RefreshClassFilterCheckBoxes();
         }
 
+        // Backing list for ClassFilterItemsControl
+        private List<ClassFilterItem> classFilterItems = new();
+
         /// <summary>
-        /// Refreshes the class filter checkboxes in the Expander
+        /// Rebuilds the class filter list from projectClasses, preserving prior selection by ClassId.
         /// </summary>
         private void RefreshClassFilterCheckBoxes()
         {
-            if (ClassFilterCheckBoxPanel == null)
+            if (ClassFilterItemsControl == null)
                 return;
 
-            // Clear existing checkboxes
-            ClassFilterCheckBoxPanel.Children.Clear();
-
-            // Create checkbox for each class
-            foreach (var labelClass in projectClasses)
+            var previous = classFilterItems.ToDictionary(i => i.ClassId, i => i.IsChecked);
+            classFilterItems = projectClasses.Select(c => new ClassFilterItem
             {
-                var checkBox = new CheckBox
-                {
-                    Content = labelClass.Name,
-                    Tag = labelClass.ClassId,
-                    IsChecked = true, // Default: all classes are selected
-                    Margin = new Thickness(0, 4, 0, 4),
-                    FontSize = 11
-                };
+                ClassId = c.ClassId,
+                Name = c.Name,
+                ColorBrush = c.ColorBrush,
+                IsChecked = !previous.TryGetValue(c.ClassId, out var wasChecked) || wasChecked
+            }).ToList();
 
-                // Add color indicator
-                var stackPanel = new StackPanel { Orientation = Orientation.Horizontal };
-                
-                // Color bar
-                var colorBar = new Border
-                {
-                    Width = 4,
-                    Height = 16,
-                    Background = new SolidColorBrush(
-                        (Color)ColorConverter.ConvertFromString(labelClass.ColorHex)),
-                    Margin = new Thickness(0, 0, 8, 0),
-                    CornerRadius = new CornerRadius(2),
-                    VerticalAlignment = VerticalAlignment.Center
-                };
-                stackPanel.Children.Add(colorBar);
-
-                // Checkbox
-                stackPanel.Children.Add(checkBox);
-
-                // Wrap in a container
-                var container = new StackPanel { Orientation = Orientation.Horizontal };
-                container.Children.Add(stackPanel);
-
-                // Subscribe to checkbox change event
-                checkBox.Checked += ClassFilterCheckBox_Changed;
-                checkBox.Unchecked += ClassFilterCheckBox_Changed;
-
-                ClassFilterCheckBoxPanel.Children.Add(container);
-            }
+            ClassFilterItemsControl.ItemsSource = classFilterItems;
         }
 
         /// <summary>
@@ -4045,30 +4094,15 @@ namespace YoableWPF
             return ClassFilterMode.Include;
         }
 
-        private IEnumerable<CheckBox> GetClassFilterCheckBoxes()
+        // Bulk-sets every class filter item with the filter re-applied only once at the end.
+        private void SetAllClassCheckBoxes(Func<ClassFilterItem, bool> valueSelector)
         {
-            if (ClassFilterCheckBoxPanel == null)
-                yield break;
-
-            foreach (var container in ClassFilterCheckBoxPanel.Children.OfType<StackPanel>())
-            {
-                var stackPanel = container.Children.OfType<StackPanel>().FirstOrDefault();
-                var checkBox = stackPanel?.Children.OfType<CheckBox>().FirstOrDefault();
-                if (checkBox != null)
-                    yield return checkBox;
-            }
-        }
-
-        // Bulk-sets every class checkbox with the filter re-applied only once at the end.
-        private void SetAllClassCheckBoxes(Func<CheckBox, bool> valueSelector)
-        {
-            var boxes = GetClassFilterCheckBoxes().ToList();
-            if (boxes.Count == 0)
+            if (classFilterItems.Count == 0)
                 return;
 
             suppressClassFilterApply = true;
-            foreach (var box in boxes)
-                box.IsChecked = valueSelector(box);
+            foreach (var item in classFilterItems)
+                item.IsChecked = valueSelector(item);
             suppressClassFilterApply = false;
 
             ApplyClassFilter();
@@ -4081,7 +4115,7 @@ namespace YoableWPF
             SetAllClassCheckBoxes(_ => false);
 
         private void ClassFilterInvert_Click(object sender, RoutedEventArgs e) =>
-            SetAllClassCheckBoxes(box => box.IsChecked != true);
+            SetAllClassCheckBoxes(item => !item.IsChecked);
 
         /// <summary>
         /// Applies the current class-filter selection and mode to the image list.
@@ -4091,19 +4125,15 @@ namespace YoableWPF
             if (suppressClassFilterApply)
                 return;
 
-            // The mode radio's Checked fires during XAML init before the class checkboxes are
+            // The mode radio's Checked fires during XAML init before the class list is
             // populated; bail out so we don't clear the list with an empty selection.
-            if (ClassFilterCheckBoxPanel == null || ClassFilterCheckBoxPanel.Children.Count == 0)
+            if (classFilterItems.Count == 0)
                 return;
 
-            var checkedClassIds = new HashSet<int>();
-            foreach (var container in ClassFilterCheckBoxPanel.Children.OfType<StackPanel>())
-            {
-                var stackPanel = container.Children.OfType<StackPanel>().FirstOrDefault();
-                var checkBox = stackPanel?.Children.OfType<CheckBox>().FirstOrDefault();
-                if (checkBox != null && checkBox.IsChecked == true && checkBox.Tag is int classId)
-                    checkedClassIds.Add(classId);
-            }
+            var checkedClassIds = classFilterItems
+                .Where(i => i.IsChecked)
+                .Select(i => i.ClassId)
+                .ToHashSet();
 
             ClassFilterMode mode = GetClassFilterMode();
 

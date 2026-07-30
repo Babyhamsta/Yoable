@@ -30,6 +30,7 @@
     <system:String x:Key="Settings_CrosshairSettings_Section">十字準線設定</system:String>
     <system:String x:Key="Settings_DarkMode">深色模式</system:String>
     <system:String x:Key="Settings_AccentColor">強調色（十六進制）</system:String>
+    <system:String x:Key="Settings_AccentCustomHex">自訂顏色（十六進位）</system:String>
     <system:String x:Key="Settings_AccentColor_Tooltip">輸入十六進制顏色值（例如：#FF0000 代表紅色）</system:String>
     <system:String x:Key="Settings_AccentColor_Help">更改應用程序中使用的強調色</system:String>
     <system:String x:Key="Settings_General_Section">常規</system:String>
@@ -154,11 +155,18 @@
     <!-- Menu -->
     <system:String x:Key="Menu_Project">專案</system:String>
     <system:String x:Key="Menu_Settings">設置</system:String>
+    <system:String x:Key="Toolbar_Import">匯入</system:String>
+    <system:String x:Key="Toolbar_AITools">AI 工具</system:String>
+    <system:String x:Key="Toolbar_More">更多</system:String>
+    <system:String x:Key="Toolbar_MoreTooltip">更多指令</system:String>
+    <system:String x:Key="Toolbar_SaveTooltip">儲存專案 (Ctrl+S)</system:String>
+    <system:String x:Key="Nav_WorkspacesTooltip">切換工作區</system:String>
     <system:String x:Key="Menu_NewProject">新增專案...</system:String>
     <system:String x:Key="Menu_OpenProject">開啟專案...</system:String>
     <system:String x:Key="Menu_SaveProject">儲存專案</system:String>
     <system:String x:Key="Menu_SaveProjectAs">另存專案為...</system:String>
     <system:String x:Key="Menu_CloseProject">關閉專案</system:String>
+    <system:String x:Key="Menu_BackToStart">回到啟動頁</system:String>
     <system:String x:Key="Menu_File">檔案</system:String>
     <system:String x:Key="Menu_ImportDirectory">匯入目錄</system:String>
     <system:String x:Key="Menu_ImportLabelsAndImage">匯入標籤與圖片</system:String>
@@ -186,6 +194,8 @@
     <system:String x:Key="Main_Sort">排序</system:String>
     <system:String x:Key="Main_SortByName">依名稱</system:String>
     <system:String x:Key="Main_SortByStatus">依狀態</system:String>
+    <system:String x:Key="Main_SortByDateNewest">依日期（最新）</system:String>
+    <system:String x:Key="Main_SortByDateOldest">依日期（最舊）</system:String>
     <system:String x:Key="Main_Filter">篩選</system:String>
     <system:String x:Key="Main_FilterAll">全部</system:String>
     <system:String x:Key="Main_FilterReview">審查</system:String>
@@ -526,15 +536,17 @@
     <system:String x:Key="Main_TabRoiCrop">中心 ROI</system:String>
     <system:String x:Key="Roi_Title">中心 ROI 裁切</system:String>
     <system:String x:Key="Roi_OutputSize">輸出像素尺寸</system:String>
+    <system:String x:Key="Roi_Width">寬度（px）</system:String>
+    <system:String x:Key="Roi_Height">高度（px）</system:String>
     <system:String x:Key="Roi_Scope">套用範圍</system:String>
     <system:String x:Key="Roi_AllImages">專案內全部圖片</system:String>
     <system:String x:Key="Roi_CurrentImage">目前圖片</system:String>
     <system:String x:Key="Roi_OutputFolder">輸出資料夾</system:String>
-    <system:String x:Key="Roi_Apply">建立 640 x 640 裁切圖片</system:String>
-    <system:String x:Key="Roi_RemoveSmall">移除小於 640 px 的圖片</system:String>
-    <system:String x:Key="Roi_RemoveSmallConfirm">找到 {0} 張寬度或高度小於 640 像素的圖片。要從專案中移除這些圖片及其標註嗎？硬碟上的原始檔會保留。</system:String>
+    <system:String x:Key="Roi_Apply">建立自訂尺寸裁切圖片</system:String>
+    <system:String x:Key="Roi_RemoveSmall">移除小於 ROI 的圖片</system:String>
+    <system:String x:Key="Roi_RemoveSmallConfirm">找到 {0} 張小於 {1} x {2} ROI 的圖片。要從專案中移除這些圖片及其標註嗎？硬碟上的原始檔會保留。</system:String>
     <system:String x:Key="Roi_RemoveSmallComplete">已從專案中移除 {0} 張尺寸不足的圖片及其標註。</system:String>
-    <system:String x:Key="Roi_NoSmallImages">專案中沒有寬度或高度小於 640 像素的圖片。</system:String>
+    <system:String x:Key="Roi_NoSmallImages">專案中沒有小於 {0} x {1} ROI 的圖片。</system:String>
     <system:String x:Key="Roi_Preview">中心 ROI 預覽</system:String>
     <system:String x:Key="Roi_NoPreview">沒有可預覽的圖片</system:String>
     <system:String x:Key="Roi_InvalidSize">ROI 尺寸無效。</system:String>
@@ -628,4 +640,16 @@
     <system:String x:Key="Msg_AugmentationComplete">增強完成。&#10;來源圖片:{0}&#10;產生圖片:{1}&#10;已跳過:{2}</system:String>
     <system:String x:Key="Msg_AugmentationFailed">增強失敗:{0}</system:String>
 
+
+    <!-- Startup Window -->
+    <system:String x:Key="Startup_Title">Yoable - 開始使用</system:String>
+    <system:String x:Key="Startup_Subtitle">物件偵測標註工具</system:String>
+    <system:String x:Key="Startup_RecentProjects">最近的專案</system:String>
+    <system:String x:Key="Startup_NoRecent">沒有最近的專案</system:String>
+    <system:String x:Key="Startup_NoRecentHint">建立新專案或開啟現有專案以開始使用</system:String>
+    <system:String x:Key="Startup_NewProject">新建專案</system:String>
+    <system:String x:Key="Startup_OpenProject">開啟專案</system:String>
+    <system:String x:Key="Startup_ContinueWithout">不開啟專案繼續</system:String>
+    <system:String x:Key="Startup_OpenFolderTooltip">開啟專案資料夾</system:String>
+    <system:String x:Key="Startup_DeleteTooltip">刪除專案</system:String>
 </ResourceDictionary>

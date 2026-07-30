@@ -85,15 +85,15 @@
             <StackPanel>
                 <TextBlock Text="Preview:" FontSize="11" Opacity="0.7" Margin="0,0,0,8"/>
                 <Border x:Name="PreviewBorder"
-                        Background="#44E57373"
-                        BorderBrush="#E57373"
+                        Background="{StaticResource StatusNoLabelSubtleBrush}"
+                        BorderBrush="{StaticResource StatusNoLabelBrush}"
                         BorderThickness="2"
                         CornerRadius="4"
                         Padding="8,6">
                     <StackPanel Orientation="Horizontal">
                         <Ellipse Width="12" Height="12" 
                                  x:Name="PreviewColorIndicator"
-                                 Fill="#E57373"
+                                 Fill="{StaticResource StatusNoLabelBrush}"
                                  Margin="0,0,8,0"
                                  VerticalAlignment="Center"/>
                         <TextBlock x:Name="PreviewText"

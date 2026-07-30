@@ -14,105 +14,38 @@
     MinWidth="650">
 
     <Window.Resources>
-        <!-- Accent color for buttons (uses system accent) -->
-        <SolidColorBrush x:Key="AccentButtonBrush" Color="{DynamicResource SystemAccentColor}"/>
+        <!-- Shared styles come from Themes/*.xaml (app-level) -->
 
-        <!-- Modern Button Style -->
-        <Style x:Key="ModernButton" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource AccentButtonBrush}"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
+        <!-- Accent preset swatch -->
+        <Style x:Key="AccentSwatch" TargetType="RadioButton">
+            <Setter Property="Margin" Value="0,0,8,8"/>
             <Setter Property="Cursor" Value="Hand"/>
             <Setter Property="Template">
                 <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Border"
-                                Background="{TemplateBinding Background}"
-                                BorderThickness="0"
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"/>
-                        </Border>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Grid>
+                            <Border x:Name="Ring" Width="32" Height="32" CornerRadius="16"
+                                    BorderThickness="2" BorderBrush="Transparent"/>
+                            <Border Width="24" Height="24" CornerRadius="12"
+                                    Background="{TemplateBinding Background}"/>
+                            <TextBlock x:Name="Check" FontFamily="Segoe MDL2 Assets" Text="&#xE73E;"
+                                       FontSize="12" Foreground="White" Visibility="Collapsed"
+                                       HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Grid>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.9"/>
+                                <Setter TargetName="Ring" Property="BorderBrush"
+                                        Value="{DynamicResource SystemControlForegroundBaseMediumBrush}"/>
                             </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
-                            </Trigger>
-                            <Trigger Property="IsEnabled" Value="False">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.5"/>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Ring" Property="BorderBrush"
+                                        Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
+                                <Setter TargetName="Check" Property="Visibility" Value="Visible"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
                 </Setter.Value>
             </Setter>
-        </Style>
-
-        <!-- Secondary Button Style -->
-        <Style x:Key="SecondaryButton" TargetType="Button">
-            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
-            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Padding" Value="16,8"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="Border"
-                                Background="{TemplateBinding Background}"
-                                BorderThickness="0"
-                                CornerRadius="4"
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" 
-                                            VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource SystemControlHighlightListLowBrush}"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter TargetName="Border" Property="Opacity" Value="0.8"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-
-        <!-- Setting Card Style -->
-        <Style x:Key="SettingCard" TargetType="Border">
-            <Setter Property="Background" Value="{DynamicResource SystemControlPageBackgroundChromeLowBrush}"/>
-            <Setter Property="CornerRadius" Value="6"/>
-            <Setter Property="Padding" Value="16"/>
-            <Setter Property="Margin" Value="0,0,0,16"/>
-        </Style>
-
-        <!-- Section Header Style -->
-        <Style x:Key="SectionHeader" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="14"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="Margin" Value="0,0,0,12"/>
-            <Setter Property="Foreground" Value="{DynamicResource SystemControlForegroundBaseHighBrush}"/>
-        </Style>
-
-        <!-- Setting Label Style -->
-        <Style x:Key="SettingLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="FontWeight" Value="Medium"/>
-            <Setter Property="Margin" Value="0,0,0,8"/>
-        </Style>
-
-        <!-- Help Text Style -->
-        <Style x:Key="HelpText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="Gray"/>
-            <Setter Property="FontSize" Value="11"/>
-            <Setter Property="TextWrapping" Value="Wrap"/>
-            <Setter Property="Margin" Value="0,6,0,0"/>
         </Style>
 
         <!-- Horizontal Tab Style -->
@@ -372,7 +305,7 @@
                                 </ItemsControl>
                                 <TextBlock x:Name="ModelRoleWarningText"
                                            Text="{DynamicResource Settings_ClassTransfer_NeedDetector}"
-                                           Foreground="#FFE57373"
+                                           Foreground="{StaticResource StatusNoLabelBrush}"
                                            FontSize="11"
                                            TextWrapping="Wrap"
                                            Visibility="Collapsed"
@@ -699,7 +632,7 @@
                     </Expander>
 
                     <!-- Info Card -->
-                    <Border Background="#4400BCD4"
+                    <Border Background="{StaticResource InfoSubtleBrush}"
                             CornerRadius="6"
                             Padding="16">
                         <Grid>
@@ -711,12 +644,12 @@
                                        FontFamily="Segoe MDL2 Assets"
                                        Text="&#xE946;"
                                        FontSize="16"
-                                       Foreground="#00BCD4"
+                                       Foreground="{StaticResource InfoBrush}"
                                        VerticalAlignment="Top"
                                        Margin="0,0,10,0"/>
                             <TextBlock Grid.Column="1"
                                        Text="{DynamicResource Settings_EnsembleInfo}"
-                                       Foreground="#00BCD4"
+                                       Foreground="{StaticResource InfoBrush}"
                                        FontSize="12"
                                        TextWrapping="Wrap"
                                        VerticalAlignment="Top"/>
@@ -762,6 +695,14 @@
                                       Margin="0,0,0,16"/>
 
                             <TextBlock Text="{DynamicResource Settings_AccentColor}" Style="{StaticResource SettingLabel}"/>
+                            <ItemsControl x:Name="AccentPresetPanel" Margin="0,0,0,10">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel/>
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                            </ItemsControl>
+                            <TextBlock Text="{DynamicResource Settings_AccentCustomHex}" Style="{StaticResource SettingLabel}"/>
                             <TextBox x:Name="FormHexAccent"
                                      ui:ControlHelper.PlaceholderText="#RRGGBB"
                                      MaxLength="7"
@@ -960,8 +901,8 @@
                     </Border>
 
                     <!-- Help Text -->
-                    <Border Background="#2200BCD4"
-                            BorderBrush="#4400BCD4"
+                    <Border Background="{StaticResource InfoFaintBrush}"
+                            BorderBrush="{StaticResource InfoSubtleBrush}"
                             BorderThickness="1"
                             CornerRadius="6"
                             Padding="16">
@@ -969,7 +910,7 @@
                             <TextBlock FontFamily="Segoe MDL2 Assets" 
                                        Text="&#xE946;" 
                                        FontSize="16" 
-                                       Foreground="#00BCD4"
+                                       Foreground="{StaticResource InfoBrush}"
                                        Margin="0,0,12,0"
                                        VerticalAlignment="Center"/>
                             <TextBlock Text="{DynamicResource Settings_Hotkey_Description}"
@@ -1066,7 +1007,7 @@
                     </Border>
 
                     <!-- Performance Tips Card -->
-                    <Border Background="#44FFB74D"
+                    <Border Background="{StaticResource StatusReviewSubtleBrush}"
                             CornerRadius="6"
                             Padding="16">
                         <Grid>
@@ -1078,12 +1019,12 @@
                                        FontFamily="Segoe MDL2 Assets"
                                        Text="&#xE7BA;"
                                        FontSize="16"
-                                       Foreground="#FFB74D"
+                                       Foreground="{StaticResource StatusReviewBrush}"
                                        VerticalAlignment="Top"
                                        Margin="0,0,10,0"/>
                             <TextBlock Grid.Column="1"
                                        Text="{DynamicResource Settings_PerformanceTip}"
-                                       Foreground="#CC7A00"
+                                       Foreground="{StaticResource StatusReviewDeepBrush}"
                                        FontSize="12"
                                        TextWrapping="Wrap"
                                        VerticalAlignment="Top"/>

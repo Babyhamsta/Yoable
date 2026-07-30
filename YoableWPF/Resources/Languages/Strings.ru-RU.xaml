@@ -30,6 +30,7 @@
     <system:String x:Key="Settings_CrosshairSettings_Section">Настройки прицельной сетки</system:String>
     <system:String x:Key="Settings_DarkMode">Тёмный режим</system:String>
     <system:String x:Key="Settings_AccentColor">Акцентный цвет (Hex)</system:String>
+    <system:String x:Key="Settings_AccentCustomHex">Свой цвет (Hex)</system:String>
     <system:String x:Key="Settings_AccentColor_Tooltip">Введите шестнадцатеричное значение цвета (например, #FF0000 для красного)</system:String>
     <system:String x:Key="Settings_AccentColor_Help">Изменяет акцентный цвет, используемый во всём приложении.</system:String>
     <system:String x:Key="Settings_General_Section">Общие</system:String>
@@ -154,11 +155,18 @@
     <!-- Menu -->
     <system:String x:Key="Menu_Project">Проект</system:String>
     <system:String x:Key="Menu_Settings">Настройки</system:String>
+    <system:String x:Key="Toolbar_Import">Импорт</system:String>
+    <system:String x:Key="Toolbar_AITools">ИИ-инструменты</system:String>
+    <system:String x:Key="Toolbar_More">Ещё</system:String>
+    <system:String x:Key="Toolbar_MoreTooltip">Дополнительные команды</system:String>
+    <system:String x:Key="Toolbar_SaveTooltip">Сохранить проект (Ctrl+S)</system:String>
+    <system:String x:Key="Nav_WorkspacesTooltip">Переключить рабочую область</system:String>
     <system:String x:Key="Menu_NewProject">Новый проект...</system:String>
     <system:String x:Key="Menu_OpenProject">Открыть проект...</system:String>
     <system:String x:Key="Menu_SaveProject">Сохранить проект</system:String>
     <system:String x:Key="Menu_SaveProjectAs">Сохранить проект как...</system:String>
     <system:String x:Key="Menu_CloseProject">Закрыть проект</system:String>
+    <system:String x:Key="Menu_BackToStart">Вернуться на стартовый экран</system:String>
     <system:String x:Key="Menu_File">Файл</system:String>
     <system:String x:Key="Menu_ImportDirectory">Импортировать директорию</system:String>
     <system:String x:Key="Menu_ImportLabelsAndImage">Импортировать метки и изображения</system:String>
@@ -186,6 +194,8 @@
     <system:String x:Key="Main_Sort">Сортировка</system:String>
     <system:String x:Key="Main_SortByName">По имени</system:String>
     <system:String x:Key="Main_SortByStatus">По статусу</system:String>
+    <system:String x:Key="Main_SortByDateNewest">По дате (сначала новые)</system:String>
+    <system:String x:Key="Main_SortByDateOldest">По дате (сначала старые)</system:String>
     <system:String x:Key="Main_Filter">Фильтр</system:String>
     <system:String x:Key="Main_FilterAll">Все</system:String>
     <system:String x:Key="Main_FilterReview">Проверка</system:String>
@@ -526,15 +536,17 @@
     <system:String x:Key="Main_TabRoiCrop">Центральная ROI</system:String>
     <system:String x:Key="Roi_Title">Обрезка центральной ROI</system:String>
     <system:String x:Key="Roi_OutputSize">Размер в пикселях</system:String>
+    <system:String x:Key="Roi_Width">Ширина (пкс)</system:String>
+    <system:String x:Key="Roi_Height">Высота (пкс)</system:String>
     <system:String x:Key="Roi_Scope">Применить к</system:String>
     <system:String x:Key="Roi_AllImages">Всем изображениям проекта</system:String>
     <system:String x:Key="Roi_CurrentImage">Текущему изображению</system:String>
     <system:String x:Key="Roi_OutputFolder">Папка вывода</system:String>
-    <system:String x:Key="Roi_Apply">Создать обрезки 640 x 640</system:String>
-    <system:String x:Key="Roi_RemoveSmall">Удалить изображения меньше 640 пкс</system:String>
-    <system:String x:Key="Roi_RemoveSmallConfirm">Найдено изображений, ширина или высота которых меньше 640 пикселей: {0}. Удалить их и их метки из проекта? Исходные файлы останутся на диске.</system:String>
+    <system:String x:Key="Roi_Apply">Создать обрезки заданного размера</system:String>
+    <system:String x:Key="Roi_RemoveSmall">Удалить изображения меньше ROI</system:String>
+    <system:String x:Key="Roi_RemoveSmallConfirm">Найдено изображений меньше ROI {1} x {2}: {0}. Удалить их и их метки из проекта? Исходные файлы останутся на диске.</system:String>
     <system:String x:Key="Roi_RemoveSmallComplete">Из проекта удалено изображений недостаточного размера и их меток: {0}.</system:String>
-    <system:String x:Key="Roi_NoSmallImages">В проекте нет изображений с шириной или высотой меньше 640 пикселей.</system:String>
+    <system:String x:Key="Roi_NoSmallImages">В проекте нет изображений меньше ROI {0} x {1}.</system:String>
     <system:String x:Key="Roi_Preview">Предпросмотр центральной ROI</system:String>
     <system:String x:Key="Roi_NoPreview">Нет изображения для предпросмотра</system:String>
     <system:String x:Key="Roi_InvalidSize">Недопустимый размер ROI.</system:String>
@@ -628,4 +640,16 @@
     <system:String x:Key="Msg_AugmentationComplete">Аугментация завершена.&#10;Исходных изображений: {0}&#10;Создано изображений: {1}&#10;Пропущено: {2}</system:String>
     <system:String x:Key="Msg_AugmentationFailed">Ошибка аугментации: {0}</system:String>
 
+
+    <!-- Startup Window -->
+    <system:String x:Key="Startup_Title">Yoable - Начало работы</system:String>
+    <system:String x:Key="Startup_Subtitle">Инструмент разметки для обнаружения объектов</system:String>
+    <system:String x:Key="Startup_RecentProjects">Недавние проекты</system:String>
+    <system:String x:Key="Startup_NoRecent">Нет недавних проектов</system:String>
+    <system:String x:Key="Startup_NoRecentHint">Создайте новый проект или откройте существующий, чтобы начать</system:String>
+    <system:String x:Key="Startup_NewProject">Новый проект</system:String>
+    <system:String x:Key="Startup_OpenProject">Открыть проект</system:String>
+    <system:String x:Key="Startup_ContinueWithout">Продолжить без проекта</system:String>
+    <system:String x:Key="Startup_OpenFolderTooltip">Открыть папку проекта</system:String>
+    <system:String x:Key="Startup_DeleteTooltip">Удалить проект</system:String>
 </ResourceDictionary>

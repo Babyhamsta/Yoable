@@ -45,10 +45,89 @@ namespace YoableWPF
         {
             InitializeComponent();
             InitializeLanguageComboBox();
+            BuildAccentSwatches();
             LoadSettings();
-            
+
             // Subscribe to language changes to update UI immediately
             LanguageManager.Instance.LanguageChanged += LanguageManager_LanguageChanged;
+
+            // Revert live theme/accent preview when the dialog is dismissed without saving
+            Closing += (s, e) =>
+            {
+                if (DialogResult != true)
+                {
+                    ThemeManager.Current.ApplicationTheme = Properties.Settings.Default.DarkTheme
+                        ? ApplicationTheme.Dark
+                        : ApplicationTheme.Light;
+                    try
+                    {
+                        ThemeManager.Current.AccentColor =
+                            (Color)ColorConverter.ConvertFromString(Properties.Settings.Default.FormAccent);
+                    }
+                    catch { /* invalid stored hex — leave current accent */ }
+                }
+            };
+        }
+
+        // Preset accent colors shown as swatches in the UI tab
+        private static readonly string[] AccentPresets =
+        {
+            "#ba0012", // Yoable default crimson
+            "#0078D4", // Windows blue
+            "#E81123", // red
+            "#F7630C", // orange
+            "#FFB900", // gold
+            "#107C10", // green
+            "#00B294", // teal
+            "#0099BC", // cyan
+            "#6B69D6", // purple
+            "#C239B3", // magenta
+        };
+
+        private bool suppressSwatchEvents;
+
+        private void BuildAccentSwatches()
+        {
+            foreach (string hex in AccentPresets)
+            {
+                var swatch = new RadioButton
+                {
+                    Style = (Style)FindResource("AccentSwatch"),
+                    GroupName = "AccentPreset",
+                    Background = new SolidColorBrush((Color)ColorConverter.ConvertFromString(hex)),
+                    Tag = hex,
+                    ToolTip = hex
+                };
+                swatch.Checked += AccentSwatch_Checked;
+                AccentPresetPanel.Items.Add(swatch);
+            }
+        }
+
+        private void AccentSwatch_Checked(object sender, RoutedEventArgs e)
+        {
+            if (suppressSwatchEvents) return;
+            if (sender is RadioButton rb && rb.Tag is string hex &&
+                !string.Equals(FormHexAccent.Text, hex, StringComparison.OrdinalIgnoreCase))
+            {
+                FormHexAccent.Text = hex;
+            }
+        }
+
+        private void UpdateAccentSwatchSelection(string hex)
+        {
+            suppressSwatchEvents = true;
+            try
+            {
+                foreach (var item in AccentPresetPanel.Items)
+                {
+                    if (item is RadioButton rb)
+                        rb.IsChecked = string.Equals((string)rb.Tag, hex, StringComparison.OrdinalIgnoreCase);
+                }
+            }
+            finally
+            {
+                suppressSwatchEvents = false;
+            }
         }
 
         private void LanguageManager_LanguageChanged(object sender, EventArgs e)
@@ -507,6 +586,10 @@ namespace YoableWPF
                 {
                     FormHexAccent.ClearValue(TextBox.BackgroundProperty);
                     SaveButton.IsEnabled = true;
+
+                    // Live preview + sync preset swatch selection (reverted on cancel/close)
+                    ThemeManager.Current.AccentColor = (Color)ColorConverter.ConvertFromString("#" + hex);
+                    UpdateAccentSwatchSelection("#" + hex);
                 }
                 else
                 {

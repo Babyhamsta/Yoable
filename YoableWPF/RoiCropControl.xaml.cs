@@ -12,7 +12,7 @@ namespace YoableWPF
 
     public partial class RoiCropControl : UserControl
     {
-        private const int OutputSize = 640;
+        private const int DefaultOutputSize = 640;
         private Func<Task<RoiCropPreviewData?>>? loadPreview;
         private Func<int, int, RoiCropScope, IProgress<(int current, int total, string fileName)>, CancellationToken, Task<RoiCropBatchResult>>? applyCrop;
         private Func<int, int, IReadOnlyList<string>>? findSmallImages;
@@ -65,6 +65,11 @@ namespace YoableWPF
             UpdateRoiPreview();
         }
 
+        private void CropSizeTextBox_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            UpdateRoiPreview();
+        }
+
         private void UpdateRoiPreview()
         {
             if (PreviewHost == null ||
@@ -73,8 +78,12 @@ namespace YoableWPF
                 previewImageSize.Height <= 0 ||
                 !TryGetCropSize(out int cropWidth, out int cropHeight))
             {
+                if (RoiPreviewBorder != null)
+                    RoiPreviewBorder.Visibility = Visibility.Collapsed;
                 return;
             }
+
+            RoiPreviewBorder.Visibility = Visibility.Visible;
 
             double hostWidth = PreviewHost.ActualWidth;
             double hostHeight = PreviewHost.ActualHeight;
@@ -123,6 +132,7 @@ namespace YoableWPF
             cropCancellation?.Dispose();
             cropCancellation = new CancellationTokenSource();
             ApplyCropButton.IsEnabled = false;
+            RemoveSmallImagesButton.IsEnabled = false;
             CancelCropButton.Visibility = Visibility.Visible;
             CropProgressBar.Visibility = Visibility.Visible;
             CropProgressBar.Value = 0;
@@ -179,6 +189,7 @@ namespace YoableWPF
             finally
             {
                 ApplyCropButton.IsEnabled = true;
+                RemoveSmallImagesButton.IsEnabled = true;
                 CancelCropButton.Visibility = Visibility.Collapsed;
                 CropProgressBar.Visibility = Visibility.Collapsed;
             }
@@ -191,15 +202,24 @@ namespace YoableWPF
 
         private async void RemoveSmallImagesButton_Click(object sender, RoutedEventArgs e)
         {
-            if (findSmallImages == null || removeImages == null)
+            if (findSmallImages == null ||
+                removeImages == null ||
+                !TryGetCropSize(out int cropWidth, out int cropHeight))
+            {
+                ShowMessage("Roi_InvalidSize", "Enter a valid ROI width and height.", MessageBoxImage.Warning);
                 return;
+            }
 
-            var candidates = findSmallImages(OutputSize, OutputSize);
+            var candidates = findSmallImages(cropWidth, cropHeight);
             if (candidates.Count == 0)
             {
-                ShowMessage(
-                    "Roi_NoSmallImages",
-                    "No project images have a width or height under 640 pixels.",
+                CustomMessageBox.Show(
+                    string.Format(
+                        GetString("Roi_NoSmallImages", "No project images are smaller than the {0} x {1} ROI."),
+                        cropWidth,
+                        cropHeight),
+                    GetString("Roi_Title", "Center ROI Crop"),
+                    MessageBoxButton.OK,
                     MessageBoxImage.Information);
                 return;
             }
@@ -208,8 +228,10 @@ namespace YoableWPF
                 string.Format(
                     GetString(
                         "Roi_RemoveSmallConfirm",
-                        "Found {0} image(s) with a width or height under 640 pixels. Remove them and their labels from this project? Original files will remain on disk."),
-                    candidates.Count),
+                        "Found {0} image(s) smaller than the {1} x {2} ROI. Remove them and their labels from this project? Original files will remain on disk."),
+                    candidates.Count,
+                    cropWidth,
+                    cropHeight),
                 GetString("Roi_Title", "Center ROI Crop"),
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);
@@ -237,9 +259,15 @@ namespace YoableWPF
 
         private bool TryGetCropSize(out int width, out int height)
         {
-            width = OutputSize;
-            height = OutputSize;
-            return true;
+            width = DefaultOutputSize;
+            height = DefaultOutputSize;
+
+            return CropWidthTextBox != null &&
+                   CropHeightTextBox != null &&
+                   int.TryParse(CropWidthTextBox.Text, out width) &&
+                   int.TryParse(CropHeightTextBox.Text, out height) &&
+                   width > 0 &&
+                   height > 0;
         }
 
         private void ShowMessage(string key, string fallback, MessageBoxImage image)

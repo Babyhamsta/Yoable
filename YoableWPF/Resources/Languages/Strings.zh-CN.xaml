@@ -30,6 +30,7 @@
     <system:String x:Key="Settings_CrosshairSettings_Section">十字准线设置</system:String>
     <system:String x:Key="Settings_DarkMode">深色模式</system:String>
     <system:String x:Key="Settings_AccentColor">强调色（十六进制）</system:String>
+    <system:String x:Key="Settings_AccentCustomHex">自定义颜色（十六进制）</system:String>
     <system:String x:Key="Settings_AccentColor_Tooltip">输入十六进制颜色值（例如：#FF0000 表示红色）</system:String>
     <system:String x:Key="Settings_AccentColor_Help">更改应用程序中使用的强调色。</system:String>
     <system:String x:Key="Settings_General_Section">常规</system:String>
@@ -154,11 +155,18 @@
     <!-- Menu -->
     <system:String x:Key="Menu_Project">项目</system:String>
     <system:String x:Key="Menu_Settings">设置</system:String>
+    <system:String x:Key="Toolbar_Import">导入</system:String>
+    <system:String x:Key="Toolbar_AITools">AI 工具</system:String>
+    <system:String x:Key="Toolbar_More">更多</system:String>
+    <system:String x:Key="Toolbar_MoreTooltip">更多命令</system:String>
+    <system:String x:Key="Toolbar_SaveTooltip">保存项目 (Ctrl+S)</system:String>
+    <system:String x:Key="Nav_WorkspacesTooltip">切换工作区</system:String>
     <system:String x:Key="Menu_NewProject">新建项目...</system:String>
     <system:String x:Key="Menu_OpenProject">打开项目...</system:String>
     <system:String x:Key="Menu_SaveProject">保存项目</system:String>
     <system:String x:Key="Menu_SaveProjectAs">另存项目为...</system:String>
     <system:String x:Key="Menu_CloseProject">关闭项目</system:String>
+    <system:String x:Key="Menu_BackToStart">回到启动页</system:String>
     <system:String x:Key="Menu_File">文件</system:String>
     <system:String x:Key="Menu_ImportDirectory">导入目录</system:String>
     <system:String x:Key="Menu_ImportLabelsAndImage">导入标签与图片</system:String>
@@ -186,6 +194,8 @@
     <system:String x:Key="Main_Sort">排序</system:String>
     <system:String x:Key="Main_SortByName">按名称</system:String>
     <system:String x:Key="Main_SortByStatus">按状态</system:String>
+    <system:String x:Key="Main_SortByDateNewest">按日期（最新）</system:String>
+    <system:String x:Key="Main_SortByDateOldest">按日期（最旧）</system:String>
     <system:String x:Key="Main_Filter">筛选</system:String>
     <system:String x:Key="Main_FilterAll">全部</system:String>
     <system:String x:Key="Main_FilterReview">审查</system:String>
@@ -526,15 +536,17 @@
     <system:String x:Key="Main_TabRoiCrop">中心 ROI</system:String>
     <system:String x:Key="Roi_Title">中心 ROI 裁切</system:String>
     <system:String x:Key="Roi_OutputSize">输出像素尺寸</system:String>
+    <system:String x:Key="Roi_Width">宽度（px）</system:String>
+    <system:String x:Key="Roi_Height">高度（px）</system:String>
     <system:String x:Key="Roi_Scope">应用范围</system:String>
     <system:String x:Key="Roi_AllImages">项目内全部图片</system:String>
     <system:String x:Key="Roi_CurrentImage">当前图片</system:String>
     <system:String x:Key="Roi_OutputFolder">输出文件夹</system:String>
-    <system:String x:Key="Roi_Apply">创建 640 x 640 裁切图片</system:String>
-    <system:String x:Key="Roi_RemoveSmall">移除小于 640 px 的图片</system:String>
-    <system:String x:Key="Roi_RemoveSmallConfirm">找到 {0} 张宽度或高度小于 640 像素的图片。要从项目中移除这些图片及其标注吗？硬盘上的原始文件会保留。</system:String>
+    <system:String x:Key="Roi_Apply">创建自定义尺寸裁切图片</system:String>
+    <system:String x:Key="Roi_RemoveSmall">移除小于 ROI 的图片</system:String>
+    <system:String x:Key="Roi_RemoveSmallConfirm">找到 {0} 张小于 {1} x {2} ROI 的图片。要从项目中移除这些图片及其标注吗？硬盘上的原始文件会保留。</system:String>
     <system:String x:Key="Roi_RemoveSmallComplete">已从项目中移除 {0} 张尺寸不足的图片及其标注。</system:String>
-    <system:String x:Key="Roi_NoSmallImages">项目中没有宽度或高度小于 640 像素的图片。</system:String>
+    <system:String x:Key="Roi_NoSmallImages">项目中没有小于 {0} x {1} ROI 的图片。</system:String>
     <system:String x:Key="Roi_Preview">中心 ROI 预览</system:String>
     <system:String x:Key="Roi_NoPreview">没有可预览的图片</system:String>
     <system:String x:Key="Roi_InvalidSize">ROI 尺寸无效。</system:String>
@@ -628,4 +640,16 @@
     <system:String x:Key="Msg_AugmentationComplete">增强完成。&#10;来源图片:{0}&#10;生成图片:{1}&#10;已跳过:{2}</system:String>
     <system:String x:Key="Msg_AugmentationFailed">增强失败:{0}</system:String>
 
+
+    <!-- Startup Window -->
+    <system:String x:Key="Startup_Title">Yoable - 开始使用</system:String>
+    <system:String x:Key="Startup_Subtitle">目标检测标注工具</system:String>
+    <system:String x:Key="Startup_RecentProjects">最近的项目</system:String>
+    <system:String x:Key="Startup_NoRecent">没有最近的项目</system:String>
+    <system:String x:Key="Startup_NoRecentHint">创建新项目或打开现有项目以开始使用</system:String>
+    <system:String x:Key="Startup_NewProject">新建项目</system:String>
+    <system:String x:Key="Startup_OpenProject">打开项目</system:String>
+    <system:String x:Key="Startup_ContinueWithout">不打开项目继续</system:String>
+    <system:String x:Key="Startup_OpenFolderTooltip">打开项目文件夹</system:String>
+    <system:String x:Key="Startup_DeleteTooltip">删除项目</system:String>
 </ResourceDictionary>

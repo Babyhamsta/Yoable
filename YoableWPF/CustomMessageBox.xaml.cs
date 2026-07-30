@@ -9,18 +9,12 @@ namespace YoableWPF
     {
         private MessageBoxResult result = MessageBoxResult.None;
 
-        // Icon colors
-        private static readonly SolidColorBrush InfoBrush = CreateFrozenBrush(0x64, 0xB5, 0xF6);
-        private static readonly SolidColorBrush WarningBrush = CreateFrozenBrush(0xFF, 0xB7, 0x4D);
-        private static readonly SolidColorBrush ErrorBrush = CreateFrozenBrush(0xE5, 0x73, 0x73);
-        private static readonly SolidColorBrush QuestionBrush = CreateFrozenBrush(0x81, 0xC7, 0x84);
-
-        private static SolidColorBrush CreateFrozenBrush(byte r, byte g, byte b)
-        {
-            var brush = new SolidColorBrush(Color.FromRgb(r, g, b));
-            brush.Freeze();
-            return brush;
-        }
+        // Icon colors sourced from the shared palette (Themes/Palette.xaml)
+        private static SolidColorBrush Pal(string key) => (SolidColorBrush)Application.Current.FindResource(key);
+        private static readonly SolidColorBrush InfoBrush = Pal("StatusSuggestedBrush");
+        private static readonly SolidColorBrush WarningBrush = Pal("StatusReviewBrush");
+        private static readonly SolidColorBrush ErrorBrush = Pal("StatusNoLabelBrush");
+        private static readonly SolidColorBrush QuestionBrush = Pal("StatusVerifiedBrush");
 
         private CustomMessageBox()
         {
@@ -161,10 +155,9 @@ namespace YoableWPF
                 IsCancel = isCancel
             };
 
-            if (isPrimary)
-            {
-                button.Style = (Style)FindResource("AccentButtonStyle");
-            }
+            // Use the shared theme styles (Themes/Controls.xaml)
+            button.Style = (Style)(TryFindResource(isPrimary ? "ModernButton" : "SecondaryButton")
+                ?? (isPrimary ? FindResource("AccentButtonStyle") : null));
 
             button.Click += (s, e) =>
             {
